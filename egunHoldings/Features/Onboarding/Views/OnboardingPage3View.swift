@@ -1,0 +1,459 @@
+import SwiftUI
+
+struct OnboardingPage3View: View {
+    @ObservedObject var viewModel: OnboardingFlowViewModel
+    let onBack: () -> Void
+    let onNext: () -> Void
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+    @State private var showsConnectionReviewSheet = false
+
+    private let categories = ["저축은행", "페이머니", "카드", "증권", "할부금융", "보험", "기타"]
+
+    private var selectedInstitutionCount: Int {
+        viewModel.connectedInstitutionID == nil ? 0 : 1
+    }
+
+    private var selectedInstitutionCountText: String {
+        selectedInstitutionCount == 0 ? "선택 안 함" : "\(selectedInstitutionCount)개 선택"
+    }
+
+    private var accentGradient: LinearGradient {
+        LinearGradient(
+            colors: [Color.midnightAccent, Color.electricBlue],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    var body: some View {
+        PFContentScrollView(
+            alignment: .leading,
+            spacing: 20,
+            horizontalPadding: MidnightLayout.horizontal,
+            topPadding: 16,
+            bottomPadding: 168
+        ) {
+            FlowProgressHeader(currentStep: 3, totalSteps: 4, onBack: onBack)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("증권 계좌를 연결해주세요")
+                    .font(.pretendard(26, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.92))
+
+                Text("현재는 한국투자증권 계좌만 연결할 수 있고, 연결된 자산 기준으로 정책 민감도를 계산합니다.")
+                    .font(.pretendard(15, weight: .regular))
+                    .foregroundStyle(Color.white.opacity(0.62))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            categoryStrip
+
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.electricBlue)
+
+                    Text("증권")
+                        .font(.pretendard(18, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.92))
+
+                    Text("\(selectedInstitutionCount)")
+                        .font(.pretendard(18, weight: .bold))
+                        .foregroundStyle(Color.electricBlue)
+
+                    Spacer()
+
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.42))
+                }
+
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(viewModel.brokerageInstitutions) { institution in
+                        BrokerInstitutionCard(
+                            institution: institution,
+                            isSelected: viewModel.connectedInstitutionID == institution.id,
+                            isConnectable: viewModel.canConnect(institution),
+                            onTap: {
+                                toggleInstitution(institution)
+                            }
+                        )
+                    }
+                }
+            }
+
+            Text("다른 증권사는 준비 중이며, 현재는 한국투자증권만 선택 가능합니다.")
+                .font(.pretendard(13, weight: .medium))
+                .foregroundStyle(Color.white.opacity(0.42))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .safeAreaInset(edge: .bottom) {
+            bottomActionBar
+        }
+        .sheet(isPresented: $showsConnectionReviewSheet) {
+            if let institution = viewModel.connectedInstitution {
+                BrokerageConnectionReviewSheet(
+                    institution: institution,
+                    onContinue: {
+                        showsConnectionReviewSheet = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+                            onNext()
+                        }
+                    }
+                )
+                .presentationDetents([.height(520), .large])
+                .presentationDragIndicator(.visible)
+                .preferredColorScheme(.dark)
+            }
+        }
+        .background(PFGradientBackground())
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private var categoryStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 18) {
+                ForEach(categories, id: \.self) { category in
+                    VStack(spacing: 8) {
+                        Text(category)
+                            .font(.pretendard(14, weight: category == "증권" ? .semibold : .medium))
+                            .foregroundStyle(category == "증권" ? Color.white.opacity(0.9) : Color.white.opacity(0.26))
+
+                        Capsule()
+                            .fill(category == "증권" ? Color.white.opacity(0.9) : .clear)
+                            .frame(height: 2)
+                    }
+                }
+            }
+            .padding(.bottom, 4)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(Color.white.opacity(0.06))
+                .frame(height: 1)
+        }
+    }
+
+    private var bottomActionBar: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                Text(selectedInstitutionCountText)
+                    .font(.pretendard(18, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.88))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 58)
+                    .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                Button {
+                    showsConnectionReviewSheet = true
+                } label: {
+                    Text("연결하기")
+                        .font(.pretendard(18, weight: .bold))
+                        .foregroundStyle(selectedInstitutionCount > 0 ? .white : Color.white.opacity(0.34))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 58)
+                        .background(
+                            selectedInstitutionCount > 0
+                                ? AnyShapeStyle(accentGradient)
+                                : AnyShapeStyle(Color.white.opacity(0.10)),
+                            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        )
+                }
+                .buttonStyle(.plain)
+                .allowsHitTesting(selectedInstitutionCount > 0)
+                .shadow(
+                    color: selectedInstitutionCount > 0 ? Color.midnightAccent.opacity(0.22) : .clear,
+                    radius: 14,
+                    y: 6
+                )
+            }
+
+            Button("나중에 할게요") {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    viewModel.skipBrokerageConnection()
+                }
+                onNext()
+            }
+            .font(.pretendard(14, weight: .medium))
+            .foregroundStyle(Color.white.opacity(0.46))
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, MidnightLayout.horizontal)
+        .padding(.top, 12)
+        .padding(.bottom, 12)
+        .background(
+            Color(hex: "090E25").opacity(0.94)
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.06))
+                        .frame(height: 1)
+                }
+                .ignoresSafeArea()
+        )
+    }
+
+    private func toggleInstitution(_ institution: AccountInstitution) {
+        guard viewModel.canConnect(institution) else { return }
+
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if viewModel.connectedInstitutionID == institution.id {
+                viewModel.skipBrokerageConnection()
+            } else {
+                viewModel.selectInstitution(institution)
+            }
+        }
+    }
+}
+
+private struct BrokerInstitutionCard: View {
+    let institution: AccountInstitution
+    let isSelected: Bool
+    let isConnectable: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack {
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color.electricBlue)
+                    } else if isConnectable {
+                        Circle()
+                            .stroke(Color.white.opacity(0.20), lineWidth: 1)
+                            .frame(width: 16, height: 16)
+                    } else {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.20))
+                    }
+
+                    Spacer()
+                }
+
+                Spacer(minLength: 10)
+
+                brokerMark
+                    .frame(maxWidth: .infinity)
+
+                Spacer(minLength: 12)
+
+                Text(institution.name)
+                    .font(.pretendard(13, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(isConnectable ? 0.88 : 0.52))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity)
+            .frame(height: 116)
+            .background(cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(cardBorder, lineWidth: isSelected ? 1.6 : 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .allowsHitTesting(isConnectable)
+    }
+
+    private var cardBackground: Color {
+        if isSelected {
+            return Color.midnightAccent.opacity(0.10)
+        }
+
+        return Color.white.opacity(isConnectable ? 0.07 : 0.05)
+    }
+
+    private var cardBorder: Color {
+        if isSelected {
+            return Color.midnightAccent.opacity(0.82)
+        }
+
+        return Color.white.opacity(isConnectable ? 0.08 : 0.04)
+    }
+
+    @ViewBuilder
+    private var brokerMark: some View {
+        if institution.id == AccountInstitution.koreaInvestmentID {
+            Image("hantoo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 42, height: 42)
+        } else {
+            Text(brandMark)
+                .font(.pretendard(23, weight: .bold))
+                .foregroundStyle(Color(hex: institution.accentHex).opacity(isConnectable ? 0.96 : 0.72))
+                .frame(width: 46, height: 46)
+        }
+    }
+
+    private var brandMark: String {
+        switch institution.id {
+        case "kiwoom":
+            return "키"
+        case "samsung_securities":
+            return "삼"
+        case "mirae":
+            return "M"
+        case "nh_invest":
+            return "NH"
+        case "kb_securities":
+            return "KB"
+        case "hana_securities":
+            return "하"
+        case "shinhan_invest":
+            return "신"
+        case "toss_securities":
+            return "토"
+        default:
+            return institution.emoji
+        }
+    }
+}
+
+private struct BrokerageConnectionReviewSheet: View {
+    let institution: AccountInstitution
+    let onContinue: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                PFGradientBackground()
+
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("조회 전용으로 연결할게요")
+                                .font(.pretendard(24, weight: .bold))
+                                .foregroundStyle(Color.white.opacity(0.92))
+
+                            Text("매수나 매도 기능 없이, 계좌 잔고와 보유 종목만 불러옵니다.")
+                                .font(.pretendard(15, weight: .regular))
+                                .foregroundStyle(Color.white.opacity(0.62))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        FlowSurfaceCard {
+                            HStack(spacing: 14) {
+                                SelectedInstitutionBadge(institution: institution, size: 54)
+
+                                VStack(alignment: .leading, spacing: 5) {
+                                    Text(institution.name)
+                                        .font(.pretendard(17, weight: .semibold))
+                                        .foregroundStyle(Color.white.opacity(0.92))
+
+                                    Text("연결 후 홈과 내 자산 화면에 실계좌 기준 분석이 반영돼요.")
+                                        .font(.pretendard(13, weight: .medium))
+                                        .foregroundStyle(Color.white.opacity(0.58))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 12) {
+                            ReviewBulletRow(
+                                icon: "chart.bar.doc.horizontal",
+                                title: "잔고 조회",
+                                description: "총 평가금액과 현금 비중을 불러옵니다."
+                            )
+                            ReviewBulletRow(
+                                icon: "list.bullet.rectangle",
+                                title: "보유 종목 조회",
+                                description: "보유 ETF와 종목 목록을 분석에 활용합니다."
+                            )
+                            ReviewBulletRow(
+                                icon: "lock.shield",
+                                title: "주문 권한 없음",
+                                description: "매수·매도는 실행하지 않고 읽기 전용으로만 연결합니다."
+                            )
+                        }
+
+                        FlowPrimaryButton(title: "계속", action: onContinue)
+                            .padding(.top, 4)
+                    }
+                    .padding(.horizontal, MidnightLayout.horizontal)
+                    .padding(.top, 24)
+                    .padding(.bottom, 28)
+                }
+
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("닫기") {
+                        dismiss()
+                    }
+                    .font(.pretendard(14, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.62))
+                }
+            }
+        }
+    }
+}
+
+private struct ReviewBulletRow: View {
+    let icon: String
+    let title: String
+    let description: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Circle()
+                .fill(Color.midnightAccent.opacity(0.14))
+                .frame(width: 34, height: 34)
+                .overlay {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.electricBlue)
+                }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.pretendard(14, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.9))
+
+                Text(description)
+                    .font(.pretendard(13, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.56))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+struct SelectedInstitutionBadge: View {
+    let institution: AccountInstitution
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.06))
+
+            if institution.id == AccountInstitution.koreaInvestmentID {
+                Image("hantoo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size * 0.56, height: size * 0.56)
+            } else {
+                Text(institution.emoji)
+                    .font(.system(size: size * 0.38))
+            }
+        }
+        .frame(width: size, height: size)
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+        }
+    }
+}
+
+#Preview {
+    OnboardingPage3View(viewModel: OnboardingFlowViewModel(), onBack: {}, onNext: {})
+        .preferredColorScheme(.dark)
+}

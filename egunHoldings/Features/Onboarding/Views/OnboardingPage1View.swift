@@ -1,0 +1,239 @@
+import SwiftUI
+
+struct OnboardingPage1View: View {
+    @ObservedObject var viewModel: OnboardingFlowViewModel
+    let onNext: () -> Void
+    var onBack: () -> Void = {}
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    private var previewKey: String {
+        viewModel.previewItems.map(\.id).joined(separator: "-")
+    }
+
+    var body: some View {
+        PFContentScrollView(
+            alignment: .leading,
+            spacing: 24,
+            horizontalPadding: MidnightLayout.horizontal,
+            topPadding: 16,
+            bottomPadding: 32
+        ) {
+            FlowProgressHeader(currentStep: 1, totalSteps: 4, onBack: onBack)
+
+            VStack(alignment: .leading, spacing: 10) {
+                Text("어떤 산업을 주로 보시나요?")
+                    .font(.pretendard(28, weight: .bold))
+                    .foregroundStyle(Color.white.opacity(0.92))
+
+                Text("선택한 산업 중심으로 뉴스와 시그널을 우선 정리해요")
+                    .font(.pretendard(16, weight: .regular))
+                    .foregroundStyle(Color.white.opacity(0.62))
+            }
+
+            FlowInfoHint(text: "선택하면 아래 뉴스 미리보기가 즉시 바뀌어요")
+
+            ZStack(alignment: .bottom) {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(viewModel.allSectors) { sector in
+                        SectorSelectionCard(
+                            sector: sector,
+                            isSelected: viewModel.selectedSectors.contains(sector)
+                        ) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                viewModel.toggleSector(sector)
+                            }
+                        }
+                    }
+                }
+
+                LinearGradient(
+                    colors: [.clear, Color(hex: "060A1C").opacity(0.96)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 54)
+                .allowsHitTesting(false)
+            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            VStack(spacing: 10) {
+                ZStack {
+                    FloatingNewsPreviewSheet(items: viewModel.previewItems)
+                        .id(previewKey)
+                        .transition(.opacity)
+                }
+                .animation(.easeInOut(duration: 0.2), value: previewKey)
+
+                FlowPrimaryButton(
+                    title: "다음",
+                    isEnabled: viewModel.canAdvanceFromSectorStep,
+                    action: onNext
+                )
+            }
+            .padding(.horizontal, MidnightLayout.horizontal)
+            .padding(.top, 10)
+            .padding(.bottom, 12)
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(hex: "060A1C").opacity(0),
+                        Color(hex: "060A1C").opacity(0.88),
+                        Color(hex: "060A1C")
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            )
+        }
+        .background(PFGradientBackground())
+        .toolbar(.hidden, for: .navigationBar)
+    }
+}
+
+private struct SectorSelectionCard: View {
+    let sector: InterestSector
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    @GestureState private var isPressed = false
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top) {
+                    Text(sector.emoji)
+                        .font(.system(size: 24))
+
+                    Spacer()
+
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(isSelected ? Color(hex: "7C6FFF") : Color.white.opacity(0.05))
+                        .frame(width: 20, height: 20)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .stroke(isSelected ? Color(hex: "7C6FFF") : Color.white.opacity(0.16), lineWidth: 1)
+
+                            if isSelected {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(sector.title)
+                        .font(.pretendard(16, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.92))
+
+                    Text(sector.description)
+                        .font(.pretendard(12, weight: .regular))
+                        .foregroundStyle(Color.white.opacity(0.58))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 148, alignment: .leading)
+            .padding(16)
+            .background(
+                isSelected ? Color(hex: "7C6FFF", alpha: 0.13) : Color.white.opacity(0.04),
+                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(isSelected ? Color(hex: "7C6FFF", alpha: 0.45) : Color.white.opacity(0.07), lineWidth: 1)
+            }
+            .scaleEffect(isPressed ? 0.96 : 1)
+            .animation(.easeInOut(duration: 0.15), value: isPressed)
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .updating($isPressed) { _, state, _ in
+                    state = true
+                }
+        )
+    }
+}
+
+private struct SelectionNewsPreviewCard: View {
+    let items: [OnboardingNewsPreviewItem]
+    var embedded = false
+
+    var body: some View {
+        Group {
+            if embedded {
+                content
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+            } else {
+                FlowSurfaceCard {
+                    content
+                }
+            }
+        }
+    }
+
+    private var content: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("선택 기반 뉴스 미리보기")
+                .font(.pretendard(12, weight: .semibold))
+                .foregroundStyle(Color(hex: "5BBBFF"))
+
+            ForEach(items) { item in
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(item.title)
+                        .font(.pretendard(15, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.9))
+
+                    Text(item.summary)
+                        .font(.pretendard(13, weight: .regular))
+                        .foregroundStyle(Color.white.opacity(0.58))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if item.id != items.last?.id {
+                    Rectangle()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(height: 1)
+                }
+            }
+        }
+    }
+}
+
+private struct FloatingNewsPreviewSheet: View {
+    let items: [OnboardingNewsPreviewItem]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Capsule(style: .continuous)
+                .fill(Color.white.opacity(0.18))
+                .frame(width: 34, height: 4)
+                .padding(.top, 8)
+
+            SelectionNewsPreviewCard(items: items, embedded: true)
+                .padding(.top, 10)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color(hex: "0C1332").opacity(0.94))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                }
+        )
+        .shadow(color: Color.black.opacity(0.28), radius: 18, y: 8)
+    }
+}
+
+#Preview {
+    OnboardingPage1View(viewModel: OnboardingFlowViewModel(), onNext: {})
+        .preferredColorScheme(.dark)
+}

@@ -1,0 +1,25 @@
+.DS_Store
+
+# Xcode user state
+xcuserdata/
+*.xcuserstate
+*.xcbkptlist
+
+# Build products and archives
+build/
+DerivedData/
+*.xcarchive
+*.ipa
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved.backup
+
+# Local configuration
+*.xcconfig.local
+*.env
+*.env.*
+
+# Exported artifacts
+exports/*.zip
