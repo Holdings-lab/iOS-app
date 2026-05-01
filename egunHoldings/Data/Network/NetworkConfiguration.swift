@@ -1,9 +1,27 @@
 import Foundation
 
 nonisolated enum NetworkConfiguration {
-    // When this value is missing, the app falls back to mock news data and insight responses.
+    static var backendBaseURL: URL {
+        if let configuredURL = configuredURL(forInfoKey: "BACKEND_BASE_URL")
+            ?? configuredURL(forInfoKey: "POLICY_BACKEND_BASE_URL") {
+            return configuredURL
+        }
+
+        return URL(string: "http://43.201.130.53:8080")!
+    }
+
+    static var mlServiceBaseURL: URL {
+        if let configuredURL = configuredURL(forInfoKey: "ML_SERVICE_BASE_URL") {
+            return configuredURL
+        }
+
+        var components = URLComponents(url: backendBaseURL, resolvingAgainstBaseURL: false)
+        components?.port = 9000
+        return components?.url ?? URL(string: "http://43.201.130.53:9000")!
+    }
+
     static var policyBackendBaseURL: URL? {
-        configuredURL(forInfoKey: "POLICY_BACKEND_BASE_URL")
+        backendBaseURL
     }
 
     static var tradingServerBaseURL: URL? {
@@ -11,19 +29,11 @@ nonisolated enum NetworkConfiguration {
             return configuredURL
         }
 
-#if DEBUG
-        return URL(string: "http://localhost:8080")
-#else
-        return nil
-#endif
+        return backendBaseURL
     }
 
     static var authRefreshURL: URL? {
-        guard let policyBackendBaseURL else {
-            return nil
-        }
-
-        return policyBackendBaseURL.appendingPathComponent("v1/auth/refresh")
+        configuredURL(forInfoKey: "AUTH_REFRESH_URL")
     }
 
     static var tradingKisAccountNumber: String? {

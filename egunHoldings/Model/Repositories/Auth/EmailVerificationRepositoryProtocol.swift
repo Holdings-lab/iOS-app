@@ -1,11 +1,11 @@
 import Foundation
 
-protocol EmailVerificationRepositoryProtocol {
-    func requestVerificationCode(for email: String) throws
-    func verifyCode(_ code: String, for email: String) throws
+nonisolated protocol EmailVerificationRepositoryProtocol {
+    func requestVerificationCode(for email: String) async throws
+    func verifyCode(_ code: String, for email: String) async throws
 }
 
-enum EmailVerificationRepositoryError: LocalizedError {
+nonisolated enum EmailVerificationRepositoryError: LocalizedError {
     case invalidEmail
     case invalidCode
 

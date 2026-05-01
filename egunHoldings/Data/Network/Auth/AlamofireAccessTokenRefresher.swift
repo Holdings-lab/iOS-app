@@ -8,13 +8,13 @@ nonisolated private struct AuthRefreshRequestDTO: Encodable, Sendable {
 nonisolated private struct AuthRefreshResponseDTO: Decodable, Sendable {
     let accessToken: String
     let refreshToken: String?
-    let expiresAt: Date
+    let expiresAt: Date?
 
     func toDomain() -> AuthTokenPayload {
         AuthTokenPayload(
             accessToken: accessToken,
             refreshToken: refreshToken,
-            expiresAt: expiresAt
+            expiresAt: expiresAt ?? Date().addingTimeInterval(60 * 60 * 24 * 14)
         )
     }
 }
@@ -39,8 +39,7 @@ nonisolated final class AlamofireAccessTokenRefresher: AccessTokenRefreshing, @u
             throw NetworkError.missingRefreshToken
         }
 
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        let decoder = NetworkJSONCoding.makeDecoder()
 
         let response = try await session
             .request(
@@ -50,9 +49,17 @@ nonisolated final class AlamofireAccessTokenRefresher: AccessTokenRefreshing, @u
                 encoder: JSONParameterEncoder.default
             )
             .validate(statusCode: 200 ..< 300)
-            .serializingDecodable(AuthRefreshResponseDTO.self, decoder: decoder)
+            .serializingDecodable(APIResponse<AuthRefreshResponseDTO>.self, decoder: decoder)
             .value
 
-        return response.toDomain()
+        guard response.isSuccess, let result = response.result else {
+            throw NetworkError.apiFailure(
+                statusCode: nil,
+                code: response.code,
+                message: response.message
+            )
+        }
+
+        return result.toDomain()
     }
 }

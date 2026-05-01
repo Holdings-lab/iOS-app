@@ -11,6 +11,7 @@ final class AppFlowViewModel: ObservableObject {
 
     private let store: AuthSessionStoring
     private let accountStore: AuthAccountStoring
+    private let authRepository: AuthRepositoryProtocol
     private let brokerBalanceRepository: BrokerBalanceRepositoryProtocol
     private(set) var session: AppUserSession?
     private var lastAuthenticatedEmail: String?
@@ -18,10 +19,12 @@ final class AppFlowViewModel: ObservableObject {
     init(
         store: AuthSessionStoring? = nil,
         accountStore: AuthAccountStoring? = nil,
+        authRepository: AuthRepositoryProtocol? = nil,
         brokerBalanceRepository: BrokerBalanceRepositoryProtocol? = nil
     ) {
         self.store = store ?? AuthSessionStore()
         self.accountStore = accountStore ?? AuthAccountStore()
+        self.authRepository = authRepository ?? LiveAuthRepository()
         self.brokerBalanceRepository = brokerBalanceRepository ?? KisSandboxBalanceRepository()
         bootstrap()
     }
@@ -64,40 +67,44 @@ final class AppFlowViewModel: ObservableObject {
             return
         }
 
-        guard let account = registeredAccount(for: normalizedEmail) else {
-            authErrorMessage = "가입된 계정을 찾지 못했습니다. 회원가입 후 다시 로그인해주세요."
-            return
+        Task {
+            await performLogin(email: normalizedEmail, password: password)
         }
-        guard account.password == password else {
-            authErrorMessage = "비밀번호가 올바르지 않습니다."
-            return
-        }
+    }
 
-        let isNewUser = account.onboardingCompleted == false
+    private func performLogin(email: String, password: String) async {
+        do {
+            let loginSession = try await authRepository.login(email: email, password: password)
+            let existingAccount = registeredAccount(for: loginSession.email)
+            let isNewUser = loginSession.onboardingCompleted == false
 
-        let newSession = AppUserSession(
-            token: UUID().uuidString,
-            refreshToken: nil,
-            expiresAt: Date().addingTimeInterval(60 * 60 * 24 * 14),
-            userName: account.userName,
-            email: account.email,
-            onboardingCompleted: account.onboardingCompleted,
-            onboardingResult: account.onboardingResult,
-            brokerBalanceSnapshot: account.brokerBalanceSnapshot
-        )
+            let newSession = AppUserSession(
+                userId: loginSession.userId,
+                token: loginSession.accessToken,
+                refreshToken: loginSession.refreshToken,
+                expiresAt: Date().addingTimeInterval(60 * 60 * 24 * 14),
+                userName: loginSession.nickname,
+                email: loginSession.email,
+                onboardingCompleted: loginSession.onboardingCompleted,
+                onboardingResult: existingAccount?.onboardingResult,
+                brokerBalanceSnapshot: existingAccount?.brokerBalanceSnapshot
+            )
 
-        saveSession(newSession)
-        route = isNewUser ? .onboarding : .main
+            saveSession(newSession)
+            route = isNewUser ? .onboarding : .main
 
-        if shouldRefreshBrokerBalance(for: newSession) {
-            Task {
-                await refreshBrokerBalance(forSessionToken: newSession.token, showsUserFacingError: false)
+            if shouldRefreshBrokerBalance(for: newSession) {
+                Task {
+                    await refreshBrokerBalance(forSessionToken: newSession.token, showsUserFacingError: false)
+                }
             }
+        } catch {
+            authErrorMessage = authMessage(for: error, fallback: "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.")
         }
     }
 
     @discardableResult
-    func signUp(name: String, email: String, password: String, confirmPassword: String, agreedToTerms: Bool) -> Bool {
+    func signUp(name: String, email: String, password: String, confirmPassword: String, agreedToTerms: Bool) async -> Bool {
         resetAuthError()
 
         let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -123,22 +130,29 @@ final class AppFlowViewModel: ObservableObject {
             authErrorMessage = "이용약관 및 개인정보처리방침 동의가 필요합니다."
             return false
         }
-        guard registeredAccount(for: normalizedEmail) == nil else {
-            authErrorMessage = "이미 가입된 이메일입니다. 로그인하거나 다른 이메일을 사용해주세요."
+        do {
+            let registeredAccount = try await authRepository.register(
+                email: normalizedEmail,
+                nickname: trimmedName,
+                password: password
+            )
+
+            let newAccount = RegisteredAuthAccount(
+                userId: registeredAccount.userId,
+                userName: registeredAccount.nickname,
+                email: registeredAccount.email,
+                password: password,
+                onboardingCompleted: false,
+                onboardingResult: nil,
+                brokerBalanceSnapshot: nil
+            )
+
+            upsertAccount(newAccount)
+            return true
+        } catch {
+            authErrorMessage = authMessage(for: error, fallback: "회원가입에 실패했습니다. 입력 정보를 확인해주세요.")
             return false
         }
-
-        let newAccount = RegisteredAuthAccount(
-            userName: trimmedName,
-            email: normalizedEmail,
-            password: password,
-            onboardingCompleted: false,
-            onboardingResult: nil,
-            brokerBalanceSnapshot: nil
-        )
-
-        upsertAccount(newAccount)
-        return true
     }
 
     func login(with provider: SocialLoginProvider) {
@@ -251,6 +265,7 @@ final class AppFlowViewModel: ObservableObject {
             return
         }
 
+        account.userId = session.userId
         account.userName = session.userName
         account.onboardingCompleted = session.onboardingCompleted
         account.onboardingResult = session.onboardingResult
@@ -271,6 +286,7 @@ final class AppFlowViewModel: ObservableObject {
         }
 
         return AppUserSession(
+            userId: account.userId,
             token: UUID().uuidString,
             refreshToken: nil,
             expiresAt: Date().addingTimeInterval(60 * 60 * 24 * 14),
@@ -311,11 +327,46 @@ final class AppFlowViewModel: ObservableObject {
         switch error {
         case BrokerBalanceRepositoryError.unavailable:
             return "잔고조회 서버 주소가 설정되지 않았습니다."
+        case NetworkError.apiFailure(_, _, let message):
+            return message
         case NetworkError.httpStatus(_):
             return "잔고조회 서버가 요청을 처리하지 못했습니다."
         default:
             return "한국투자 시뮬레이션 잔고를 불러오지 못했습니다. 서버 실행 상태를 확인해주세요."
         }
+    }
+
+    private func authMessage(for error: Error, fallback: String) -> String {
+        if let networkError = error as? NetworkError {
+            switch networkError {
+            case .apiFailure(_, let code, let message):
+                switch code {
+                case "AUTH_USER_NOT_FOUND":
+                    return "존재하지 않는 사용자입니다."
+                case "AUTH_INVALID_PASSWORD":
+                    return "비밀번호가 올바르지 않습니다."
+                case "AUTH_EMAIL_DUPLICATED":
+                    return "이미 가입된 이메일입니다. 로그인하거나 다른 이메일을 사용해주세요."
+                case "AUTH_EMAIL_VERIFICATION_REQUIRED", "AUTH_EMAIL_NOT_VERIFIED":
+                    return "이메일 인증을 완료한 뒤 다시 시도해주세요."
+                default:
+                    return message
+                }
+            case .httpStatus(let statusCode):
+                return "서버 응답이 올바르지 않았어요. 상태 코드: \(statusCode)"
+            case .invalidURL:
+                return "백엔드 주소 설정이 올바르지 않아요."
+            default:
+                return fallback
+            }
+        }
+
+        if let localizedError = error as? LocalizedError,
+           let description = localizedError.errorDescription {
+            return description
+        }
+
+        return fallback
     }
 
     private static func debugLog(_ message: String) {

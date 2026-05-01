@@ -8,6 +8,7 @@ enum AppRoute: Equatable {
 }
 
 nonisolated struct AppUserSession: Codable, Sendable {
+    var userId: Int64?
     var token: String
     var refreshToken: String?
     var expiresAt: Date
@@ -23,6 +24,7 @@ nonisolated struct AppUserSession: Codable, Sendable {
 }
 
 nonisolated struct RegisteredAuthAccount: Codable, Sendable, Identifiable {
+    var userId: Int64?
     var userName: String
     var email: String
     var password: String

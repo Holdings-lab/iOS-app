@@ -14,7 +14,7 @@ struct AuthContainerView: View {
                         viewModel.resetAuthError()
                     },
                     onSignUp: { name, email, password, confirmPassword, agreed in
-                        viewModel.signUp(
+                        await viewModel.signUp(
                             name: name,
                             email: email,
                             password: password,
