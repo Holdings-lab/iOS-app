@@ -4,16 +4,17 @@ struct SignUpView: View {
     let errorMessage: String?
     let onBackToLogin: () -> Void
     let onResetError: () -> Void
-    let onSignUp: (_ name: String, _ email: String, _ password: String, _ confirmPassword: String, _ agreed: Bool) -> Bool
+    let onSignUp: (_ name: String, _ email: String, _ password: String, _ confirmPassword: String, _ agreed: Bool) async -> Bool
     let onCompleted: (String) -> Void
 
     @StateObject private var viewModel: SignUpFlowViewModel
+    @State private var isSubmitting = false
 
     init(
         errorMessage: String?,
         onBackToLogin: @escaping () -> Void,
         onResetError: @escaping () -> Void,
-        onSignUp: @escaping (_ name: String, _ email: String, _ password: String, _ confirmPassword: String, _ agreed: Bool) -> Bool,
+        onSignUp: @escaping (_ name: String, _ email: String, _ password: String, _ confirmPassword: String, _ agreed: Bool) async -> Bool,
         onCompleted: @escaping (String) -> Void
     ) {
         self.errorMessage = errorMessage
@@ -109,11 +110,18 @@ struct SignUpView: View {
     }
 
     private func finishSignup() {
-        onResetError()
-        let didSignUp = viewModel.finishSignup(using: onSignUp)
+        guard !isSubmitting else { return }
 
-        guard didSignUp else { return }
-        viewModel.moveToComplete()
+        onResetError()
+
+        Task {
+            isSubmitting = true
+            let didSignUp = await viewModel.finishSignup(using: onSignUp)
+            isSubmitting = false
+
+            guard didSignUp else { return }
+            viewModel.moveToComplete()
+        }
     }
 }
 

@@ -33,6 +33,7 @@ struct AuthMockData {
 
     static let defaultRegisteredAccounts: [RegisteredAuthAccount] = [
         RegisteredAuthAccount(
+            userId: 1,
             userName: "정책고수",
             email: "investor@policyfinance.app",
             password: "demo1234",
@@ -41,6 +42,7 @@ struct AuthMockData {
             brokerBalanceSnapshot: nil
         ),
         RegisteredAuthAccount(
+            userId: 2,
             userName: "온보딩테스트",
             email: "eom175@naver.com",
             password: "11111111",

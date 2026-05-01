@@ -1,13 +1,13 @@
 import Foundation
 
 struct MockEmailVerificationRepository: EmailVerificationRepositoryProtocol {
-    func requestVerificationCode(for email: String) throws {
+    func requestVerificationCode(for email: String) async throws {
         guard email.contains("@"), email.contains(".") else {
             throw EmailVerificationRepositoryError.invalidEmail
         }
     }
 
-    func verifyCode(_ code: String, for email: String) throws {
+    func verifyCode(_ code: String, for email: String) async throws {
         guard email.contains("@"), email.contains(".") else {
             throw EmailVerificationRepositoryError.invalidEmail
         }

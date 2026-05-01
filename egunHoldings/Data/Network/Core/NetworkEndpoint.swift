@@ -35,12 +35,24 @@ nonisolated struct Endpoint: Sendable {
         self.path = path
         self.queryItems = queryItems
         self.method = method
-        self.headers = headers
+        self.headers = Self.defaultHeaders(hasBody: body != nil).merging(headers) { _, explicit in
+            explicit
+        }
         self.body = body
         self.authorizationRequirement = authorizationRequirement
     }
 
     var queryParameters: [String: Any] {
         Dictionary(uniqueKeysWithValues: queryItems.map { ($0.name, $0.value ?? "") })
+    }
+
+    private static func defaultHeaders(hasBody: Bool) -> [String: String] {
+        var headers = ["Accept": "application/json"]
+
+        if hasBody {
+            headers["Content-Type"] = "application/json"
+        }
+
+        return headers
     }
 }

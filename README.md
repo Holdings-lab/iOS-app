@@ -59,8 +59,11 @@ egunHoldings는 정책 변화와 포트폴리오 노출도를 함께 보여주�
 
 | 키 | 설명 |
 | --- | --- |
-| `POLICY_BACKEND_BASE_URL` | 정책 뉴스와 맞춤 해설 API의 베이스 URL입니다. 없으면 목 뉴스 데이터로 폴백합니다. |
-| `TRADING_SERVER_BASE_URL` | KIS 샌드박스 잔고조회 중계 서버 URL입니다. Debug 빌드에서는 기본값으로 `http://localhost:8080`을 사용합니다. |
+| `BACKEND_BASE_URL` | `/api/**` 백엔드 베이스 URL입니다. 기본값은 `http://43.201.130.53:8080`입니다. |
+| `POLICY_BACKEND_BASE_URL` | 이전 설정명입니다. `BACKEND_BASE_URL`이 없을 때 호환용으로 읽습니다. |
+| `ML_SERVICE_BASE_URL` | `/ml/**` ML 서비스 베이스 URL입니다. 없으면 백엔드 host의 9000 포트를 사용합니다. |
+| `AUTH_REFRESH_URL` | 자동 토큰 리프레시 API가 준비되면 사용할 전체 URL입니다. 없으면 리프레시 인터셉터를 붙이지 않습니다. |
+| `TRADING_SERVER_BASE_URL` | KIS 샌드박스 잔고조회 중계 서버 URL입니다. 없으면 백엔드 베이스 URL을 사용합니다. |
 | `TRADING_KIS_ACCOUNT_NUMBER` | KIS 샌드박스 계좌번호입니다. |
 | `TRADING_KIS_PRODUCT_CODE` | KIS 상품 코드입니다. |
 
@@ -85,9 +88,9 @@ exports/               공유용 디자인/아이콘 산출물
 
 ## 현재 구현 상태
 
-- 인증은 실제 OAuth가 아닌 로컬 계정/세션 저장 기반입니다.
+- 이메일 인증, 회원가입, 로그인은 `/api/auth/**` 라이브 API를 사용하고 OAuth 버튼은 아직 탭 이벤트만 유지합니다.
 - 증권사 연결 UI는 스텁이며, KIS 샌드박스 잔고조회 서버 연동 지점이 준비되어 있습니다.
-- 정책 뉴스는 백엔드 URL이 없으면 목 데이터로 동작합니다.
+- 정책 피드는 `/api/content/policy-feed`를 우선 사용하되, 아직 미구현인 404 응답에서는 기존 목 데이터로 폴백합니다.
 - 테스트 타깃은 생성되어 있으나 실제 검증 케이스는 아직 확장 전입니다.
 
 ## 빌드 확인

@@ -46,7 +46,7 @@ final class SignUpFlowViewModel: ObservableObject {
     private let verificationRepository: EmailVerificationRepositoryProtocol
 
     init(verificationRepository: EmailVerificationRepositoryProtocol? = nil) {
-        self.verificationRepository = verificationRepository ?? MockEmailVerificationRepository()
+        self.verificationRepository = verificationRepository ?? LiveAuthRepository()
         consentDefinitions = [
             SignupConsentDefinition(
                 id: "service",
@@ -187,17 +187,24 @@ final class SignUpFlowViewModel: ObservableObject {
     func sendVerificationCode() {
         guard canSendVerificationCode else { return }
 
-        do {
-            try verificationRepository.requestVerificationCode(for: emailAddress)
-            hasSentCode = true
-            isEmailVerified = false
-            otpCode = ""
-            secondsRemaining = 180
-            emailFeedbackMessage = nil
-            emailFeedbackTone = nil
-        } catch {
-            emailFeedbackMessage = error.localizedDescription
-            emailFeedbackTone = .error
+        let email = emailAddress
+
+        Task {
+            do {
+                try await verificationRepository.requestVerificationCode(for: email)
+                hasSentCode = true
+                isEmailVerified = false
+                otpCode = ""
+                secondsRemaining = 180
+                emailFeedbackMessage = nil
+                emailFeedbackTone = nil
+            } catch {
+                emailFeedbackMessage = Self.makeErrorMessage(
+                    for: error,
+                    fallback: "인증번호를 보내지 못했어요. 잠시 후 다시 시도해주세요."
+                )
+                emailFeedbackTone = .error
+            }
         }
     }
 
@@ -221,16 +228,23 @@ final class SignUpFlowViewModel: ObservableObject {
             return
         }
 
-        do {
-            try verificationRepository.verifyCode(enteredCode, for: emailAddress)
-            isEmailVerified = true
-            emailFeedbackMessage = "인증이 완료됐어요."
-            emailFeedbackTone = .success
-        } catch {
-            otpShakeTrigger += 1
-            otpCode = ""
-            emailFeedbackMessage = error.localizedDescription
-            emailFeedbackTone = .error
+        let email = emailAddress
+
+        Task {
+            do {
+                try await verificationRepository.verifyCode(enteredCode, for: email)
+                isEmailVerified = true
+                emailFeedbackMessage = "인증이 완료됐어요."
+                emailFeedbackTone = .success
+            } catch {
+                otpShakeTrigger += 1
+                otpCode = ""
+                emailFeedbackMessage = Self.makeErrorMessage(
+                    for: error,
+                    fallback: "인증번호가 올바르지 않아요."
+                )
+                emailFeedbackTone = .error
+            }
         }
     }
 
@@ -248,14 +262,16 @@ final class SignUpFlowViewModel: ObservableObject {
         resetEmailVerificationState()
     }
 
-    func finishSignup(using action: (_ name: String, _ email: String, _ password: String, _ confirmPassword: String, _ agreed: Bool) -> Bool) -> Bool {
+    func finishSignup(
+        using action: (_ name: String, _ email: String, _ password: String, _ confirmPassword: String, _ agreed: Bool) async -> Bool
+    ) async -> Bool {
         let derivedName = emailLocalPart
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
 
         let safeName = derivedName.isEmpty ? "투자자" : derivedName
 
-        return action(
+        return await action(
             safeName,
             emailAddress,
             password,
@@ -277,5 +293,27 @@ final class SignUpFlowViewModel: ObservableObject {
         secondsRemaining = 180
         emailFeedbackMessage = nil
         emailFeedbackTone = nil
+    }
+
+    private static func makeErrorMessage(for error: Error, fallback: String) -> String {
+        if let networkError = error as? NetworkError {
+            switch networkError {
+            case .apiFailure(_, _, let message):
+                return message
+            case .httpStatus(let statusCode):
+                return "서버 응답이 올바르지 않았어요. 상태 코드: \(statusCode)"
+            case .invalidURL:
+                return "백엔드 주소 설정이 올바르지 않아요."
+            default:
+                return fallback
+            }
+        }
+
+        if let localizedError = error as? LocalizedError,
+           let description = localizedError.errorDescription {
+            return description
+        }
+
+        return fallback
     }
 }

@@ -30,8 +30,7 @@ nonisolated final class MoyaAPIClient: APIClient, @unchecked Sendable {
         }
 
         do {
-            let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
+            let decoder = NetworkJSONCoding.makeDecoder()
             return try decoder.decode(T.self, from: response.data)
         } catch {
             throw NetworkError.decodingFailed
@@ -41,6 +40,14 @@ nonisolated final class MoyaAPIClient: APIClient, @unchecked Sendable {
     private static func mapMoyaError(_ error: MoyaError) -> Error {
         switch error {
         case .statusCode(let response):
+            if let apiError = try? NetworkJSONCoding.makeDecoder().decode(APIResponse<EmptyAPIResult>.self, from: response.data) {
+                return NetworkError.apiFailure(
+                    statusCode: response.statusCode,
+                    code: apiError.code,
+                    message: apiError.message
+                )
+            }
+
             return NetworkError.httpStatus(response.statusCode)
         case .objectMapping, .encodableMapping:
             return NetworkError.decodingFailed

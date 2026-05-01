@@ -112,12 +112,11 @@ nonisolated struct KisSandboxBalanceRepository: BrokerBalanceRepositoryProtocol 
             productCode: productCode
         )
 
-        let response = try await apiClient.request(
+        let response = try await apiClient.requestResult(
             Endpoint(
                 baseURL: baseURL,
-                path: "/api/v1/brokers/kis/sandbox/balance",
+                path: "/api/brokers/kis/sandbox/balance",
                 method: .post,
-                headers: ["Content-Type": "application/json"],
                 body: requestBody
             ),
             as: BrokerBalanceResponseDTO.self

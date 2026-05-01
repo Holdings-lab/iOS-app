@@ -2,47 +2,49 @@ import Foundation
 
 nonisolated struct LivePolicyNewsRepository: PolicyNewsRepositoryProtocol {
     private let apiClient: APIClient
-    private let baseURL: URL
+    private let fallbackRepository: MockPolicyNewsRepository
 
-    init(apiClient: APIClient = APIClientFactory.makeDefault(), baseURL: URL) {
+    init(
+        apiClient: APIClient = APIClientFactory.makeDefault(),
+        fallbackRepository: MockPolicyNewsRepository = MockPolicyNewsRepository()
+    ) {
         self.apiClient = apiClient
-        self.baseURL = baseURL
+        self.fallbackRepository = fallbackRepository
     }
 
     func fetchNews() async throws -> [PolicyNewsItem] {
-        let response = try await apiClient.request(
-            Endpoint(
-                baseURL: baseURL,
-                path: "/v1/policy-news",
-                authorizationRequirement: .bearerToken
-            ),
-            as: PolicyNewsFeedResponseDTO.self
+        let requestBody = try NetworkJSONCoding.encodeJSON(
+            PolicyNewsFeedRequestDTO(cursor: nil, limit: 20)
         )
 
-        return response.items.map { $0.toDomain() }
+        do {
+            let response = try await apiClient.requestResult(
+                BackendEndpoint.policyFeed(body: requestBody),
+                as: PolicyNewsFeedResponseDTO.self
+            )
+
+            return response.toDomainItems()
+        } catch {
+            guard Self.shouldUseFallback(for: error) else {
+                throw error
+            }
+
+            return try await fallbackRepository.fetchNews()
+        }
     }
 
     func fetchInsight(for item: PolicyNewsItem, userAssetProfile: UserAssetProfile) async throws -> PolicyNewsInsight {
-        let requestBody = try JSONEncoder().encode(
-            PolicyNewsInsightRequestDTO(item: item, userAssetProfile: userAssetProfile)
-        )
-
-        let response = try await apiClient.request(
-            Endpoint(
-                baseURL: baseURL,
-                path: "/v1/policy-news/\(escapedPathComponent(item.id))/insight",
-                method: .post,
-                headers: ["Content-Type": "application/json"],
-                body: requestBody,
-                authorizationRequirement: .bearerToken
-            ),
-            as: PolicyNewsInsightResponseDTO.self
-        )
-
-        return response.toDomain()
+        try await fallbackRepository.fetchInsight(for: item, userAssetProfile: userAssetProfile)
     }
 
-    private func escapedPathComponent(_ value: String) -> String {
-        value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? value
+    private static func shouldUseFallback(for error: Error) -> Bool {
+        switch error {
+        case NetworkError.httpStatus(404), NetworkError.notImplemented:
+            return true
+        case NetworkError.apiFailure(let statusCode, _, _):
+            return statusCode == 404
+        default:
+            return false
+        }
     }
 }
