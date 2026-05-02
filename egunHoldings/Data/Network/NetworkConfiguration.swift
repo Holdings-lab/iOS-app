@@ -7,7 +7,7 @@ nonisolated enum NetworkConfiguration {
             return configuredURL
         }
 
-        return URL(string: "http://43.201.130.53:8080")!
+        return URL(string: "https://holdings-lab.me")!
     }
 
     static var mlServiceBaseURL: URL {
@@ -15,9 +15,7 @@ nonisolated enum NetworkConfiguration {
             return configuredURL
         }
 
-        var components = URLComponents(url: backendBaseURL, resolvingAgainstBaseURL: false)
-        components?.port = 9000
-        return components?.url ?? URL(string: "http://43.201.130.53:9000")!
+        return backendBaseURL
     }
 
     static var policyBackendBaseURL: URL? {
