@@ -102,3 +102,7 @@ xcodebuild -project egunHoldings.xcodeproj -scheme egunHoldings -destination 'pl
 ```
 
 현재 로컬 환경은 `xcode-select`가 Command Line Tools를 가리키고 있어 터미널 빌드 확인은 Xcode 경로 설정 후 실행해야 합니다.
+
+## 리뷰 자동화 확인
+
+CodeRabbit GitHub App 연결 확인을 위해 테스트 PR을 생성할 수 있습니다.
