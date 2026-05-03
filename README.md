@@ -57,9 +57,17 @@ egunHoldings는 정책 변화와 포트폴리오 노출도를 함께 보여주�
 
 앱은 `Info.plist` 또는 빌드 설정의 Info.plist 키를 통해 아래 값을 읽습니다.
 
+Debug 빌드는 `Config/Debug.xcconfig`를 통해 로컬 서버를 기본값으로 사용합니다.
+Release 빌드는 `Config/Release.xcconfig`를 통해 운영 서버를 사용합니다.
+
+| 빌드 | Backend | ML |
+| --- | --- | --- |
+| Debug | `http://localhost:8080` | `http://localhost:9000` |
+| Release | `https://holdings-lab.me` | `https://holdings-lab.me` |
+
 | 키 | 설명 |
 | --- | --- |
-| `BACKEND_BASE_URL` | `/api/**` 백엔드 베이스 URL입니다. 기본값은 `https://holdings-lab.me`입니다. |
+| `BACKEND_BASE_URL` | `/api/**` 백엔드 베이스 URL입니다. |
 | `POLICY_BACKEND_BASE_URL` | 이전 설정명입니다. `BACKEND_BASE_URL`이 없을 때 호환용으로 읽습니다. |
 | `ML_SERVICE_BASE_URL` | `/ml/**` ML 서비스 베이스 URL입니다. 없으면 백엔드 베이스 URL을 함께 사용합니다. |
 | `AUTH_REFRESH_URL` | 자동 토큰 리프레시 API가 준비되면 사용할 전체 URL입니다. 없으면 리프레시 인터셉터를 붙이지 않습니다. |
