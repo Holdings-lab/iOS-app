@@ -29,6 +29,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		2CF1B0012F87B00000E0F001 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		2CF1B0022F87B00000E0F001 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		2CF1B0032F87B00000E0F001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2CA789802F72D19D0079277E /* egunHoldings.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = egunHoldings.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2CA7898D2F72D19E0079277E /* egunHoldingsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = egunHoldingsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2CA789972F72D19E0079277E /* egunHoldingsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = egunHoldingsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -82,6 +85,7 @@
 		2CA789772F72D19D0079277E = {
 			isa = PBXGroup;
 			children = (
+				2CF1B0042F87B00000E0F001 /* Config */,
 				2CA789822F72D19D0079277E /* egunHoldings */,
 				2CA789902F72D19E0079277E /* egunHoldingsTests */,
 				2CA7899A2F72D19E0079277E /* egunHoldingsUITests */,
@@ -97,6 +101,16 @@
 				2CA789972F72D19E0079277E /* egunHoldingsUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		2CF1B0042F87B00000E0F001 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				2CF1B0012F87B00000E0F001 /* Debug.xcconfig */,
+				2CF1B0022F87B00000E0F001 /* Release.xcconfig */,
+				2CF1B0032F87B00000E0F001 /* Info.plist */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -405,6 +419,7 @@
 		};
 		2CA789A22F72D19E0079277E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2CF1B0012F87B00000E0F001 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -433,6 +448,7 @@
 		};
 		2CA789A32F72D19E0079277E /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 2CF1B0022F87B00000E0F001 /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
