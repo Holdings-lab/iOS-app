@@ -23,7 +23,7 @@ struct AuthMockData {
         institutions.filter { $0.category == .securities }
     }
 
-    static let defaultExistingUserOnboarding = OnboardingResult(
+    nonisolated static let defaultExistingUserOnboarding = OnboardingResult(
         connectedInstitutionIDs: [AccountInstitution.koreaInvestmentID],
         selectedSectorIDs: [InterestSector.semiconductor.rawValue, InterestSector.energy.rawValue],
         investmentStyleID: InvestmentStyleOption.balanced.rawValue,
@@ -31,7 +31,7 @@ struct AuthMockData {
         primaryAssetSymbol: "QQQ"
     )
 
-    static let defaultRegisteredAccounts: [RegisteredAuthAccount] = [
+    nonisolated static let defaultRegisteredAccounts: [RegisteredAuthAccount] = [
         RegisteredAuthAccount(
             userId: 1,
             userName: "정책고수",
