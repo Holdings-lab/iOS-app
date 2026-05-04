@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct AuthContainerView: View {
-    @ObservedObject var viewModel: AppFlowViewModel
+    let onLoginSuccess: (AppUserSession) -> Void
+
+    @StateObject private var viewModel = AuthViewModel()
     @State private var showsSignUp = false
 
     var body: some View {
@@ -30,7 +32,11 @@ struct AuthContainerView: View {
                 LoginView(
                     errorMessage: viewModel.authErrorMessage,
                     onLogin: { email, password in
-                        viewModel.login(email: email, password: password)
+                        Task {
+                            if let session = await viewModel.login(email: email, password: password) {
+                                onLoginSuccess(session)
+                            }
+                        }
                     },
                     onSocialLogin: { provider in
                         viewModel.login(with: provider)
@@ -55,5 +61,5 @@ struct AuthContainerView: View {
 }
 
 #Preview {
-    AuthContainerView(viewModel: AppFlowViewModel())
+    AuthContainerView(onLoginSuccess: { _ in })
 }

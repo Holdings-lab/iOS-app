@@ -2,34 +2,37 @@ import SwiftUI
 
 @MainActor
 struct AppRootView: View {
-    @StateObject private var flowViewModel: AppFlowViewModel
+    @StateObject private var router: AppRouter
     private let startFromLogin: Bool
 
     init(startFromLogin: Bool = false) {
-        _flowViewModel = StateObject(wrappedValue: AppFlowViewModel())
+        _router = StateObject(wrappedValue: AppRouter())
         self.startFromLogin = startFromLogin
     }
 
     var body: some View {
         Group {
-            switch flowViewModel.route {
+            switch router.route {
             case .loading:
                 loadingView
             case .auth:
-                AuthContainerView(viewModel: flowViewModel)
+                AuthContainerView(onLoginSuccess: router.handleLoginSuccess)
             case .onboarding:
-                OnboardingFlowView(viewModel: flowViewModel)
+                OnboardingFlowView(
+                    onLogout: router.logout,
+                    onComplete: router.completeOnboarding
+                )
             case .main:
                 RootTabView(
-                    userAssetProfile: flowViewModel.userAssetProfile,
-                    portfolioSnapshot: flowViewModel.portfolioSnapshot
+                    userAssetProfile: router.userAssetProfile,
+                    portfolioSnapshot: router.portfolioSnapshot
                 )
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: flowViewModel.route)
+        .animation(.easeInOut(duration: 0.2), value: router.route)
         .task {
             guard startFromLogin else { return }
-            flowViewModel.logout()
+            router.logout()
         }
     }
 
