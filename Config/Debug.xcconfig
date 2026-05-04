@@ -1,7 +1,7 @@
 // Debug defaults for local server testing from the iOS simulator.
 // Override these in Xcode build settings or a local untracked xcconfig if needed.
 
-BACKEND_BASE_URL = http:/$()/localhost:8080
-ML_SERVICE_BASE_URL = http:/$()/localhost:9000
-TRADING_SERVER_BASE_URL = http:/$()/localhost:8080
+BACKEND_BASE_URL = https:/$()/holdings-lab.me
+ML_SERVICE_BASE_URL = https:/$()/holdings-lab.me
+TRADING_SERVER_BASE_URL = https:/$()/holdings-lab.me
 AUTH_REFRESH_URL =

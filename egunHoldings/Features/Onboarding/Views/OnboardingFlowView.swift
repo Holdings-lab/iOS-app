@@ -8,7 +8,9 @@ struct OnboardingFlowView: View {
         case completion
     }
 
-    @ObservedObject var viewModel: AppFlowViewModel
+    let onLogout: () -> Void
+    let onComplete: (OnboardingResult) -> Void
+
     @StateObject private var onboardingViewModel = OnboardingFlowViewModel()
     @State private var path: [OnboardingRoute] = []
 
@@ -17,7 +19,7 @@ struct OnboardingFlowView: View {
             OnboardingPage1View(
                 viewModel: onboardingViewModel,
                 onNext: { path.append(.investmentStyle) },
-                onBack: viewModel.logout
+                onBack: onLogout
             )
             .navigationDestination(for: OnboardingRoute.self) { route in
                 switch route {
@@ -42,7 +44,7 @@ struct OnboardingFlowView: View {
                     OnboardingPage4View(
                         viewModel: onboardingViewModel,
                         onStart: {
-                            viewModel.completeOnboarding(with: onboardingViewModel.makeOnboardingResult())
+                            onComplete(onboardingViewModel.makeOnboardingResult())
                         }
                     )
                 }
@@ -58,5 +60,5 @@ struct OnboardingFlowView: View {
 }
 
 #Preview {
-    OnboardingFlowView(viewModel: AppFlowViewModel())
+    OnboardingFlowView(onLogout: {}, onComplete: { _ in })
 }

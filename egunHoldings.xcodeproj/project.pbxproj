@@ -29,12 +29,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		2CF1B0012F87B00000E0F001 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
-		2CF1B0022F87B00000E0F001 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
-		2CF1B0032F87B00000E0F001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2CA789802F72D19D0079277E /* egunHoldings.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = egunHoldings.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2CA7898D2F72D19E0079277E /* egunHoldingsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = egunHoldingsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2CA789972F72D19E0079277E /* egunHoldingsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = egunHoldingsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2CF1B0012F87B00000E0F001 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		2CF1B0022F87B00000E0F001 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		2CF1B0032F87B00000E0F001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
