@@ -2,7 +2,6 @@ import SwiftUI
 
 enum RootTab: Hashable {
     case home
-    case checkpoint
     case asset
     case newsroom
 }
@@ -35,14 +34,6 @@ struct RootTabView: View {
             .tag(RootTab.home)
             .tabItem {
                 Label("오늘", systemImage: "calendar")
-            }
-
-            NavigationStack {
-                CheckpointView()
-            }
-            .tag(RootTab.checkpoint)
-            .tabItem {
-                Label("체크포인트", systemImage: "checkmark.square.fill")
             }
 
             NavigationStack {
