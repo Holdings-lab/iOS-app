@@ -4,7 +4,7 @@ struct SignalView: View {
     @ObservedObject var viewModel: SignalViewModel
 
     var body: some View {
-        PFContentScrollView(spacing: 20) {
+        PFContentScrollView(spacing: 20, scrollsToTopOnAppear: true) {
             SignalHeaderView()
 
             ActionLaneBoardSection(actionOptions: viewModel.decisionDashboard.actionOptions)

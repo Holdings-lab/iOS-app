@@ -14,15 +14,16 @@ struct HomeView: View {
         ZStack {
             homeBackground
 
-            PFContentScrollView(spacing: 24, topPadding: 14) {
+            PFContentScrollView(spacing: 24, topPadding: 14, scrollsToTopOnAppear: true) {
                 HomeHeaderView(profile: viewModel.profile)
                     .padding(.bottom, 2)
 
                 if let policy = viewModel.briefingPolicy {
                     HomeBriefingCard(
                         policy: policy,
-                        exposureText: viewModel.homeBriefingExposure(for: policy),
                         actionText: viewModel.homeBriefingAction(for: policy),
+                        changeText: viewModel.snapshot.changePercentText,
+                        signalCountText: "\(viewModel.activeSignalCount)건",
                         onTap: {
                             quickSheetPolicyID = policy.id
                         }

@@ -87,6 +87,7 @@ struct PFContentScrollView<Content: View>: View {
     private let horizontalPadding: CGFloat
     private let topPadding: CGFloat
     private let bottomPadding: CGFloat
+    private let scrollsToTopOnAppear: Bool
     private let content: Content
 
     init(
@@ -95,6 +96,7 @@ struct PFContentScrollView<Content: View>: View {
         horizontalPadding: CGFloat = PFSpacing.screenHorizontal,
         topPadding: CGFloat = 8,
         bottomPadding: CGFloat = 0,
+        scrollsToTopOnAppear: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.alignment = alignment
@@ -102,17 +104,26 @@ struct PFContentScrollView<Content: View>: View {
         self.horizontalPadding = horizontalPadding
         self.topPadding = topPadding
         self.bottomPadding = bottomPadding
+        self.scrollsToTopOnAppear = scrollsToTopOnAppear
         self.content = content()
     }
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: alignment, spacing: spacing) {
-                content
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: alignment, spacing: spacing) {
+                    Color.clear.frame(height: 0).id("pfScrollTop")
+                    content
+                }
+                .padding(.horizontal, horizontalPadding)
+                .padding(.top, topPadding)
+                .padding(.bottom, bottomPadding)
             }
-            .padding(.horizontal, horizontalPadding)
-            .padding(.top, topPadding)
-            .padding(.bottom, bottomPadding)
+            .onAppear {
+                if scrollsToTopOnAppear {
+                    proxy.scrollTo("pfScrollTop", anchor: .top)
+                }
+            }
         }
     }
 }
