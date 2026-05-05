@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension Color {
-    init(hex: String, alpha: Double = 1) {
+    nonisolated init(hex: String, alpha: Double = 1) {
         let sanitized = hex
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "#", with: "")

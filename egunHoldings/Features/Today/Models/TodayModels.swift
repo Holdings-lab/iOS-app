@@ -182,6 +182,32 @@ struct TodayPortfolioSummary {
     let riskLevel: String
 }
 
+enum TodayLoadState: Equatable {
+    case idle
+    case loading
+    case loaded
+    case usingFallback(message: String?)
+}
+
+struct TodayDashboard {
+    let userAssetProfile: UserAssetProfile
+    let portfolioSnapshot: PortfolioSnapshot
+    let judgment: TodayJudgment
+    let portfolio: TodayPortfolioSummary
+    let policyEvents: [TodayPolicyEvent]
+    let holdings: [TodayHolding]
+    let noActionReasons: [String]
+    let noActionWatchCondition: String
+    let primaryCheckpointText: String
+    let dataUpdatedAt: String
+    let dataSources: [String]
+    let aiSummaryStatus: String
+
+    var topPolicy: TodayPolicyEvent? {
+        policyEvents.max { $0.myExposure < $1.myExposure }
+    }
+}
+
 struct TodayDecisionLane: Identifiable {
     let id: String
     let type: JudgmentType

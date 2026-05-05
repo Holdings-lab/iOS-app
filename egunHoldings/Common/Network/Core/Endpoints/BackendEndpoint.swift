@@ -77,6 +77,10 @@ nonisolated enum BackendEndpoint {
         Endpoint(baseURL: baseURL, path: "/api/home", queryItems: userQuery(userId), authorizationRequirement: .bearerToken)
     }
 
+    static func todayDashboard(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/home", queryItems: userQuery(userId), authorizationRequirement: .bearerToken)
+    }
+
     static func homeBriefing(userId: Int64) -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/home/briefing", queryItems: userQuery(userId), authorizationRequirement: .bearerToken)
     }

@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum PSColor {
+nonisolated enum PSColor {
     // Background
     static let bgDeepNavy  = Color(hex: "0A0E27")
     static let bgCard      = Color(hex: "121838")

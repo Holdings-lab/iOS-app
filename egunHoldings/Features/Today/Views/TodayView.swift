@@ -6,12 +6,14 @@ struct TodayView: View {
     @StateObject private var viewModel: TodayViewModel
 
     init(
+        userId: Int64? = nil,
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         viewModel: TodayViewModel? = nil
     ) {
         _viewModel = StateObject(
             wrappedValue: viewModel ?? TodayViewModel(
+                userId: userId,
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot
             )
@@ -56,8 +58,14 @@ struct TodayView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 110)
             }
+            .refreshable {
+                await viewModel.refresh()
+            }
         }
         .preferredColorScheme(.dark)
+        .task {
+            await viewModel.load()
+        }
         .sheet(item: $viewModel.activeSheet) { sheet in
             sheetContent(for: sheet)
                 .presentationBackground(.clear)

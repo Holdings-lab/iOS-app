@@ -448,12 +448,12 @@ struct TodayMockData {
         )
     ]
 
-    static let noActionReasons: [String] = [
+    nonisolated static let noActionReasons: [String] = [
         "금리 인하는 이미 78% 반영 — 추가 랠리 여지 제한",
         "반도체 보조금 발표 전 — 내일 확인 후 판단",
         "달러 비중 15%로 방어력 적정 — 변경 불필요"
     ]
 
-    static let noActionWatchCondition =
+    nonisolated static let noActionWatchCondition =
         "FOMC 매파 발언 또는 반도체 보조금 미달 시"
 }

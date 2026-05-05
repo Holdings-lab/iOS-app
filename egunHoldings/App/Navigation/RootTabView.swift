@@ -8,15 +8,18 @@ enum RootTab: Hashable {
 }
 
 struct RootTabView: View {
+    let userId: Int64?
     let userAssetProfile: UserAssetProfile
     let portfolioSnapshot: PortfolioSnapshot
     @State private var selectedTab: RootTab = .home
     @StateObject private var signalViewModel = SignalViewModel()
 
     init(
+        userId: Int64? = nil,
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot
     ) {
+        self.userId = userId
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
     }
@@ -24,6 +27,7 @@ struct RootTabView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             TodayView(
+                userId: userId,
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot
             )
