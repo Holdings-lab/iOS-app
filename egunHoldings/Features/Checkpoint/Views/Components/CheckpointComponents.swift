@@ -23,7 +23,6 @@ struct WeeklyPolicyAccordionSection: View {
     let isExpanded: (CheckpointPolicyEvent) -> Bool
     let onToggle: (CheckpointPolicyEvent) -> Void
     let onCheckpointTap: (CheckpointItem) -> Void
-    let decisionsFor: (Int) -> [CheckpointDecisionItem]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -35,8 +34,7 @@ struct WeeklyPolicyAccordionSection: View {
                         policy: policy,
                         isExpanded: isExpanded(policy),
                         onToggle: { onToggle(policy) },
-                        onCheckpointTap: onCheckpointTap,
-                        decisions: decisionsFor(policy.id)
+                        onCheckpointTap: onCheckpointTap
                     )
                 }
             }
@@ -49,10 +47,13 @@ private struct PolicyScheduleCard: View {
     let isExpanded: Bool
     let onToggle: () -> Void
     let onCheckpointTap: (CheckpointItem) -> Void
-    let decisions: [CheckpointDecisionItem]
 
     var body: some View {
-        Button(action: onToggle) {
+        Button {
+            withAnimation(.smooth(duration: 0.22)) {
+                onToggle()
+            }
+        } label: {
             PSGlassCard(variant: policy.isToday ? .primary : .secondary, padding: 14) {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(spacing: 12) {
@@ -94,6 +95,7 @@ private struct PolicyScheduleCard: View {
                 }
             }
         }
+        .contentShape(RoundedRectangle(cornerRadius: PSRadius.card, style: .continuous))
         .buttonStyle(PSPressStyle())
     }
 
@@ -133,23 +135,6 @@ private struct PolicyScheduleCard: View {
                 }
             }
 
-            if !decisions.isEmpty {
-                VStack(alignment: .leading, spacing: 9) {
-                    detailLabel("지금 어떻게 할까")
-
-                    ForEach(decisions) { item in
-                        HStack(alignment: .top, spacing: 8) {
-                            JudgmentTypeBadge(type: item.type)
-
-                            Text(item.title)
-                                .font(PSFont.body(12))
-                                .foregroundStyle(Color.white.opacity(0.65))
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                }
-            }
         }
         .padding(14)
         .padding(.leading, 16)

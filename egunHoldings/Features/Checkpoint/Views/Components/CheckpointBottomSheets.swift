@@ -7,6 +7,7 @@ struct CheckpointDetailSheet: View {
     let onToggleAlert: () -> Void
 
     @State private var alertOn: Bool
+    @State private var isDecisionsExpanded = false
 
     init(
         checkpoint: CheckpointItem,
@@ -107,30 +108,61 @@ struct CheckpointDetailSheet: View {
     }
 
     private var relatedDecisionsCard: some View {
-        PSGlassCard(variant: .secondary, padding: 15) {
-            VStack(alignment: .leading, spacing: 12) {
-                cardLabel("이번 정책에 대한 추천")
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.smooth(duration: 0.22)) {
+                    isDecisionsExpanded.toggle()
+                }
+            } label: {
+                PSGlassCard(variant: .secondary, padding: 14) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "lightbulb")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(PSColor.electricBlue.opacity(0.75))
 
-                VStack(alignment: .leading, spacing: 12) {
-                    ForEach(decisions) { item in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack(spacing: 7) {
-                                JudgmentTypeBadge(type: item.type)
+                        Text("이번 정책에 대한 추천")
+                            .font(PSFont.semibold(13))
+                            .foregroundStyle(PSColor.textPrimary)
 
-                                Text(item.title)
-                                    .font(PSFont.semibold(12))
-                                    .foregroundStyle(PSColor.textPrimary)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
+                        Spacer()
+
+                        Text("\(decisions.count)개")
+                            .font(PSFont.caption(11))
+                            .foregroundStyle(Color.white.opacity(0.40))
+
+                        Image(systemName: isDecisionsExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.45))
+                    }
+                }
+            }
+            .contentShape(RoundedRectangle(cornerRadius: PSRadius.card, style: .continuous))
+            .buttonStyle(PSPressStyle())
+
+            if isDecisionsExpanded {
+                PSGlassCard(variant: .secondary, padding: 15) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(decisions) { item in
+                            VStack(alignment: .leading, spacing: 6) {
+                                HStack(spacing: 7) {
+                                    JudgmentTypeBadge(type: item.type)
+
+                                    Text(item.title)
+                                        .font(PSFont.semibold(12))
+                                        .foregroundStyle(PSColor.textPrimary)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+
+                                Text(item.reason)
+                                    .font(PSFont.caption(11))
+                                    .foregroundStyle(Color.white.opacity(0.60))
                                     .fixedSize(horizontal: false, vertical: true)
                             }
-
-                            Text(item.reason)
-                                .font(PSFont.caption(11))
-                                .foregroundStyle(Color.white.opacity(0.60))
-                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
     }

@@ -19,8 +19,7 @@ struct CheckpointView: View {
                         policyEvents: viewModel.policyEvents,
                         isExpanded: viewModel.isExpanded,
                         onToggle: viewModel.togglePolicy,
-                        onCheckpointTap: viewModel.presentDetail,
-                        decisionsFor: viewModel.decisions(for:)
+                        onCheckpointTap: viewModel.presentDetail
                     )
 
                     SavedCheckpointsSection(
