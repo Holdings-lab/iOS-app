@@ -105,6 +105,6 @@ struct NewsroomView: View {
 
 #Preview {
     NavigationStack {
-        NewsroomView(userAssetProfile: HomeMockData.userAssetProfile)
+        NewsroomView(userAssetProfile: AppMockData.userAssetProfile)
     }
 }

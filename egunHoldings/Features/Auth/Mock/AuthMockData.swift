@@ -54,7 +54,7 @@ struct AuthMockData {
 
     static func makeAssetProfile(from onboarding: OnboardingResult?) -> UserAssetProfile {
         guard let onboarding else {
-            return HomeMockData.userAssetProfile
+            return AppMockData.userAssetProfile
         }
 
         if !onboarding.selectedAssetSymbols.isEmpty {
@@ -120,7 +120,7 @@ struct AuthMockData {
         let selectedAssets = symbols.compactMap(ETFAsset.asset(for:))
 
         guard !selectedAssets.isEmpty else {
-            return HomeMockData.userAssetProfile
+            return AppMockData.userAssetProfile
         }
 
         let etfBudget = 65

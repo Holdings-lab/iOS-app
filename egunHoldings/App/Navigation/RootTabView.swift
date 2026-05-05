@@ -8,33 +8,33 @@ enum RootTab: Hashable {
 }
 
 struct RootTabView: View {
+    let userId: Int64?
     let userAssetProfile: UserAssetProfile
     let portfolioSnapshot: PortfolioSnapshot
     @State private var selectedTab: RootTab = .home
     @StateObject private var signalViewModel = SignalViewModel()
 
     init(
-        userAssetProfile: UserAssetProfile = HomeMockData.userAssetProfile,
-        portfolioSnapshot: PortfolioSnapshot = HomeMockData.snapshot
+        userId: Int64? = nil,
+        userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
+        portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot
     ) {
+        self.userId = userId
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
     }
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            NavigationStack {
-                HomeView(
-                    viewModel: HomeViewModel(
-                        userAssetProfile: userAssetProfile,
-                        portfolioSnapshot: portfolioSnapshot
-                    )
-                )
-            }
+            TodayView(
+                userId: userId,
+                userAssetProfile: userAssetProfile,
+                portfolioSnapshot: portfolioSnapshot
+            )
             .id(portfolioSnapshot)
             .tag(RootTab.home)
             .tabItem {
-                Label("홈", systemImage: "house.fill")
+                Label("오늘", systemImage: "calendar")
             }
 
             NavigationStack {
@@ -42,7 +42,7 @@ struct RootTabView: View {
             }
             .tag(RootTab.signal)
             .tabItem {
-                Label("시그널", systemImage: "antenna.radiowaves.left.and.right")
+                Label("체크포인트", systemImage: "checkmark.square.fill")
             }
 
             NavigationStack {
@@ -58,7 +58,7 @@ struct RootTabView: View {
             }
             .tag(RootTab.newsroom)
             .tabItem {
-                Label("뉴스룸", systemImage: "newspaper.fill")
+                Label("뉴스", systemImage: "newspaper.fill")
             }
         }
         .tint(Color.electricBlue)

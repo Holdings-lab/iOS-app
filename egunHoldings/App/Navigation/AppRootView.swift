@@ -24,6 +24,7 @@ struct AppRootView: View {
                 )
             case .main:
                 RootTabView(
+                    userId: router.session?.userId,
                     userAssetProfile: router.userAssetProfile,
                     portfolioSnapshot: router.portfolioSnapshot
                 )

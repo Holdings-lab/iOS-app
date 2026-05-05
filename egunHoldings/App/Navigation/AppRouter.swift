@@ -4,8 +4,8 @@ import Foundation
 @MainActor
 final class AppRouter: ObservableObject {
     @Published private(set) var route: AppRoute = .loading
-    @Published private(set) var userAssetProfile: UserAssetProfile = HomeMockData.userAssetProfile
-    @Published private(set) var portfolioSnapshot: PortfolioSnapshot = HomeMockData.snapshot
+    @Published private(set) var userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile
+    @Published private(set) var portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot
     @Published private(set) var userName: String = "투자자"
 
     private let store: AuthSessionStoring
@@ -64,7 +64,7 @@ final class AppRouter: ObservableObject {
     func completeOnboarding(with result: OnboardingResult) {
         guard var currentSession = session ?? makeFallbackSession(for: result) else {
             userAssetProfile = AuthMockData.makeAssetProfile(from: result)
-            portfolioSnapshot = HomeMockData.snapshot
+            portfolioSnapshot = AppMockData.portfolioSnapshot
             route = .main
             return
         }
@@ -99,7 +99,7 @@ final class AppRouter: ObservableObject {
             portfolioSnapshot = brokerBalanceSnapshot.toPortfolioSnapshot()
         } else {
             userAssetProfile = AuthMockData.makeAssetProfile(from: session.onboardingResult)
-            portfolioSnapshot = HomeMockData.snapshot
+            portfolioSnapshot = AppMockData.portfolioSnapshot
         }
     }
 
@@ -114,8 +114,8 @@ final class AppRouter: ObservableObject {
     private func clearSessionAndMoveToAuth() {
         session = nil
         lastAuthenticatedEmail = nil
-        userAssetProfile = HomeMockData.userAssetProfile
-        portfolioSnapshot = HomeMockData.snapshot
+        userAssetProfile = AppMockData.userAssetProfile
+        portfolioSnapshot = AppMockData.portfolioSnapshot
         userName = "투자자"
         store.clear()
         route = .auth
