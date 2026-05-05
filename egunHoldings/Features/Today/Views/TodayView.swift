@@ -6,8 +6,8 @@ struct TodayView: View {
     @StateObject private var viewModel: TodayViewModel
 
     init(
-        userAssetProfile: UserAssetProfile = HomeMockData.userAssetProfile,
-        portfolioSnapshot: PortfolioSnapshot = HomeMockData.snapshot,
+        userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
+        portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         viewModel: TodayViewModel? = nil
     ) {
         _viewModel = StateObject(

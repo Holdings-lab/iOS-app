@@ -14,8 +14,8 @@ struct RootTabView: View {
     @StateObject private var signalViewModel = SignalViewModel()
 
     init(
-        userAssetProfile: UserAssetProfile = HomeMockData.userAssetProfile,
-        portfolioSnapshot: PortfolioSnapshot = HomeMockData.snapshot
+        userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
+        portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot
     ) {
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
