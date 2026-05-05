@@ -40,7 +40,7 @@ struct NewsroomView: View {
     }
 
     var body: some View {
-        PFContentScrollView(spacing: 20) {
+        PFContentScrollView(spacing: 20, scrollsToTopOnAppear: true) {
             NewsroomHeaderView(
                 latestUpdateText: displayedItems.first?.relativePublishedText ?? "방금",
                 digestMode: $digestMode
@@ -50,6 +50,8 @@ struct NewsroomView: View {
                 NewsroomLoadingCard()
             } else if let errorMessage = viewModel.feedErrorMessage, viewModel.news.isEmpty {
                 NewsroomErrorCard(message: errorMessage, onRetry: viewModel.loadNews)
+            } else if displayedItems.isEmpty {
+                NewsroomEmptyCard()
             } else {
                 if let spotlightItem {
                     NewsroomSpotlightCard(item: spotlightItem) {

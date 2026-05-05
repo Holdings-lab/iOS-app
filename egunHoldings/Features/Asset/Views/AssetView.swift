@@ -12,6 +12,7 @@ struct AssetView: View {
 
     @State private var selectedSegment: AssetSegment = .overview
     @State private var showBrokerConnectionSheet = false
+    @State private var showAllHoldingsSheet = false
 
     private let exposureDashboard = AssetExposureMockData.dashboard
 
@@ -38,6 +39,13 @@ struct AssetView: View {
             }
         }
         .policyFinanceDarkTabChrome()
+        .sheet(isPresented: $showAllHoldingsSheet) {
+            AllHoldingsSheet(rows: exposureDashboard.holdingRows)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(.clear)
+                .presentationCornerRadius(28)
+        }
         .sheet(isPresented: $showBrokerConnectionSheet) {
             BrokerConnectionStubView()
                 .presentationDetents([.medium])
@@ -47,7 +55,7 @@ struct AssetView: View {
     }
 
     private var overviewContent: some View {
-        PFContentScrollView(spacing: 20) {
+        PFContentScrollView(spacing: 20, scrollsToTopOnAppear: true) {
             AssetHeaderView(
                 title: "정책 노출도 대시보드",
                 subtitle: "보유 종목 목록보다 먼저, 지금 포트폴리오가 무엇에 베팅 중인지 보여줘요"
@@ -63,12 +71,36 @@ struct AssetView: View {
                 hiddenBets: exposureDashboard.hiddenBets
             )
 
+            Button {
+                showAllHoldingsSheet = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.electricBlue)
+                    Text("전체 보유 종목")
+                        .font(.pretendard(14, weight: .semibold))
+                        .foregroundStyle(Color.electricBlue)
+                    Spacer()
+                    Text("\(exposureDashboard.holdingRows.count)개")
+                        .font(.pretendard(13, weight: .medium))
+                        .foregroundStyle(Color.mutedForeground)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.electricBlue.opacity(0.7))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 13)
+                .glassCard()
+            }
+            .buttonStyle(.plain)
+
             brokerConnectionCard
         }
     }
 
     private var rebalanceContent: some View {
-        PFContentScrollView(spacing: 20) {
+        PFContentScrollView(spacing: 20, scrollsToTopOnAppear: true) {
             AssetHeaderView(
                 title: "시나리오 리밸런싱 엔진",
                 subtitle: "노트레이드 존과 정책 시나리오를 먼저 보고, 그 다음 슬라이더를 조절하세요"
@@ -181,6 +213,79 @@ private struct AssetHeaderView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct AllHoldingsSheet: View {
+    let rows: [HoldingPolicyExposureRow]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            Color(hex: "060B24").ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                HStack {
+                    Text("전체 보유 종목")
+                        .font(.pretendard(20, weight: .bold))
+                        .foregroundStyle(Color.foreground)
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(Color.mutedForeground.opacity(0.6))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
+                .padding(.bottom, 16)
+
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 12) {
+                        ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                            HStack(alignment: .center, spacing: 14) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.electricBlue.opacity(0.12))
+                                        .frame(width: 36, height: 36)
+                                    Text("\(index + 1)")
+                                        .font(.pretendard(13, weight: .bold))
+                                        .foregroundStyle(Color.electricBlue)
+                                }
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(row.holdingName)
+                                        .font(.pretendard(14, weight: .semibold))
+                                        .foregroundStyle(Color.foreground)
+                                    Text(row.note)
+                                        .font(.pretendard(11, weight: .medium))
+                                        .foregroundStyle(Color.mutedForeground)
+                                        .lineLimit(2)
+                                }
+
+                                Spacer()
+
+                                Text("\(row.holdingWeightPercent)%")
+                                    .font(.pretendard(15, weight: .bold))
+                                    .foregroundStyle(Color.electricBlue)
+                                    .monospacedDigit()
+                            }
+                            .padding(14)
+                            .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.white.opacity(0.07), lineWidth: 1)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
+                }
+            }
+        }
     }
 }
 

@@ -184,8 +184,9 @@ struct ActionKeywordPill: View {
 
 struct HomeBriefingCard: View {
     let policy: HomeImpactPolicy
-    let exposureText: String
     let actionText: String
+    let changeText: String
+    let signalCountText: String
     let onTap: () -> Void
 
     var body: some View {
@@ -194,30 +195,60 @@ struct HomeBriefingCard: View {
                 variant: .primary,
                 padding: EdgeInsets(top: 18, leading: 18, bottom: 16, trailing: 18)
             ) {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 14) {
                     Text("오늘 가장 중요한 변화")
                         .font(.pretendard(11, weight: .semibold))
                         .foregroundStyle(Color.electricBlue.opacity(0.84))
                         .tracking(0.4)
 
+                    HStack(spacing: 0) {
+                        BriefingStatCell(
+                            value: "\(policy.meta.exposurePercent)%",
+                            label: "내 자산 노출",
+                            color: .electricBlue
+                        )
+                        Rectangle()
+                            .fill(Color.white.opacity(0.08))
+                            .frame(width: 1, height: 28)
+                        BriefingStatCell(
+                            value: changeText,
+                            label: "포트폴리오",
+                            color: changeText.hasPrefix("-") ? .policyCoral : .emerald
+                        )
+                        Rectangle()
+                            .fill(Color.white.opacity(0.08))
+                            .frame(width: 1, height: 28)
+                        BriefingStatCell(
+                            value: signalCountText,
+                            label: "시그널",
+                            color: .policyPurple
+                        )
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
                     Text(policy.title)
-                        .font(.pretendard(20, weight: .bold))
+                        .font(.pretendard(21, weight: .bold))
                         .foregroundStyle(Color.foreground)
                         .tracking(-0.3)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    HStack(alignment: .top, spacing: 24) {
-                        HomeBriefingMetaBlock(
-                            label: "내 자산 노출",
-                            value: exposureText,
-                            valueColor: Color.foreground.opacity(0.92)
-                        )
+                    HStack(spacing: 8) {
+                        Text("권장 행동")
+                            .font(.pretendard(11, weight: .medium))
+                            .foregroundStyle(Color.mutedForeground.opacity(0.78))
 
-                        HomeBriefingMetaBlock(
-                            label: "권장 행동",
-                            value: actionText,
-                            valueColor: Color.policyAmber
-                        )
+                        Text(actionText)
+                            .font(.pretendard(12, weight: .semibold))
+                            .foregroundStyle(policy.judgment.action.color)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(policy.judgment.action.color.opacity(0.1), in: Capsule())
+                            .overlay {
+                                Capsule()
+                                    .stroke(policy.judgment.action.color.opacity(0.22), lineWidth: 1)
+                            }
                     }
                 }
             }
@@ -227,23 +258,22 @@ struct HomeBriefingCard: View {
     }
 }
 
-private struct HomeBriefingMetaBlock: View {
-    let label: String
+private struct BriefingStatCell: View {
     let value: String
-    let valueColor: Color
+    let label: String
+    let color: Color
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.pretendard(11, weight: .medium))
-                .foregroundStyle(Color.mutedForeground.opacity(0.78))
-
+        VStack(spacing: 4) {
             Text(value)
-                .font(.pretendard(13, weight: .semibold))
-                .foregroundStyle(valueColor)
-                .fixedSize(horizontal: false, vertical: true)
+                .font(.pretendard(17, weight: .bold))
+                .foregroundStyle(color)
+                .monospacedDigit()
+            Text(label)
+                .font(.pretendard(10, weight: .medium))
+                .foregroundStyle(Color.mutedForeground.opacity(0.76))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
     }
 }
 
