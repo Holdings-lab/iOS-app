@@ -29,17 +29,17 @@ enum PolicyNewsCategory: String, CaseIterable, Sendable {
     var color: Color {
         switch self {
         case .semiconductor:
-            return .policyPurple
+            return .brand
         case .interestRate:
-            return .electricBlue
+            return .brand
         case .energy:
-            return .emerald
+            return .success
         case .macro:
-            return .policyAmber
+            return .warning
         case .finance:
-            return .policyCoral
+            return .up
         case .ai:
-            return .electricBlue
+            return .brandLight
         }
     }
 }
@@ -63,11 +63,11 @@ enum PolicyNewsSentiment: String, Sendable {
     var color: Color {
         switch self {
         case .positive:
-            return .emeraldLight
+            return .success
         case .neutral:
-            return .electricBlue
+            return .brand
         case .caution:
-            return .policyCoral
+            return .up
         }
     }
 }

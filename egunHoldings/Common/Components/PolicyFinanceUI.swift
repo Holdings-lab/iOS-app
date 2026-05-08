@@ -12,6 +12,7 @@ enum PFRadius {
     static let button: CGFloat = 14
 }
 
+// Legacy gradient background — auth/onboarding only
 struct PFGradientBackground: View {
     var body: some View {
         LinearGradient(
@@ -41,6 +42,7 @@ struct PFStepHeader: View {
     }
 }
 
+// KODEX light progress bar (replaces legacy midnight version)
 struct PFProgressBar: View {
     let progress: Double
 
@@ -51,12 +53,12 @@ struct PFProgressBar: View {
 
             ZStack(alignment: .leading) {
                 Capsule(style: .continuous)
-                    .fill(Color.midnightBorder)
+                    .fill(Color.kdxDivider)
 
                 Capsule(style: .continuous)
                     .fill(
                         LinearGradient(
-                            colors: [Color.midnightAccent, Color.midnightAccent.opacity(0.88)],
+                            colors: [Color.brand, Color.brandLight],
                             startPoint: .leading,
                             endPoint: .trailing
                         )
@@ -64,7 +66,7 @@ struct PFProgressBar: View {
                     .frame(width: width)
             }
         }
-        .frame(height: 3)
+        .frame(height: 6)
     }
 }
 
@@ -75,7 +77,7 @@ struct PFInlineErrorText: View {
     var body: some View {
         Text(message)
             .font(.pretendard(13, weight: .medium))
-            .foregroundStyle(Color.midnightError)
+            .foregroundStyle(Color.up)
             .frame(maxWidth: .infinity, alignment: alignment)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -128,6 +130,7 @@ struct PFContentScrollView<Content: View>: View {
     }
 }
 
+// KODEX light surface card — white bg + hairline border, no shadow
 struct PFSurfaceCard<Content: View>: View {
     private let padding: CGFloat
     private let cornerRadius: CGFloat
@@ -136,10 +139,10 @@ struct PFSurfaceCard<Content: View>: View {
     private let content: Content
 
     init(
-        padding: CGFloat = 14,
-        cornerRadius: CGFloat = PFRadius.card,
+        padding: CGFloat = 16,
+        cornerRadius: CGFloat = KDXRadius.card,
         selected: Bool = false,
-        selectedTint: Color = .electricBlue,
+        selectedTint: Color = .brand,
         @ViewBuilder content: () -> Content
     ) {
         self.padding = padding
@@ -152,11 +155,11 @@ struct PFSurfaceCard<Content: View>: View {
     var body: some View {
         content
             .padding(padding)
-            .background(Color.midnightSurface, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .background(Color.elevated, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .stroke(
-                        selected ? selectedTint.opacity(0.4) : Color.midnightBorder,
+                        selected ? selectedTint.opacity(0.5) : Color.hairline,
                         lineWidth: 1
                     )
             }
@@ -170,9 +173,15 @@ extension View {
             .toolbar(.hidden, for: .navigationBar)
     }
 
-    func policyFinanceDarkTabChrome(bottomInset: CGFloat = 90) -> some View {
+    // Light version — canvas background
+    func policyFinanceLightTabChrome(bottomInset: CGFloat = 90) -> some View {
         policyFinanceNavigationChrome(bottomInset: bottomInset)
-            .background(Color.deepNavy.ignoresSafeArea())
+            .background(Color.canvas.ignoresSafeArea())
+    }
+
+    // Keep old name as alias so existing call sites compile without changes
+    func policyFinanceDarkTabChrome(bottomInset: CGFloat = 90) -> some View {
+        policyFinanceLightTabChrome(bottomInset: bottomInset)
     }
 }
 
@@ -183,7 +192,7 @@ struct PFSelectionIndicator: View {
 
     var body: some View {
         Circle()
-            .stroke(Color.midnightBorder, lineWidth: 2)
+            .stroke(Color.hairline, lineWidth: 2)
             .frame(width: size, height: size)
             .overlay {
                 if isSelected {
