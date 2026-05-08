@@ -50,7 +50,7 @@ struct OnboardingFlowView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 
     private func navigateBack() {

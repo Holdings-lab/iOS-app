@@ -279,14 +279,14 @@ struct TodayMockData {
     ]
 
     nonisolated static let judgment = TodayJudgment(
-        title: "오늘은 매매보다 금리 코멘트 확인이 먼저예요",
-        type: .confirm,
+        title: "오늘은 특별히 행동할 필요가 없습니다",
+        type: .simulate,
         myExposure: 61,
         validUntil: "장 마감 전 (오후 3:30)",
         invalidationCondition: "예상 외 동결 또는 총재 추가 인하 부정 발언 시",
         forEvidence: [
-            "시장 인하 기대 78% → 이미 반영, 추가 랠리 여지 제한",
-            "채권 ETF 12% 보유 중 → 인하 후 비중 조정 타이밍"
+            "보유 ETF의 80%가 이번 정책 영향권 밖입니다",
+            "현금 비중 18%로 단기 변동에 충분히 대응 가능합니다"
         ],
         againstEvidence: [
             "총재가 '추가 인하 신중' 발언 시 채권 시장 되돌림 가능"
@@ -295,9 +295,9 @@ struct TodayMockData {
     )
 
     nonisolated static let portfolio = TodayPortfolioSummary(
-        totalAsset: 13_550_000,
-        todayChange: 0.34,
-        todayChangeAmt: 46_070,
+        totalAsset: 134_820_000,
+        todayChange: 1.2,
+        todayChangeAmt: 1_580_000,
         cashDefense: 30,
         dollarDefense: 15,
         overtradeRisk: "낮음",

@@ -29,7 +29,10 @@ struct RootTabView: View {
             TodayView(
                 userId: userId,
                 userAssetProfile: userAssetProfile,
-                portfolioSnapshot: portfolioSnapshot
+                portfolioSnapshot: portfolioSnapshot,
+                onAssetTabRequested: {
+                    selectedTab = .asset
+                }
             )
             .id(portfolioSnapshot)
             .tag(RootTab.today)

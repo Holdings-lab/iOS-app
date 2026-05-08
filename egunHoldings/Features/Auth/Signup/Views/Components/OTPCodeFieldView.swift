@@ -53,16 +53,16 @@ struct OTPCodeFieldView: View {
         let isActive = isFocused && index == min(characters.count, 5)
 
         return RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .fill(Color.midnightSurface)
+            .fill(Color.elevated)
             .frame(maxWidth: .infinity)
             .frame(height: 56)
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isActive ? Color.midnightAccent : Color.midnightBorder, lineWidth: 1)
+                    .stroke(isActive ? Color.brand : Color.hairline, lineWidth: 1)
 
                 Text(isFilled ? String(characters[index]) : "")
                     .font(.pretendard(22, weight: .semibold))
-                    .foregroundStyle(Color.midnightTextPrimary)
+                    .foregroundStyle(Color.textPrimary)
             }
     }
 }

@@ -53,29 +53,29 @@ extension Color {
     static let kodexYellow   = Color(hex: "FFCC00")
     static let inkBlack      = Color(hex: "1A1A1A")
 
-    // Legacy — Auth / Onboarding dark theme (do not use in main app)
-    static let deepNavy = Color(hex: "0A0E27")
-    static let electricBlue = Color(hex: "3B82F6")
-    static let foreground = Color(hex: "E8ECF4")
-    static let mutedForeground = Color(hex: "7A88A8")
-    static let navyCard = Color(hex: "161C3C")
-    static let emerald = Color(hex: "10B981")
-    static let emeraldLight = Color(hex: "34D399")
-    static let emeraldSoft = Color(hex: "6EE7B7")
-    static let policyPurple = Color(hex: "8B5CF6")
-    static let policyAmber = Color(hex: "F59E0B")
-    static let policyCoral = Color(hex: "EF4444")
-    static let policyCyan = Color(hex: "06B6D4")
-    static let policyGold = Color(hex: "FACC15")
+    // Compatibility aliases for older feature code. Prefer KODEX tokens above.
+    static let deepNavy = Color.canvas
+    static let electricBlue = Color.brand
+    static let foreground = Color.textPrimary
+    static let mutedForeground = Color.textTertiary
+    static let navyCard = Color.elevated
+    static let emerald = Color.success
+    static let emeraldLight = Color.success
+    static let emeraldSoft = Color.successBg
+    static let policyPurple = Color.brandDark
+    static let policyAmber = Color.warning
+    static let policyCoral = Color.up
+    static let policyCyan = Color.brandLight
+    static let policyGold = Color.kodexYellow
 
-    static let midnightTop = Color(hex: "08112B")
-    static let midnightBottom = Color(hex: "060A1C")
-    static let midnightSurface = Color.white.opacity(0.07)
-    static let midnightBorder = Color.white.opacity(0.08)
-    static let midnightTextPrimary = Color.white.opacity(0.92)
-    static let midnightTextSecondary = Color.white.opacity(0.62)
-    static let midnightTextTertiary = Color.white.opacity(0.42)
-    static let midnightAccent = Color(hex: "7C86FF")
-    static let midnightSuccess = Color(hex: "83E2B8")
-    static let midnightError = Color(hex: "FF8F8F")
+    static let midnightTop = Color.canvas
+    static let midnightBottom = Color.canvas
+    static let midnightSurface = Color.elevated
+    static let midnightBorder = Color.hairline
+    static let midnightTextPrimary = Color.textPrimary
+    static let midnightTextSecondary = Color.textTertiary
+    static let midnightTextTertiary = Color.textQuaternary
+    static let midnightAccent = Color.brand
+    static let midnightSuccess = Color.success
+    static let midnightError = Color.up
 }

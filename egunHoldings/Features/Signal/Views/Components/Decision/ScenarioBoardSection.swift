@@ -36,7 +36,7 @@ struct ScenarioBoardSection: View {
                         }
                     }
                     .padding(12)
-                    .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color.subtle, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
             .padding(16)
@@ -72,7 +72,7 @@ struct ScenarioBoardSection: View {
                         .foregroundStyle(Color.mutedForeground)
                     }
                     .padding(12)
-                    .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .background(Color.subtle, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
             }
             .padding(16)

@@ -20,20 +20,20 @@ struct AuthInputField: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(Color.midnightTextSecondary)
+                .foregroundStyle(Color.textTertiary)
                 .frame(width: 24)
 
             Group {
                 if secure && isSecureEntry {
                     SecureField(
                         text: $text,
-                        prompt: Text(placeholder).foregroundStyle(Color.midnightTextSecondary)
+                        prompt: Text(placeholder).foregroundStyle(Color.textQuaternary)
                     ) {
                     }
                 } else {
                     TextField(
                         text: $text,
-                        prompt: Text(placeholder).foregroundStyle(Color.midnightTextSecondary)
+                        prompt: Text(placeholder).foregroundStyle(Color.textQuaternary)
                     ) {
                     }
                 }
@@ -43,7 +43,7 @@ struct AuthInputField: View {
             .textContentType(disablePasswordAutofill ? .oneTimeCode : nil)
             .keyboardType(forceASCIIKeyboard ? .asciiCapable : keyboardType)
             .font(inputFont)
-            .foregroundStyle(Color.midnightTextPrimary)
+            .foregroundStyle(Color.textPrimary)
 
             if secure {
                 Button {
@@ -51,17 +51,17 @@ struct AuthInputField: View {
                 } label: {
                     Image(systemName: isSecureEntry ? "eye" : "eye.slash")
                         .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(Color.midnightTextSecondary)
+                        .foregroundStyle(Color.textTertiary)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 14)
         .frame(height: 56)
-        .background(Color.midnightSurface, in: RoundedRectangle(cornerRadius: PFRadius.card, style: .continuous))
+        .background(Color.elevated, in: RoundedRectangle(cornerRadius: PFRadius.card, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: PFRadius.card, style: .continuous)
-                .stroke(Color.midnightBorder, lineWidth: 1)
+                .stroke(Color.hairline, lineWidth: 1)
         }
     }
 }

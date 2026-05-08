@@ -21,11 +21,11 @@ struct OnboardingPage4View: View {
                 VStack(spacing: 10) {
                     Text("준비가 끝났어요")
                         .font(.pretendard(28, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.92))
+                        .foregroundStyle(Color.textPrimary)
 
                     Text("맞춤 설정 기준으로 홈을 구성했어요")
                         .font(.pretendard(15, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.62))
+                        .foregroundStyle(Color.textTertiary)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -35,7 +35,7 @@ struct OnboardingPage4View: View {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("설정 요약")
                         .font(.pretendard(15, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.92))
+                        .foregroundStyle(Color.textPrimary)
 
                     FlowSummaryRow(title: "관심 섹터", value: viewModel.selectedSectorSummary)
                     FlowSummaryRow(title: "투자 성향", value: viewModel.selectedStyleSummary)
@@ -45,7 +45,7 @@ struct OnboardingPage4View: View {
 
             Text("설정은 언제든지 변경할 수 있어요")
                 .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.46))
+                .foregroundStyle(Color.textTertiary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
 
@@ -64,5 +64,5 @@ struct OnboardingPage4View: View {
 
 #Preview {
     OnboardingPage4View(viewModel: OnboardingFlowViewModel(), onStart: {})
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
 }

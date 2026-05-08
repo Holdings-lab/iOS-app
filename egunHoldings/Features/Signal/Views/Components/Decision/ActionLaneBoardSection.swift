@@ -75,10 +75,10 @@ private struct ActionLaneCard: View {
                             .foregroundStyle(Color.mutedForeground)
                     }
                     .padding(10)
-                    .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .background(Color.subtle, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .padding(12)
-                .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(Color.subtle, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
         }
         .padding(16)
@@ -96,6 +96,6 @@ private struct LaneMetaChip: View {
             .foregroundStyle(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .glassEffect(.regular.tint(color.opacity(0.16)), in: Capsule())
+            .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: KDXRadius.chip, style: .continuous))
     }
 }

@@ -39,21 +39,17 @@ struct AppRootView: View {
 
     private var loadingView: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color.deepNavy, Color(hex: "0D1C5A")],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            Color.canvas
+                .ignoresSafeArea()
 
             VStack(spacing: 16) {
                 ProgressView()
-                    .tint(Color.electricBlue)
+                    .tint(Color.brand)
                     .scaleEffect(1.3)
 
                 Text("불러오는 중...")
                     .font(.pretendard(14, weight: .medium))
-                    .foregroundStyle(Color.mutedForeground)
+                    .foregroundStyle(Color.textTertiary)
             }
         }
     }

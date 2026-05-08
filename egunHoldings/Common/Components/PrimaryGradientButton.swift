@@ -22,18 +22,17 @@ struct PrimaryGradientButton: View {
                 }
             }
             .font(.pretendard(17, weight: .semibold))
-            .foregroundStyle(isEnabled ? Color.white : Color.white.opacity(0.35))
+            .foregroundStyle(isEnabled ? Color.textOnAccent : Color.textDisabled)
             .frame(maxWidth: .infinity)
             .frame(height: 56)
             .background(
                 buttonBackground,
-                in: RoundedRectangle(cornerRadius: PFRadius.button, style: .continuous)
+                in: RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: PFRadius.button, style: .continuous)
-                    .stroke(Color.white.opacity(isEnabled ? 0.08 : 0.04), lineWidth: 1)
+                RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous)
+                    .stroke(isEnabled ? Color.clear : Color.hairline, lineWidth: 1)
             }
-            .shadow(color: isEnabled ? Color.midnightAccent.opacity(0.14) : .clear, radius: 10, y: 4)
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -42,13 +41,13 @@ struct PrimaryGradientButton: View {
     private var buttonBackground: LinearGradient {
         if isEnabled {
             return LinearGradient(
-                colors: [Color.midnightAccent, Color(hex: "6E7BFA")],
+                colors: [Color.brand, Color.brandDark],
                 startPoint: .leading,
                 endPoint: .trailing
             )
         }
 
-        let disabled = Color.white.opacity(0.12)
+        let disabled = Color.muted
         return LinearGradient(colors: [disabled, disabled], startPoint: .leading, endPoint: .trailing)
     }
 }

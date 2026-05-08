@@ -23,7 +23,7 @@ struct SignupIntroView: View {
                     """
                 )
                 .font(.pretendard(32, weight: .bold))
-                .foregroundStyle(Color.white.opacity(0.95))
+                .foregroundStyle(Color.textPrimary)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
             }
@@ -38,7 +38,7 @@ struct SignupIntroView: View {
 
             Text("가입하면 내 보유 ETF 기준으로 분석돼요")
                 .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.46))
+                .foregroundStyle(Color.textTertiary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
         }
@@ -50,7 +50,7 @@ struct SignupIntroView: View {
                     onBack()
                 }
                 .font(.pretendard(15, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.62))
+                .foregroundStyle(Color.textTertiary)
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, MidnightLayout.horizontal)
@@ -64,5 +64,5 @@ struct SignupIntroView: View {
 
 #Preview {
     SignupIntroView(onBack: {}, onStart: {})
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
 }
