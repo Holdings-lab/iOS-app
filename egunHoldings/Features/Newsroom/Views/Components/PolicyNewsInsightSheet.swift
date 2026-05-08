@@ -6,23 +6,36 @@ struct PolicyNewsInsightSheet: View {
     let isLoading: Bool
     let errorMessage: String?
     let onRetry: () -> Void
+    let isSaved: Bool
+    let onToggleSave: () -> Void
+    let onHide: () -> Void
+    let onSaveCheckpoint: () -> Void
+
+    init(
+        item: PolicyNewsItem,
+        insight: PolicyNewsInsight?,
+        isLoading: Bool,
+        errorMessage: String?,
+        onRetry: @escaping () -> Void,
+        isSaved: Bool = false,
+        onToggleSave: @escaping () -> Void = {},
+        onHide: @escaping () -> Void = {},
+        onSaveCheckpoint: @escaping () -> Void = {}
+    ) {
+        self.item = item
+        self.insight = insight
+        self.isLoading = isLoading
+        self.errorMessage = errorMessage
+        self.onRetry = onRetry
+        self.isSaved = isSaved
+        self.onToggleSave = onToggleSave
+        self.onHide = onHide
+        self.onSaveCheckpoint = onSaveCheckpoint
+    }
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color.deepNavy.opacity(0.94),
-                    Color.electricBlue.opacity(0.16)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-                .ignoresSafeArea()
+            Color.elevated.ignoresSafeArea()
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
@@ -39,105 +52,123 @@ struct PolicyNewsInsightSheet: View {
                     }
                 }
                 .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 28)
             }
         }
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(item.category.color.opacity(0.18))
-                    .frame(width: 44, height: 44)
-                    .overlay {
-                        Image(systemName: "newspaper.fill")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundStyle(item.category.color)
-                    }
-                    .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        VStack(alignment: .leading, spacing: 6) {
+            Text(item.title)
+                .font(.pretendard(16, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("\(item.category.title) · \(item.sourceName)")
-                        .font(.pretendard(12, weight: .medium))
-                        .foregroundStyle(Color.mutedForeground)
-
-                    Text(item.title)
-                        .font(.pretendard(18, weight: .bold))
-                        .foregroundStyle(Color.foreground)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer()
-            }
-
-            HStack(spacing: 10) {
-                Label(item.relativePublishedText, systemImage: "clock")
-
-                if let sourceURL = item.sourceURL {
-                    Link(destination: sourceURL) {
-                        Label("원문 보기", systemImage: "arrow.up.right.square")
-                    }
-                }
-            }
-            .font(.pretendard(12, weight: .medium))
-            .foregroundStyle(Color.electricBlue)
+            Text(item.newsroomSourceTimeText)
+                .font(.pretendard(11, weight: .medium))
+                .foregroundStyle(Color.mutedForeground.opacity(0.4))
         }
+    }
+
+    private func loadedContent(_ insight: PolicyNewsInsight) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sheetTextCard(
+                title: "기사 핵심 요약",
+                tint: Color.electricBlue.opacity(0.6),
+                text: insight.articleSummary.joined(separator: "\n")
+            )
+
+            sheetTextCard(
+                title: "내 자산 기준 해석",
+                tint: Color.emerald.opacity(0.6),
+                text: ([insight.portfolioHeadline] + insight.portfolioBullets).joined(separator: "\n")
+            )
+
+            sheetTextCard(
+                title: "확인해야 할 숫자/문장",
+                tint: Color.policyAmber.opacity(0.7),
+                text: insight.actionChecklist.isEmpty
+                    ? item.newsroomCheckConditionText
+                    : insight.actionChecklist.joined(separator: "\n")
+            )
+
+            relatedHoldingsCard
+
+            sheetTextCard(
+                title: "과도하게 해석하면 안 되는 이유",
+                tint: Color.mutedForeground.opacity(0.4),
+                text: "단일 기사 하나로 정책 집행 시점, 기업 실적, 시장 가격이 동시에 확정되지는 않아요. 후속 발표와 실제 숫자를 함께 확인해야 합니다."
+            )
+
+            NewsInvestmentDisclaimer()
+                .padding(.top, 2)
+
+            actionButtons
+                .padding(.top, 2)
+        }
+    }
+
+    private var relatedHoldingsCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("관련 보유자산")
+                .font(.pretendard(12, weight: .bold))
+                .foregroundStyle(Color.textPrimary.opacity(0.65))
+
+            NewsAssetTagFlow(tags: item.newsroomAssetTags)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .softGlassCard()
     }
 
-    private func loadedContent(_ insight: PolicyNewsInsight) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            summaryCard(
-                title: "기사 핵심",
-                symbol: "text.alignleft",
-                headline: insight.headline,
-                lines: insight.articleSummary
-            )
-
-            summaryCard(
-                title: "내 자산 기준 해설",
-                symbol: "person.crop.circle.badge.checkmark",
-                headline: insight.portfolioHeadline,
-                lines: insight.portfolioBullets
-            )
-
-            checklistCard(
-                title: "지금 확인할 포인트",
-                symbol: "checklist",
-                items: insight.actionChecklist,
-                accentColor: .electricBlue
-            )
-
-            checklistCard(
-                title: "주의할 점",
-                symbol: "exclamationmark.triangle.fill",
-                items: insight.riskNotes,
-                accentColor: .policyAmber
-            )
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .foregroundStyle(Color.electricBlue)
-                    Text("생성 정보")
-                        .font(.pretendard(14, weight: .semibold))
-                        .foregroundStyle(Color.foreground)
-                }
-
-                Text("업데이트 \(insight.generatedAtText)")
-                    .font(.pretendard(12, weight: .medium))
-                    .foregroundStyle(Color.mutedForeground)
-
-                Text(insight.disclaimer)
-                    .font(.pretendard(11, weight: .medium))
-                    .foregroundStyle(Color.mutedForeground)
-                    .fixedSize(horizontal: false, vertical: true)
+    private var actionButtons: some View {
+        HStack(spacing: 8) {
+            Button(action: onSaveCheckpoint) {
+                Text("체크포인트 저장")
+                    .font(.pretendard(12, weight: .bold))
+                    .foregroundStyle(Color.electricBlue)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(
+                        Color.electricBlue.opacity(0.10),
+                        in: RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous)
+                    )
             }
-            .padding(14)
-            .softGlassCard()
+            .buttonStyle(PressScaleButtonStyle())
+
+            Button(action: onToggleSave) {
+                Label(isSaved ? "저장됨" : "저장", systemImage: isSaved ? "bookmark.fill" : "bookmark")
+                    .font(.pretendard(12, weight: .bold))
+                    .foregroundStyle(Color.mutedForeground.opacity(0.6))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(
+                        Color.subtle,
+                        in: RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous)
+                            .stroke(Color.hairline, lineWidth: 1)
+                    }
+            }
+            .buttonStyle(PressScaleButtonStyle())
+
+            Button(action: onHide) {
+                Image(systemName: "eye.slash")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Color.mutedForeground.opacity(0.4))
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Color.subtle,
+                        in: RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous)
+                            .stroke(Color.hairline, lineWidth: 1)
+                    }
+            }
+            .buttonStyle(PressScaleButtonStyle())
         }
     }
 
@@ -146,14 +177,15 @@ struct PolicyNewsInsightSheet: View {
             HStack(spacing: 8) {
                 ProgressView()
                     .tint(Color.electricBlue)
+
                 Text("기사와 보유 자산을 바탕으로 맞춤 해설을 만드는 중이에요")
-                    .font(.pretendard(13, weight: .semibold))
-                    .foregroundStyle(Color.foreground)
+                    .font(.pretendard(13, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
             }
 
-            Text("이 구간은 나중에 serverless backend가 OpenAI 응답을 받아 채워주는 자리예요.")
+            Text("이 구간은 serverless backend가 OpenAI 응답을 받아 채우는 자리예요.")
                 .font(.pretendard(12, weight: .medium))
-                .foregroundStyle(Color.mutedForeground)
+                .foregroundStyle(Color.textTertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
@@ -164,13 +196,13 @@ struct PolicyNewsInsightSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(message)
                 .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.foreground)
+                .foregroundStyle(Color.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
 
             Button("다시 시도하기") {
                 onRetry()
             }
-            .font(.pretendard(13, weight: .semibold))
+            .font(.pretendard(13, weight: .bold))
             .foregroundStyle(Color.electricBlue)
             .buttonStyle(.plain)
         }
@@ -179,80 +211,25 @@ struct PolicyNewsInsightSheet: View {
         .softGlassCard()
     }
 
-    private func summaryCard(
-        title: String,
-        symbol: String,
-        headline: String,
-        lines: [String]
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: symbol)
-                    .foregroundStyle(Color.electricBlue)
-                Text(title)
-                    .font(.pretendard(14, weight: .semibold))
-                    .foregroundStyle(Color.foreground)
-            }
+    private func sheetTextCard(title: String, tint: Color, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text(title)
+                .font(.pretendard(12, weight: .bold))
+                .foregroundStyle(tint)
 
-            Text(headline)
-                .font(.pretendard(13, weight: .semibold))
-                .foregroundStyle(Color.foreground)
+            Text(text)
+                .font(.pretendard(12, weight: .medium))
+                .foregroundStyle(Color.textPrimary.opacity(0.65))
+                .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
-
-            ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                HStack(alignment: .top, spacing: 10) {
-                    Text("\(index + 1)")
-                        .font(.pretendard(11, weight: .bold))
-                        .foregroundStyle(Color.electricBlue)
-                        .frame(width: 20, height: 20)
-                        .background(Color.electricBlue.opacity(0.14), in: Circle())
-
-                    Text(line)
-                        .font(.pretendard(12, weight: .medium))
-                        .foregroundStyle(Color.mutedForeground)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(10)
-                .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            }
         }
-        .padding(14)
-        .softGlassCard()
-    }
-
-    private func checklistCard(
-        title: String,
-        symbol: String,
-        items: [String],
-        accentColor: Color
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: symbol)
-                    .foregroundStyle(accentColor)
-                Text(title)
-                    .font(.pretendard(14, weight: .semibold))
-                    .foregroundStyle(Color.foreground)
-            }
-
-            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(accentColor)
-                        .padding(.top, 2)
-
-                    Text(item)
-                        .font(.pretendard(12, weight: .medium))
-                        .foregroundStyle(Color.mutedForeground)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .softGlassCard()
     }
 }
+
+typealias NewsInsightSheet = PolicyNewsInsightSheet
 
 #Preview {
     PolicyNewsInsightSheet(
