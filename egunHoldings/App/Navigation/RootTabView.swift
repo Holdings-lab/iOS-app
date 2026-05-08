@@ -46,7 +46,10 @@ struct RootTabView: View {
             }
 
             NavigationStack {
-                NewsroomView(userAssetProfile: userAssetProfile)
+                NewsroomView(
+                    userId: userId,
+                    userAssetProfile: userAssetProfile
+                )
             }
             .tag(RootTab.news)
             .tabItem {

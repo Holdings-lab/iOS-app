@@ -18,8 +18,8 @@ final class PolicyNewsViewModel: ObservableObject {
 
     private let repository: PolicyNewsRepositoryProtocol
 
-    init(repository: PolicyNewsRepositoryProtocol? = nil) {
-        self.repository = repository ?? PolicyNewsRepositoryFactory.makeDefault()
+    init(userId: Int64? = nil, repository: PolicyNewsRepositoryProtocol? = nil) {
+        self.repository = repository ?? PolicyNewsRepositoryFactory.makeDefault(userId: userId)
         loadNews()
     }
 

@@ -24,39 +24,40 @@ struct TodayView: View {
         ZStack {
             todayBackground
 
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: PSSpacing.sectionGap) {
-                    TodayHeaderSection(
-                        onDataStatus: { viewModel.present(.dataStatus) },
-                        onSettings:   { viewModel.present(.settings) }
-                    )
+            PFContentScrollView(
+                spacing: PSSpacing.sectionGap,
+                horizontalPadding: PSSpacing.pagePad,
+                topPadding: 8,
+                bottomPadding: 110,
+                scrollsToTopOnAppear: true
+            ) {
+                TodayHeaderSection(
+                    onDataStatus: { viewModel.present(.dataStatus) },
+                    onSettings:   { viewModel.present(.settings) }
+                )
 
-                    TodayJudgmentSection(
-                        judgment: viewModel.judgment,
-                        onWhy:             { viewModel.present(.quickReason) },
-                        onSaveCheckpoint:  { viewModel.present(.saveCheckpoint) },
-                        onSnooze:          { viewModel.present(.snooze) }
-                    )
+                TodayJudgmentSection(
+                    judgment: viewModel.judgment,
+                    onWhy:             { viewModel.present(.quickReason) },
+                    onSaveCheckpoint:  { viewModel.present(.saveCheckpoint) },
+                    onSnooze:          { viewModel.present(.snooze) }
+                )
 
-                    TodayPortfolioSection(
-                        portfolio: viewModel.portfolio,
-                        onExposureTap: { item in
-                            viewModel.present(.exposureTheme(item))
-                        }
-                    )
-
-                    if let topPolicy = viewModel.topPolicy {
-                        TodayTopPolicySection(policy: topPolicy)
+                TodayPortfolioSection(
+                    portfolio: viewModel.portfolio,
+                    onExposureTap: { item in
+                        viewModel.present(.exposureTheme(item))
                     }
+                )
 
-                    TodayNoActionSection(
-                        reasons: viewModel.noActionReasons,
-                        watchCondition: viewModel.noActionWatchCondition
-                    )
+                if let topPolicy = viewModel.topPolicy {
+                    TodayTopPolicySection(policy: topPolicy)
                 }
-                .padding(.horizontal, PSSpacing.pagePad)
-                .padding(.top, 8)
-                .padding(.bottom, 110)
+
+                TodayNoActionSection(
+                    reasons: viewModel.noActionReasons,
+                    watchCondition: viewModel.noActionWatchCondition
+                )
             }
             .refreshable {
                 await viewModel.refresh()
@@ -113,17 +114,34 @@ struct TodayView: View {
 
     private var todayBackground: some View {
         ZStack {
-            Color(hex: "0A0E27").ignoresSafeArea()
+            LinearGradient(
+                colors: [
+                    Color(hex: "060B24"),
+                    Color(hex: "0D163B"),
+                    Color(hex: "060B24")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
             Circle()
-                .fill(PSColor.electricBlue.opacity(0.14))
-                .frame(width: 340)
-                .blur(radius: 130)
-                .offset(x: -140, y: -320)
-            Circle()
-                .fill(PSColor.purple.opacity(0.10))
-                .frame(width: 260)
+                .fill(PSColor.electricBlue.opacity(0.16))
+                .frame(width: 320, height: 320)
                 .blur(radius: 120)
-                .offset(x: 160, y: -200)
+                .offset(x: -120, y: -330)
+
+            Circle()
+                .fill(PSColor.purple.opacity(0.12))
+                .frame(width: 250, height: 250)
+                .blur(radius: 110)
+                .offset(x: 160, y: -230)
+
+            Circle()
+                .fill(Color.white.opacity(0.04))
+                .frame(width: 220, height: 220)
+                .blur(radius: 90)
+                .offset(x: 120, y: 250)
         }
         .ignoresSafeArea()
     }
@@ -192,22 +210,24 @@ private struct TodayJudgmentSection: View {
 
     var body: some View {
         PSGlassCard(variant: .primary) {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 topRow
+                briefingStatsRow
                 titleText
-                metricsRow
+                actionSummary
                 actionButtons
             }
         }
     }
 
     private var topRow: some View {
-        HStack {
-            JudgmentTypeBadge(type: judgment.type)
-            Text("오늘의 판단")
+        HStack(spacing: 8) {
+            Text("오늘 가장 중요한 변화")
                 .font(PSFont.caption())
-                .foregroundStyle(PSColor.textMuted)
+                .foregroundStyle(PSColor.electricBlue.opacity(0.72))
+                .tracking(0.3)
             Spacer()
+            JudgmentTypeBadge(type: judgment.type)
             HStack(spacing: 4) {
                 Image(systemName: "clock")
                     .font(.system(size: 10))
@@ -218,39 +238,67 @@ private struct TodayJudgmentSection: View {
         }
     }
 
+    private var briefingStatsRow: some View {
+        HStack(spacing: 0) {
+            TodayBriefingStatCell(
+                value: "\(judgment.myExposure)%",
+                label: "내 자산 노출",
+                color: PSColor.electricBlue
+            )
+
+            TodayStatDivider()
+
+            TodayBriefingStatCell(
+                value: compactInvalidationCondition,
+                label: "무효화 조건",
+                color: PSColor.yellow
+            )
+
+            TodayStatDivider()
+
+            TodayBriefingStatCell(
+                value: judgment.type.rawValue,
+                label: "권장 행동",
+                color: judgment.type.color
+            )
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: PSRadius.inner, style: .continuous))
+    }
+
     private var titleText: some View {
         Text(judgment.title)
-            .font(PSFont.semibold(17))
+            .font(PSFont.semibold(19))
             .foregroundStyle(PSColor.textPrimary)
             .fixedSize(horizontal: false, vertical: true)
             .lineSpacing(4)
     }
 
-    private var metricsRow: some View {
-        HStack(alignment: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("내 자산 영향권")
-                    .font(PSFont.caption())
-                    .foregroundStyle(PSColor.textMuted)
-                Text("\(judgment.myExposure)%")
-                    .font(PSFont.semibold(20))
-                    .foregroundStyle(PSColor.electricBlue)
-                    .monospacedDigit()
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+    private var actionSummary: some View {
+        HStack(spacing: 8) {
+            Text("다시 볼 기준")
+                .font(PSFont.caption())
+                .foregroundStyle(PSColor.textMuted.opacity(0.78))
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("무효화 조건")
-                    .font(PSFont.caption())
-                    .foregroundStyle(PSColor.textMuted)
-                Text(judgment.invalidationCondition)
-                    .font(PSFont.body(12))
-                    .foregroundStyle(PSColor.yellow.opacity(0.80))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .lineSpacing(2)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            Text(judgment.invalidationCondition)
+                .font(PSFont.semibold(12))
+                .foregroundStyle(PSColor.yellow.opacity(0.86))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
         }
+    }
+
+    private var compactInvalidationCondition: String {
+        let normalized = judgment.invalidationCondition
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard normalized.count > 8 else {
+            return normalized
+        }
+
+        return "\(String(normalized.prefix(8)))..."
     }
 
     private var actionButtons: some View {
@@ -301,6 +349,38 @@ private struct TodayJudgmentSection: View {
             .background(bg, in: RoundedRectangle(cornerRadius: PSRadius.small, style: .continuous))
         }
         .buttonStyle(PSPressStyle())
+    }
+}
+
+private struct TodayBriefingStatCell: View {
+    let value: String
+    let label: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(PSFont.semibold(16))
+                .foregroundStyle(color)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.68)
+
+            Text(label)
+                .font(PSFont.caption(10))
+                .foregroundStyle(PSColor.textMuted.opacity(0.76))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+private struct TodayStatDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.08))
+            .frame(width: 1, height: 28)
     }
 }
 

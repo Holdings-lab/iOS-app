@@ -1,10 +1,5 @@
 import Foundation
 
-nonisolated struct PolicyNewsFeedRequestDTO: Encodable, Sendable {
-    let cursor: String?
-    let limit: Int
-}
-
 nonisolated struct PolicyNewsFeedResponseDTO: Decodable, Sendable {
     let feedType: String?
     let generatedAt: String?
