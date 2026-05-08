@@ -500,6 +500,7 @@ struct SnoozeSheet: View {
                             }
                         }
                     }
+                    .contentShape(RoundedRectangle(cornerRadius: PSRadius.card, style: .continuous))
                     .buttonStyle(PSPressStyle())
                 }
             }
