@@ -16,27 +16,7 @@ struct NewsroomView: View {
     }
 
     private var displayedItems: [PolicyNewsItem] {
-        guard let limit = digestMode.storyLimit else {
-            return viewModel.news
-        }
-
-        return Array(viewModel.news.prefix(limit))
-    }
-
-    private var spotlightItem: PolicyNewsItem? {
-        displayedItems.first
-    }
-
-    private var assetLinkedItems: [PolicyNewsItem] {
-        displayedItems.filter { item in
-            item.id != spotlightItem?.id && !item.relatedTickers.isEmpty
-        }
-    }
-
-    private var skimmableItems: [PolicyNewsItem] {
-        displayedItems.filter { item in
-            item.id != spotlightItem?.id && !assetLinkedItems.contains(where: { $0.id == item.id })
-        }
+        viewModel.visibleNews
     }
 
     var body: some View {
@@ -53,38 +33,12 @@ struct NewsroomView: View {
             } else if displayedItems.isEmpty {
                 NewsroomEmptyCard()
             } else {
-                if let spotlightItem {
-                    NewsroomSpotlightCard(item: spotlightItem) {
-                        viewModel.presentInsight(for: spotlightItem, userAssetProfile: userAssetProfile)
-                    }
-                }
-
-                if !assetLinkedItems.isEmpty {
-                    NewsroomCapsuleSection(
-                        title: "내 자산 관련",
-                        subtitle: "보유 자산과 직접 연결되는 이슈만 먼저 모았어요",
-                        items: assetLinkedItems,
-                        style: .linked,
-                        onSelect: { item in
-                            viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
-                        }
-                    )
-                }
-
-                if !skimmableItems.isEmpty {
-                    NewsroomCapsuleSection(
-                        title: "짧게 보고 저장",
-                        subtitle: "지금은 제목과 한 줄 요약만 체크해도 되는 이슈예요",
-                        items: skimmableItems,
-                        style: .skim,
-                        onSelect: { item in
-                            viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
-                        }
-                    )
-                }
+                newsroomContent
             }
+
+            NewsroomInfoBox()
         }
-        .policyFinanceDarkTabChrome()
+        .policyFinanceLightTabChrome()
         .sheet(item: $viewModel.presentedItem, onDismiss: viewModel.dismissPresentedInsight) { item in
             PolicyNewsInsightSheet(
                 item: item,
@@ -93,12 +47,96 @@ struct NewsroomView: View {
                 errorMessage: viewModel.insightErrorMessage,
                 onRetry: {
                     viewModel.reloadPresentedInsight(userAssetProfile: userAssetProfile)
+                },
+                isSaved: viewModel.isSaved(item),
+                onToggleSave: {
+                    viewModel.toggleSaved(item)
+                },
+                onHide: {
+                    viewModel.hide(item)
+                    viewModel.dismissPresentedInsight()
+                },
+                onSaveCheckpoint: {
+                    viewModel.saveCheckpoint(for: item)
                 }
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
-            .presentationBackground(.clear)
-            .presentationCornerRadius(28)
+            .presentationBackground(Color.elevated)
+            .presentationCornerRadius(KDXRadius.bottomSheet)
+        }
+        .sheet(item: $viewModel.lowRelevanceItem, onDismiss: viewModel.dismissLowRelevanceReason) { item in
+            LowRelevanceSheet(
+                item: item,
+                onOpen: {
+                    viewModel.dismissLowRelevanceReason()
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 220_000_000)
+                        viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
+                    }
+                }
+            )
+            .presentationDetents([.fraction(0.42), .medium])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(Color.elevated)
+            .presentationCornerRadius(KDXRadius.bottomSheet)
+        }
+    }
+
+    @ViewBuilder
+    private var newsroomContent: some View {
+        if digestMode == .saved {
+            NewsroomSavedSection(
+                items: viewModel.savedNews,
+                onSelect: { item in
+                    viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
+                }
+            )
+        } else {
+            if !viewModel.highRelevanceNews.isEmpty {
+                NewsroomPrioritySection(
+                    title: "내 자산 관련",
+                    subtitle: "\(viewModel.highRelevanceNews.count)건",
+                    items: viewModel.highRelevanceNews,
+                    presentation: digestMode == .oneMinute ? .skim : .detail,
+                    isSaved: viewModel.isSaved,
+                    onSelect: { item in
+                        viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
+                    },
+                    onToggleSave: viewModel.toggleSaved,
+                    onShowLowReason: viewModel.presentLowRelevanceReason
+                )
+            }
+
+            if !viewModel.mediumRelevanceNews.isEmpty {
+                NewsroomPrioritySection(
+                    title: "짧게 확인",
+                    subtitle: "\(viewModel.mediumRelevanceNews.count)건",
+                    items: viewModel.mediumRelevanceNews,
+                    presentation: .skim,
+                    isSaved: viewModel.isSaved,
+                    onSelect: { item in
+                        viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
+                    },
+                    onToggleSave: viewModel.toggleSaved,
+                    onShowLowReason: viewModel.presentLowRelevanceReason
+                )
+            }
+
+            if !viewModel.lowRelevanceNews.isEmpty {
+                NewsroomPrioritySection(
+                    title: "지금은 넘겨도 됨",
+                    subtitle: "\(viewModel.lowRelevanceNews.count)건",
+                    items: viewModel.lowRelevanceNews,
+                    presentation: .ignore,
+                    isSaved: viewModel.isSaved,
+                    onSelect: { item in
+                        viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
+                    },
+                    onToggleSave: viewModel.toggleSaved,
+                    onShowLowReason: viewModel.presentLowRelevanceReason
+                )
+            }
         }
     }
 }
