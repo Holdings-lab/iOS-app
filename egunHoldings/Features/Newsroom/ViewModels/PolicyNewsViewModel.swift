@@ -11,12 +11,52 @@ final class PolicyNewsViewModel: ObservableObject {
     @Published private(set) var presentedInsight: PolicyNewsInsight?
     @Published private(set) var isInsightLoading = false
     @Published private(set) var insightErrorMessage: String?
+    @Published private(set) var savedItemIDs: Set<String> = []
+    @Published private(set) var checkpointItemIDs: Set<String> = []
+    @Published private(set) var hiddenItemIDs: Set<String> = []
+    @Published var lowRelevanceItem: PolicyNewsItem?
 
     private let repository: PolicyNewsRepositoryProtocol
 
     init(repository: PolicyNewsRepositoryProtocol? = nil) {
         self.repository = repository ?? PolicyNewsRepositoryFactory.makeDefault()
         loadNews()
+    }
+
+    var visibleNews: [PolicyNewsItem] {
+        news.filter { !hiddenItemIDs.contains($0.id) }
+    }
+
+    var highRelevanceNews: [PolicyNewsItem] {
+        Array(
+            visibleNews
+                .filter { $0.newsroomRelevanceLevel == .high }
+                .prefix(2)
+        )
+    }
+
+    var mediumRelevanceNews: [PolicyNewsItem] {
+        let highIDs = Set(highRelevanceNews.map(\.id))
+
+        return Array(
+            visibleNews
+                .filter { !highIDs.contains($0.id) && $0.newsroomRelevanceLevel == .medium }
+                .prefix(3)
+        )
+    }
+
+    var lowRelevanceNews: [PolicyNewsItem] {
+        let surfacedIDs = Set((highRelevanceNews + mediumRelevanceNews).map(\.id))
+
+        return Array(
+            visibleNews
+                .filter { !surfacedIDs.contains($0.id) && $0.newsroomRelevanceLevel == .low }
+                .prefix(2)
+        )
+    }
+
+    var savedNews: [PolicyNewsItem] {
+        visibleNews.filter { savedItemIDs.contains($0.id) }
     }
 
     func loadNews() {
@@ -53,6 +93,35 @@ final class PolicyNewsViewModel: ObservableObject {
         presentedInsight = nil
         insightErrorMessage = nil
         loadInsight(for: presentedItem, userAssetProfile: userAssetProfile)
+    }
+
+    func toggleSaved(_ item: PolicyNewsItem) {
+        if savedItemIDs.contains(item.id) {
+            savedItemIDs.remove(item.id)
+        } else {
+            savedItemIDs.insert(item.id)
+        }
+    }
+
+    func isSaved(_ item: PolicyNewsItem) -> Bool {
+        savedItemIDs.contains(item.id)
+    }
+
+    func saveCheckpoint(for item: PolicyNewsItem) {
+        checkpointItemIDs.insert(item.id)
+        savedItemIDs.insert(item.id)
+    }
+
+    func hide(_ item: PolicyNewsItem) {
+        hiddenItemIDs.insert(item.id)
+    }
+
+    func presentLowRelevanceReason(for item: PolicyNewsItem) {
+        lowRelevanceItem = item
+    }
+
+    func dismissLowRelevanceReason() {
+        lowRelevanceItem = nil
     }
 
     func dismissPresentedInsight() {

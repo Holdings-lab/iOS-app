@@ -10,15 +10,15 @@ enum PolicyLifecycleState: String {
     var color: Color {
         switch self {
         case .scheduled:
-            return .electricBlue
+            return .brand
         case .announced:
-            return .policyAmber
+            return .warning
         case .passed:
-            return .emerald
+            return .success
         case .delayed:
-            return .policyCoral
+            return .up
         case .canceled:
-            return .mutedForeground
+            return .textQuaternary
         }
     }
 }
@@ -31,11 +31,11 @@ enum PolicyPortfolioDirection: String {
     var color: Color {
         switch self {
         case .positive:
-            return .emerald
+            return .success
         case .negative:
-            return .policyCoral
+            return .up
         case .mixed:
-            return .policyAmber
+            return .warning
         }
     }
 }
@@ -56,13 +56,13 @@ enum PolicyJudgmentAction: String {
     var color: Color {
         switch self {
         case .increase:
-            return .emerald
+            return .success
         case .reduce:
-            return .policyCoral
+            return .brand
         case .hedge:
-            return .policyAmber
+            return .up
         case .wait:
-            return .electricBlue
+            return .warning
         }
     }
 

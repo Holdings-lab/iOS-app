@@ -56,6 +56,28 @@ enum HomeNewsMockData {
             sourceURL: URL(string: "https://www.mk.co.kr"),
             relatedTickers: [],
             sentiment: .caution
+        ),
+        PolicyNewsItem(
+            id: "ai-export-guidance",
+            category: .ai,
+            publishedAt: Date().addingTimeInterval(-12 * 60 * 60),
+            title: "EU, 생성형 AI 수출 가이드라인 공개... 플랫폼 기업은 규정 해석 대기",
+            summary: "보유 ETF와 직접 연결되는 비중은 낮아 지금은 규제 방향만 확인해도 충분해요.",
+            sourceName: "Financial Times",
+            sourceURL: URL(string: "https://www.ft.com"),
+            relatedTickers: [],
+            sentiment: .neutral
+        ),
+        PolicyNewsItem(
+            id: "shipping-carbon-levy",
+            category: .energy,
+            publishedAt: Date().addingTimeInterval(-14 * 60 * 60),
+            title: "해운 탄소부담금 논의 재개... 운임 영향은 내년 이후 확인 가능",
+            summary: "해운·물류 직접 보유가 없다면 당장 포트폴리오 액션으로 연결할 필요는 낮아요.",
+            sourceName: "한국경제",
+            sourceURL: URL(string: "https://www.hankyung.com"),
+            relatedTickers: [],
+            sentiment: .caution
         )
     ]
 
