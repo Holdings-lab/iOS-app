@@ -8,11 +8,12 @@ struct NewsroomView: View {
     @State private var digestMode: NewsroomDigestMode = .oneMinute
 
     init(
+        userId: Int64? = nil,
         userAssetProfile: UserAssetProfile,
         viewModel: PolicyNewsViewModel? = nil
     ) {
         self.userAssetProfile = userAssetProfile
-        _viewModel = StateObject(wrappedValue: viewModel ?? PolicyNewsViewModel())
+        _viewModel = StateObject(wrappedValue: viewModel ?? PolicyNewsViewModel(userId: userId))
     }
 
     private var displayedItems: [PolicyNewsItem] {
