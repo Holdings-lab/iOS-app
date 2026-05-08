@@ -18,11 +18,11 @@ struct OnboardingPage2View: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("투자 성향을 알려주세요")
                     .font(.pretendard(28, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.92))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text("같은 뉴스도 성향에 따라 강조할 자산이 달라져요")
                     .font(.pretendard(16, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.62))
+                    .foregroundStyle(Color.textTertiary)
             }
 
             VStack(spacing: 12) {
@@ -79,21 +79,21 @@ private struct InvestmentStyleCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(style.title)
                         .font(.pretendard(16, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.92))
+                        .foregroundStyle(Color.textPrimary)
 
                     Text(style.subtitle)
                         .font(.pretendard(13, weight: .regular))
-                        .foregroundStyle(Color.white.opacity(0.58))
+                        .foregroundStyle(Color.textTertiary)
                 }
 
                 Spacer()
 
                 Circle()
-                    .fill(isSelected ? Color(hex: "7C6FFF") : Color.white.opacity(0.05))
+                    .fill(isSelected ? Color.brand : Color.subtle)
                     .frame(width: 22, height: 22)
                     .overlay {
                         Circle()
-                            .stroke(isSelected ? Color(hex: "7C6FFF") : Color.white.opacity(0.16), lineWidth: 1)
+                            .stroke(isSelected ? Color.brand : Color.divider, lineWidth: 1)
 
                         if isSelected {
                             Image(systemName: "checkmark")
@@ -104,12 +104,12 @@ private struct InvestmentStyleCard: View {
             }
             .padding(16)
             .background(
-                isSelected ? Color(hex: "7C6FFF", alpha: 0.13) : Color.white.opacity(0.04),
+                isSelected ? Color.brand.opacity(0.13) : Color.subtle,
                 in: RoundedRectangle(cornerRadius: 16, style: .continuous)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? Color(hex: "7C6FFF", alpha: 0.45) : Color.white.opacity(0.07), lineWidth: 1)
+                    .stroke(isSelected ? Color.brand.opacity(0.45) : Color.hairline, lineWidth: 1)
             }
         }
         .buttonStyle(.plain)
@@ -126,7 +126,7 @@ private struct AnimatedPortfolioBarsCard: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("선택한 성향 기준 예시 포트폴리오")
                     .font(.pretendard(13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.62))
+                    .foregroundStyle(Color.textTertiary)
 
                 VStack(spacing: 14) {
                     ForEach(Array(style.allocations.enumerated()), id: \.element.id) { index, allocation in
@@ -134,7 +134,7 @@ private struct AnimatedPortfolioBarsCard: View {
                             HStack {
                                 Text(allocation.label)
                                     .font(.pretendard(14, weight: .medium))
-                                    .foregroundStyle(Color.white.opacity(0.84))
+                                    .foregroundStyle(Color.textPrimary)
 
                                 Spacer()
 
@@ -146,7 +146,7 @@ private struct AnimatedPortfolioBarsCard: View {
                             GeometryReader { proxy in
                                 ZStack(alignment: .leading) {
                                     Capsule(style: .continuous)
-                                        .fill(Color.white.opacity(0.06))
+                                        .fill(Color.subtle)
 
                                     Capsule(style: .continuous)
                                         .fill(Color(hex: allocation.colorHex))
@@ -174,5 +174,5 @@ private struct AnimatedPortfolioBarsCard: View {
 
 #Preview {
     OnboardingPage2View(viewModel: OnboardingFlowViewModel(), onBack: {}, onNext: {})
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
 }

@@ -47,7 +47,7 @@ enum SocialLoginProvider: String, CaseIterable, Hashable {
     var borderColor: Color {
         switch self {
         case .apple:
-            return Color.white.opacity(0.08)
+            return Color.divider
         case .google:
             return Color.black.opacity(0.08)
         case .kakao:
@@ -83,11 +83,11 @@ struct LoginView: View {
             VStack(spacing: 8) {
                 Text("폴리시 파이낸스")
                     .font(.pretendard(32, weight: .bold))
-                    .foregroundStyle(Color.foreground)
+                    .foregroundStyle(Color.textPrimary)
 
                 Text("정책이 만드는 투자 기회를 잡으세요")
                     .font(.pretendard(15, weight: .medium))
-                    .foregroundStyle(Color.mutedForeground)
+                    .foregroundStyle(Color.textTertiary)
             }
 
             VStack(spacing: PFSpacing.item) {
@@ -120,11 +120,11 @@ struct LoginView: View {
 
             HStack(spacing: 6) {
                 Text("계정이 없으신가요?")
-                    .foregroundStyle(Color.mutedForeground)
+                    .foregroundStyle(Color.textTertiary)
                 Button("회원가입") {
                     onTapSignUp()
                 }
-                .foregroundStyle(Color.electricBlue)
+                .foregroundStyle(Color.brand)
                 .buttonStyle(.plain)
             }
             .font(.pretendard(15, weight: .medium))
@@ -134,28 +134,28 @@ struct LoginView: View {
                 Text("온보딩 테스트 계정: eom175@naver.com / 11111111")
             }
             .font(.pretendard(12, weight: .medium))
-            .foregroundStyle(Color.mutedForeground.opacity(0.8))
+            .foregroundStyle(Color.textTertiary.opacity(0.8))
         }
         .background(PFGradientBackground())
     }
 
     private var appIcon: some View {
         BrandWaveLogo()
-            .frame(width: 92, height: 54)
+            .frame(width: 148, height: 54)
     }
 
     private var socialDivider: some View {
         HStack(spacing: 10) {
             Rectangle()
-                .fill(Color.white.opacity(0.14))
+                .fill(Color.divider)
                 .frame(height: 1)
 
             Text("또는")
                 .font(.pretendard(14, weight: .medium))
-                .foregroundStyle(Color.mutedForeground)
+                .foregroundStyle(Color.textTertiary)
 
             Rectangle()
-                .fill(Color.white.opacity(0.14))
+                .fill(Color.divider)
                 .frame(height: 1)
         }
     }
@@ -212,61 +212,33 @@ private struct SocialButton: View {
 
 struct BrandWaveLogo: View {
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color.midnightAccent.opacity(0.16))
-                .frame(width: 56, height: 56)
-                .blur(radius: 18)
-                .offset(x: -16, y: -2)
+        HStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.brand, Color.brandDark],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
 
-            Circle()
-                .fill(Color.policyCyan.opacity(0.16))
-                .frame(width: 56, height: 56)
-                .blur(radius: 18)
-                .offset(x: 16, y: 2)
+                Text("P")
+                    .font(.pretendard(22, weight: .bold))
+                    .foregroundStyle(Color.textOnAccent)
+            }
+            .frame(width: 54, height: 54)
 
-            PolicyWaveShape()
-                .stroke(
-                    LinearGradient(
-                        colors: [Color.midnightAccent, Color.electricBlue, Color.policyCyan],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ),
-                    style: StrokeStyle(lineWidth: 8, lineCap: .round, lineJoin: .round)
-                )
+            VStack(alignment: .leading, spacing: 2) {
+                Text("POLSIGNAL")
+                    .font(.pretendard(10, weight: .semibold))
+                    .foregroundStyle(Color.textQuaternary)
+
+                Text("로그인")
+                    .font(.pretendard(14, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+            }
         }
-    }
-}
-
-private struct PolicyWaveShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let width = rect.width
-        let height = rect.height
-
-        path.move(to: CGPoint(x: width * 0.10, y: height * 0.42))
-        path.addCurve(
-            to: CGPoint(x: width * 0.28, y: height * 0.32),
-            control1: CGPoint(x: width * 0.15, y: height * 0.50),
-            control2: CGPoint(x: width * 0.20, y: height * 0.16)
-        )
-        path.addCurve(
-            to: CGPoint(x: width * 0.46, y: height * 0.86),
-            control1: CGPoint(x: width * 0.34, y: height * 0.54),
-            control2: CGPoint(x: width * 0.38, y: height * 0.92)
-        )
-        path.addCurve(
-            to: CGPoint(x: width * 0.61, y: height * 0.18),
-            control1: CGPoint(x: width * 0.52, y: height * 0.76),
-            control2: CGPoint(x: width * 0.56, y: height * 0.18)
-        )
-        path.addCurve(
-            to: CGPoint(x: width * 0.90, y: height * 0.44),
-            control1: CGPoint(x: width * 0.67, y: height * 0.18),
-            control2: CGPoint(x: width * 0.78, y: height * 0.62)
-        )
-
-        return path
     }
 }
 
@@ -277,5 +249,5 @@ private struct PolicyWaveShape: Shape {
         onSocialLogin: { _ in },
         onTapSignUp: {}
     )
-    .preferredColorScheme(.dark)
+    .preferredColorScheme(.light)
 }

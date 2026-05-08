@@ -19,7 +19,7 @@ struct OnboardingPage3View: View {
 
     private var accentGradient: LinearGradient {
         LinearGradient(
-            colors: [Color.midnightAccent, Color.electricBlue],
+            colors: [Color.brand, Color.brandDark],
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
@@ -38,11 +38,11 @@ struct OnboardingPage3View: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("증권 계좌를 연결해주세요")
                     .font(.pretendard(26, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.92))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text("현재는 한국투자증권 계좌만 연결할 수 있고, 연결된 자산 기준으로 정책 민감도를 계산합니다.")
                     .font(.pretendard(15, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.62))
+                    .foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -52,21 +52,21 @@ struct OnboardingPage3View: View {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.electricBlue)
+                        .foregroundStyle(Color.brand)
 
                     Text("증권")
                         .font(.pretendard(18, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.92))
+                        .foregroundStyle(Color.textPrimary)
 
                     Text("\(selectedInstitutionCount)")
                         .font(.pretendard(18, weight: .bold))
-                        .foregroundStyle(Color.electricBlue)
+                        .foregroundStyle(Color.brand)
 
                     Spacer()
 
                     Image(systemName: "chevron.up")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.42))
+                        .foregroundStyle(Color.textTertiary)
                 }
 
                 LazyVGrid(columns: columns, spacing: 12) {
@@ -85,7 +85,7 @@ struct OnboardingPage3View: View {
 
             Text("다른 증권사는 준비 중이며, 현재는 한국투자증권만 선택 가능합니다.")
                 .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.42))
+                .foregroundStyle(Color.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .safeAreaInset(edge: .bottom) {
@@ -104,7 +104,7 @@ struct OnboardingPage3View: View {
                 )
                 .presentationDetents([.height(520), .large])
                 .presentationDragIndicator(.visible)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
             }
         }
         .background(PFGradientBackground())
@@ -118,10 +118,10 @@ struct OnboardingPage3View: View {
                     VStack(spacing: 8) {
                         Text(category)
                             .font(.pretendard(14, weight: category == "증권" ? .semibold : .medium))
-                            .foregroundStyle(category == "증권" ? Color.white.opacity(0.9) : Color.white.opacity(0.26))
+                            .foregroundStyle(category == "증권" ? Color.textPrimary : Color.textDisabled)
 
                         Capsule()
-                            .fill(category == "증권" ? Color.white.opacity(0.9) : .clear)
+                            .fill(category == "증권" ? Color.textPrimary : .clear)
                             .frame(height: 2)
                     }
                 }
@@ -130,7 +130,7 @@ struct OnboardingPage3View: View {
         }
         .overlay(alignment: .bottom) {
             Rectangle()
-                .fill(Color.white.opacity(0.06))
+                .fill(Color.subtle)
                 .frame(height: 1)
         }
     }
@@ -140,33 +140,28 @@ struct OnboardingPage3View: View {
             HStack(spacing: 12) {
                 Text(selectedInstitutionCountText)
                     .font(.pretendard(18, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.88))
+                    .foregroundStyle(Color.textPrimary)
                     .frame(maxWidth: .infinity)
                     .frame(height: 58)
-                    .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .background(Color.muted, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
 
                 Button {
                     showsConnectionReviewSheet = true
                 } label: {
                     Text("연결하기")
                         .font(.pretendard(18, weight: .bold))
-                        .foregroundStyle(selectedInstitutionCount > 0 ? .white : Color.white.opacity(0.34))
+                        .foregroundStyle(selectedInstitutionCount > 0 ? Color.textOnAccent : Color.textDisabled)
                         .frame(maxWidth: .infinity)
                         .frame(height: 58)
                         .background(
                             selectedInstitutionCount > 0
                                 ? AnyShapeStyle(accentGradient)
-                                : AnyShapeStyle(Color.white.opacity(0.10)),
+                                : AnyShapeStyle(Color.muted),
                             in: RoundedRectangle(cornerRadius: 16, style: .continuous)
                         )
                 }
                 .buttonStyle(.plain)
                 .allowsHitTesting(selectedInstitutionCount > 0)
-                .shadow(
-                    color: selectedInstitutionCount > 0 ? Color.midnightAccent.opacity(0.22) : .clear,
-                    radius: 14,
-                    y: 6
-                )
             }
 
             Button("나중에 할게요") {
@@ -176,17 +171,17 @@ struct OnboardingPage3View: View {
                 onNext()
             }
             .font(.pretendard(14, weight: .medium))
-            .foregroundStyle(Color.white.opacity(0.46))
+            .foregroundStyle(Color.textTertiary)
             .buttonStyle(.plain)
         }
         .padding(.horizontal, MidnightLayout.horizontal)
         .padding(.top, 12)
         .padding(.bottom, 12)
         .background(
-            Color(hex: "090E25").opacity(0.94)
+            Color.elevated
                 .overlay(alignment: .top) {
                     Rectangle()
-                        .fill(Color.white.opacity(0.06))
+                        .fill(Color.hairline)
                         .frame(height: 1)
                 }
                 .ignoresSafeArea()
@@ -219,15 +214,15 @@ private struct BrokerInstitutionCard: View {
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Color.electricBlue)
+                            .foregroundStyle(Color.brand)
                     } else if isConnectable {
                         Circle()
-                            .stroke(Color.white.opacity(0.20), lineWidth: 1)
+                            .stroke(Color.textDisabled, lineWidth: 1)
                             .frame(width: 16, height: 16)
                     } else {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.white.opacity(0.20))
+                            .foregroundStyle(Color.textDisabled)
                     }
 
                     Spacer()
@@ -242,7 +237,7 @@ private struct BrokerInstitutionCard: View {
 
                 Text(institution.name)
                     .font(.pretendard(13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(isConnectable ? 0.88 : 0.52))
+                    .foregroundStyle(isConnectable ? Color.textPrimary : Color.textDisabled)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
@@ -262,18 +257,18 @@ private struct BrokerInstitutionCard: View {
 
     private var cardBackground: Color {
         if isSelected {
-            return Color.midnightAccent.opacity(0.10)
+            return Color.brand.opacity(0.10)
         }
 
-        return Color.white.opacity(isConnectable ? 0.07 : 0.05)
+        return isConnectable ? Color.elevated : Color.muted
     }
 
     private var cardBorder: Color {
         if isSelected {
-            return Color.midnightAccent.opacity(0.82)
+            return Color.brand.opacity(0.82)
         }
 
-        return Color.white.opacity(isConnectable ? 0.08 : 0.04)
+        return isConnectable ? Color.hairline : Color.divider
     }
 
     @ViewBuilder
@@ -331,11 +326,11 @@ private struct BrokerageConnectionReviewSheet: View {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("조회 전용으로 연결할게요")
                                 .font(.pretendard(24, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.92))
+                                .foregroundStyle(Color.textPrimary)
 
                             Text("매수나 매도 기능 없이, 계좌 잔고와 보유 종목만 불러옵니다.")
                                 .font(.pretendard(15, weight: .regular))
-                                .foregroundStyle(Color.white.opacity(0.62))
+                                .foregroundStyle(Color.textTertiary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
@@ -346,11 +341,11 @@ private struct BrokerageConnectionReviewSheet: View {
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(institution.name)
                                         .font(.pretendard(17, weight: .semibold))
-                                        .foregroundStyle(Color.white.opacity(0.92))
+                                        .foregroundStyle(Color.textPrimary)
 
                                     Text("연결 후 홈과 내 자산 화면에 실계좌 기준 분석이 반영돼요.")
                                         .font(.pretendard(13, weight: .medium))
-                                        .foregroundStyle(Color.white.opacity(0.58))
+                                        .foregroundStyle(Color.textTertiary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                             }
@@ -389,7 +384,7 @@ private struct BrokerageConnectionReviewSheet: View {
                         dismiss()
                     }
                     .font(.pretendard(14, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.62))
+                    .foregroundStyle(Color.textTertiary)
                 }
             }
         }
@@ -404,22 +399,22 @@ private struct ReviewBulletRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Circle()
-                .fill(Color.midnightAccent.opacity(0.14))
+                .fill(Color.brand.opacity(0.14))
                 .frame(width: 34, height: 34)
                 .overlay {
                     Image(systemName: icon)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.electricBlue)
+                        .foregroundStyle(Color.brand)
                 }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.pretendard(14, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.9))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text(description)
                     .font(.pretendard(13, weight: .medium))
-                    .foregroundStyle(Color.white.opacity(0.56))
+                    .foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -433,7 +428,7 @@ struct SelectedInstitutionBadge: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(Color.subtle)
 
             if institution.id == AccountInstitution.koreaInvestmentID {
                 Image("hantoo")
@@ -448,12 +443,12 @@ struct SelectedInstitutionBadge: View {
         .frame(width: size, height: size)
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Color.divider, lineWidth: 1)
         }
     }
 }
 
 #Preview {
     OnboardingPage3View(viewModel: OnboardingFlowViewModel(), onBack: {}, onNext: {})
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
 }

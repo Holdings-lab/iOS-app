@@ -27,7 +27,7 @@ struct OnboardingBrokerageLoadingView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(isCompleted ? "계좌 정보 준비가 끝났어요" : "계좌 정보를 불러오고 있어요")
                     .font(.pretendard(28, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.92))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text(
                     isCompleted
@@ -35,7 +35,7 @@ struct OnboardingBrokerageLoadingView: View {
                     : "읽기 전용으로 인증을 확인하고, 잔고와 보유 종목을 순서대로 조회하는 중입니다."
                 )
                 .font(.pretendard(15, weight: .regular))
-                .foregroundStyle(Color.white.opacity(0.62))
+                .foregroundStyle(Color.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -78,11 +78,11 @@ struct OnboardingBrokerageLoadingView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(viewModel.connectedInstitutionSummary)
                         .font(.pretendard(17, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.92))
+                        .foregroundStyle(Color.textPrimary)
 
                     Text(isCompleted ? "조회 준비 완료" : "계좌 인증과 데이터 조회를 진행 중")
                         .font(.pretendard(13, weight: .medium))
-                        .foregroundStyle(isCompleted ? Color.electricBlue : Color.white.opacity(0.56))
+                        .foregroundStyle(isCompleted ? Color.brand : Color.textTertiary)
                 }
 
                 Spacer()
@@ -90,10 +90,10 @@ struct OnboardingBrokerageLoadingView: View {
                 if isCompleted {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(Color.electricBlue)
+                        .foregroundStyle(Color.brand)
                 } else {
                     ProgressView()
-                        .tint(Color.electricBlue)
+                        .tint(Color.brand)
                 }
             }
         }
@@ -190,11 +190,11 @@ private struct BrokerageSyncStageRow: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(stage.title)
                         .font(.pretendard(15, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.9))
+                        .foregroundStyle(Color.textPrimary)
 
                     Text(stage.subtitle)
                         .font(.pretendard(13, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.56))
+                        .foregroundStyle(Color.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -210,29 +210,29 @@ private struct BrokerageSyncStageRow: View {
         switch state {
         case .done:
             Circle()
-                .fill(Color.midnightAccent.opacity(0.16))
+                .fill(Color.brand.opacity(0.16))
                 .frame(width: 34, height: 34)
                 .overlay {
                     Image(systemName: "checkmark")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Color.electricBlue)
+                        .foregroundStyle(Color.brand)
                 }
         case .active:
             Circle()
-                .stroke(Color.electricBlue.opacity(0.28), lineWidth: 1.5)
+                .stroke(Color.brand.opacity(0.28), lineWidth: 1.5)
                 .frame(width: 34, height: 34)
                 .overlay {
                     ProgressView()
-                        .tint(Color.electricBlue)
+                        .tint(Color.brand)
                 }
         case .waiting:
             Circle()
-                .fill(Color.white.opacity(0.04))
+                .fill(Color.subtle)
                 .frame(width: 34, height: 34)
                 .overlay {
                     Image(systemName: stage.icon)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.28))
+                        .foregroundStyle(Color.textDisabled)
                 }
         }
     }
@@ -243,15 +243,15 @@ private struct BrokerageSyncStageRow: View {
         case .done:
             Text("완료")
                 .font(.pretendard(12, weight: .semibold))
-                .foregroundStyle(Color.electricBlue)
+                .foregroundStyle(Color.brand)
         case .active:
             Text("진행 중")
                 .font(.pretendard(12, weight: .semibold))
-                .foregroundStyle(Color.electricBlue)
+                .foregroundStyle(Color.brand)
         case .waiting:
             Text("대기")
                 .font(.pretendard(12, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.32))
+                .foregroundStyle(Color.textDisabled)
         }
     }
 }
@@ -261,5 +261,5 @@ private struct BrokerageSyncStageRow: View {
         viewModel: OnboardingFlowViewModel(),
         onNext: {}
     )
-    .preferredColorScheme(.dark)
+    .preferredColorScheme(.light)
 }

@@ -54,11 +54,11 @@ struct SignupEmailAuthView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("이메일을 인증해주세요")
                     .font(.pretendard(28, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.92))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text("로그인에 사용할 이메일이에요.")
                     .font(.pretendard(16, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.62))
+                    .foregroundStyle(Color.textTertiary)
             }
 
             if hasSentCode {
@@ -123,11 +123,11 @@ struct SignupEmailAuthView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("인증할 이메일")
                         .font(.pretendard(12, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.52))
+                        .foregroundStyle(Color.textTertiary)
 
                     Text(emailAddress)
                         .font(.pretendard(15, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.92))
+                        .foregroundStyle(Color.textPrimary)
                 }
 
                 Spacer()
@@ -136,7 +136,7 @@ struct SignupEmailAuthView: View {
                     onChangeEmail()
                 }
                 .font(.pretendard(13, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.62))
+                .foregroundStyle(Color.textTertiary)
                 .buttonStyle(.plain)
             }
         }
@@ -147,14 +147,14 @@ struct SignupEmailAuthView: View {
             VStack(alignment: .leading, spacing: isCompactOTPLayout ? 10 : 14) {
                 Text("인증번호 6자리를 입력해주세요")
                     .font(.pretendard(15, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.9))
+                    .foregroundStyle(Color.textPrimary)
 
                 OTPCodeFieldView(code: $otpCode, shakeTrigger: shakeTrigger, onCompleted: onVerifyCode)
 
                 HStack {
                     Text(timeText)
                         .font(.pretendard(13, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.62))
+                        .foregroundStyle(Color.textTertiary)
 
                     Spacer()
 
@@ -162,13 +162,13 @@ struct SignupEmailAuthView: View {
                         onResendCode()
                     }
                     .font(.pretendard(13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.62))
+                    .foregroundStyle(Color.textTertiary)
                     .buttonStyle(.plain)
                 }
 
                 Text("인증번호가 오지 않으면 스팸함과 프로모션함도 함께 확인해주세요.")
                     .font(.pretendard(isCompactOTPLayout ? 12 : 13, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.46))
+                    .foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -179,16 +179,16 @@ struct SignupEmailAuthView: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text("인증 팁")
                     .font(.pretendard(12, weight: .semibold))
-                    .foregroundStyle(Color(hex: "5BBBFF"))
+                    .foregroundStyle(Color.brandLight)
 
                 Text("메일 주소를 정확히 입력하면 3분 동안 사용할 수 있는 인증번호를 보내드려요.")
                     .font(.pretendard(15, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.88))
+                    .foregroundStyle(Color.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("회사 메일을 쓰는 경우 수신 보안 정책 때문에 조금 늦을 수 있어요.")
                     .font(.pretendard(13, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.56))
+                    .foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -199,30 +199,30 @@ struct SignupEmailAuthView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("이메일")
                 .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.52))
+                .foregroundStyle(Color.textTertiary)
 
             HStack(spacing: 8) {
                 TextField(
                     "",
                     text: $emailLocalPart,
-                    prompt: Text("example").foregroundStyle(Color.white.opacity(0.38))
+                    prompt: Text("example").foregroundStyle(Color.textDisabled)
                 )
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled(true)
                 .keyboardType(.emailAddress)
                 .font(.pretendard(16, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.92))
+                .foregroundStyle(Color.textPrimary)
 
                 Text("@")
                     .font(.pretendard(16, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.46))
+                    .foregroundStyle(Color.textTertiary)
             }
             .padding(.horizontal, 16)
             .frame(height: 54)
-            .background(Color.midnightSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(Color.divider, lineWidth: 1)
             }
         }
         .frame(maxWidth: .infinity)
@@ -232,7 +232,7 @@ struct SignupEmailAuthView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("도메인")
                 .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.52))
+                .foregroundStyle(Color.textTertiary)
 
             Menu {
                 ForEach(availableDomains) { domain in
@@ -244,21 +244,21 @@ struct SignupEmailAuthView: View {
                 HStack(spacing: 8) {
                     Text(selectedDomain.title)
                         .font(.pretendard(15, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.92))
+                        .foregroundStyle(Color.textPrimary)
                         .lineLimit(1)
 
                     Spacer(minLength: 8)
 
                     Image(systemName: "chevron.down")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.46))
+                        .foregroundStyle(Color.textTertiary)
                 }
                 .padding(.horizontal, 16)
                 .frame(height: 54)
-                .background(Color.midnightSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Color.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        .stroke(Color.divider, lineWidth: 1)
                 }
             }
             .buttonStyle(.plain)
@@ -270,24 +270,24 @@ struct SignupEmailAuthView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("직접 입력")
                 .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.52))
+                .foregroundStyle(Color.textTertiary)
 
             TextField(
                 "",
                 text: $customDomain,
-                prompt: Text("domain.com").foregroundStyle(Color.white.opacity(0.38))
+                prompt: Text("domain.com").foregroundStyle(Color.textDisabled)
             )
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled(true)
             .keyboardType(.emailAddress)
             .font(.pretendard(16, weight: .medium))
-            .foregroundStyle(Color.white.opacity(0.92))
+            .foregroundStyle(Color.textPrimary)
             .padding(.horizontal, 16)
             .frame(height: 54)
-            .background(Color.midnightSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(Color.divider, lineWidth: 1)
             }
         }
     }
@@ -295,7 +295,7 @@ struct SignupEmailAuthView: View {
 
 #Preview {
     PreviewSignupEmailAuth()
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
 }
 
 private struct PreviewSignupEmailAuth: View {

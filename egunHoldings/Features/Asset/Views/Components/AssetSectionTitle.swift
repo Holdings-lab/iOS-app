@@ -16,17 +16,16 @@ struct AssetSectionTitle: View {
 
 extension View {
     func assetGradientCTA() -> some View {
-        foregroundStyle(Color.white)
+        foregroundStyle(Color.textOnAccent)
             .padding(.horizontal, 16)
             .padding(.vertical, 15)
             .background(
                 LinearGradient(
-                    colors: [Color.electricBlue, Color.policyPurple],
+                    colors: [Color.brand, Color.brandDark],
                     startPoint: .leading,
                     endPoint: .trailing
                 ),
                 in: RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous)
             )
-            .shadow(color: Color.electricBlue.opacity(0.2), radius: 16, x: 0, y: 8)
     }
 }

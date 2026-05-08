@@ -20,11 +20,11 @@ struct SignupCompleteView: View {
                 VStack(spacing: 10) {
                     Text("회원가입이 완료됐어요")
                         .font(.pretendard(28, weight: .bold))
-                        .foregroundStyle(Color.white.opacity(0.92))
+                        .foregroundStyle(Color.textPrimary)
 
                     Text("이제 로그인하면 맞춤 설정을 시작할 수 있어요.")
                         .font(.pretendard(15, weight: .medium))
-                        .foregroundStyle(Color.white.opacity(0.62))
+                        .foregroundStyle(Color.textTertiary)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -45,5 +45,5 @@ struct SignupCompleteView: View {
 
 #Preview {
     SignupCompleteView(onLogin: {})
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
 }

@@ -98,7 +98,7 @@ struct SignUpView: View {
             }
         }
         .background(PFGradientBackground())
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onReceive(viewModel.verificationTimer) { _ in
             viewModel.tickVerificationTimer()
         }

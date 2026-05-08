@@ -28,43 +28,15 @@ struct PSGlassCard<Content: View>: View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                ZStack(alignment: .top) {
-                    shape.fill(bgFill)
-                    shape.fill(
-                        LinearGradient(
-                            colors: [glowColor, .clear],
-                            startPoint: .top,
-                            endPoint: UnitPoint(x: 0.5, y: 0.1)
-                        )
-                    )
-                }
-            }
-            .clipShape(shape)
-            .overlay { shape.stroke(PSColor.border, lineWidth: 0.5) }
-            .glassEffect(.regular.tint(tintColor), in: shape)
+            .background(bgFill, in: shape)
+            .overlay { shape.stroke(Color.hairline, lineWidth: 1) }
     }
 
     private var bgFill: Color {
         switch variant {
-        case .primary:          return PSColor.bgCardSub
-        case .secondary:        return PSColor.bgCardMuted
-        case .tinted(let c):    return c.opacity(0.04)
-        }
-    }
-
-    private var glowColor: Color {
-        switch variant {
-        case .primary:          return .white.opacity(0.07)
-        case .secondary:        return .white.opacity(0.05)
-        case .tinted(let c):    return c.opacity(0.10)
-        }
-    }
-
-    private var tintColor: Color {
-        switch variant {
-        case .primary, .secondary: return .white.opacity(0.02)
-        case .tinted(let c):       return c.opacity(0.04)
+        case .primary:       return Color.elevated
+        case .secondary:     return Color.subtle
+        case .tinted(let c): return c.opacity(0.08)
         }
     }
 }
@@ -78,12 +50,11 @@ struct PSStatusChip: View {
 
     var body: some View {
         Text(label)
-            .font(PSFont.caption())
+            .font(PSFont.semibold(11))
             .foregroundStyle(color)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(color.opacity(bgOpacity), in: Capsule())
-            .overlay { Capsule().stroke(color.opacity(0.2), lineWidth: 0.5) }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(color.opacity(bgOpacity), in: RoundedRectangle(cornerRadius: KDXRadius.chip, style: .continuous))
     }
 }
 
@@ -97,10 +68,10 @@ enum JudgmentType: String {
 
     var color: Color {
         switch self {
-        case .confirm:  return PSColor.electricBlue
-        case .wait:     return PSColor.purple
-        case .defend:   return PSColor.red
-        case .simulate: return PSColor.emerald
+        case .confirm:  return Color.brand
+        case .wait:     return Color.warning
+        case .defend:   return Color.up
+        case .simulate: return Color.success
         }
     }
 
@@ -125,10 +96,9 @@ struct JudgmentTypeBadge: View {
                 .font(PSFont.semibold(11))
         }
         .foregroundStyle(type.color)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
-        .background(type.color.opacity(0.12), in: Capsule())
-        .overlay { Capsule().stroke(type.color.opacity(0.22), lineWidth: 0.5) }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(type.color.opacity(0.12), in: RoundedRectangle(cornerRadius: KDXRadius.chip, style: .continuous))
     }
 }
 
@@ -150,21 +120,20 @@ struct PSExposureBar: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.06))
-                        .frame(height: 5)
+                        .fill(Color.divider)
+                        .frame(height: 6)
                     Capsule()
                         .fill(
                             LinearGradient(
-                                colors: [color.opacity(0.5), color.opacity(0.85)],
+                                colors: [color, Color.brandLight],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
-                        .frame(width: max(8, geo.size.width * CGFloat(pct) / 100), height: 5)
-                        .shadow(color: color.opacity(0.3), radius: 4)
+                        .frame(width: max(8, geo.size.width * CGFloat(pct) / 100), height: 6)
                 }
             }
-            .frame(height: 5)
+            .frame(height: 6)
 
             Text("\(pct)%")
                 .font(PSFont.semibold(12))
@@ -222,24 +191,24 @@ struct PolSignalLogo: View {
             )
             shield.closeSubpath()
 
-            ctx.fill(shield, with: .color(Color.electricBlue.opacity(0.15)))
-            ctx.stroke(shield, with: .color(Color.electricBlue.opacity(0.5)), lineWidth: 1)
+            ctx.fill(shield, with: .color(Color.brandTintBg))
+            ctx.stroke(shield, with: .color(Color.brand.opacity(0.5)), lineWidth: 1)
 
             let r: CGFloat = 3
             ctx.fill(
                 Path(ellipseIn: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2)),
-                with: .color(Color.electricBlue.opacity(0.7))
+                with: .color(Color.brand)
             )
 
             var arc1 = Path()
             arc1.addArc(center: CGPoint(x: cx, y: cy), radius: w * 0.30,
                         startAngle: .degrees(200), endAngle: .degrees(340), clockwise: false)
-            ctx.stroke(arc1, with: .color(Color.electricBlue.opacity(0.7)), lineWidth: 1.5)
+            ctx.stroke(arc1, with: .color(Color.brand), lineWidth: 1.5)
 
             var arc2 = Path()
             arc2.addArc(center: CGPoint(x: cx, y: cy), radius: w * 0.42,
                         startAngle: .degrees(200), endAngle: .degrees(340), clockwise: false)
-            ctx.stroke(arc2, with: .color(Color.electricBlue.opacity(0.4)), lineWidth: 1)
+            ctx.stroke(arc2, with: .color(Color.brandLight), lineWidth: 1)
         }
         .frame(width: 28, height: 28)
     }
@@ -271,11 +240,11 @@ struct PSGradientButton: View {
                 .padding(.vertical, 16)
                 .background(
                     LinearGradient(
-                        colors: [PSColor.electricBlue, PSColor.purple],
+                        colors: [Color.brand, Color.brandDark],
                         startPoint: .leading,
                         endPoint: .trailing
                     ),
-                    in: RoundedRectangle(cornerRadius: PSRadius.inner, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous)
                 )
         }
         .buttonStyle(PSPressStyle())

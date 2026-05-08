@@ -1,17 +1,17 @@
 import SwiftUI
 
 private enum FlowTheme {
-    static let accentStart = Color(hex: "7C6FFF")
-    static let accentEnd = Color(hex: "5BBBFF")
-    static let cardBackground = Color.white.opacity(0.06)
-    static let cardBorder = Color.white.opacity(0.09)
-    static let track = Color.white.opacity(0.10)
-    static let disabledBackground = Color(hex: "2C344A")
-    static let disabledText = Color.white.opacity(0.34)
-    static let sparkleBackground = Color(hex: "1A1040")
-    static let sparkleBorder = Color(hex: "7C6FFF", alpha: 0.30)
+    static let accentStart = Color.brand
+    static let accentEnd = Color.brandDark
+    static let cardBackground = Color.elevated
+    static let cardBorder = Color.hairline
+    static let track = Color.divider
+    static let disabledBackground = Color.muted
+    static let disabledText = Color.textDisabled
+    static let sparkleBackground = Color.brandTintBg
+    static let sparkleBorder = Color.brand.opacity(0.30)
     static let logoWaveGradient = LinearGradient(
-        colors: [Color.midnightAccent, Color.electricBlue, Color.policyCyan],
+        colors: [Color.brand, Color.brandLight],
         startPoint: .leading,
         endPoint: .trailing
     )
@@ -26,7 +26,7 @@ struct FlowPrimaryButton: View {
         Button(action: action) {
             Text(title)
                 .font(.pretendard(17, weight: .semibold))
-                .foregroundStyle(isEnabled ? Color.white : FlowTheme.disabledText)
+                .foregroundStyle(isEnabled ? Color.textOnAccent : FlowTheme.disabledText)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
                 .background(
@@ -122,20 +122,20 @@ struct SignalDemoCard: View {
             VStack(alignment: .leading, spacing: 14) {
                 Text(label)
                     .font(.pretendard(12, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.58))
+                    .foregroundStyle(Color.textTertiary)
 
                 Text(title)
                     .font(.pretendard(24, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.92))
+                    .foregroundStyle(Color.textPrimary)
 
                 Rectangle()
-                    .fill(Color.white.opacity(0.09))
+                    .fill(Color.divider)
                     .frame(height: 1)
 
                 HStack(alignment: .lastTextBaseline, spacing: 10) {
                     Text(impactText)
                         .font(.pretendard(20, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.92))
+                        .foregroundStyle(Color.textPrimary)
 
                     Spacer(minLength: 12)
 
@@ -146,7 +146,7 @@ struct SignalDemoCard: View {
 
                 Text(subtitle)
                     .font(.pretendard(13, weight: .medium))
-                    .foregroundStyle(Color.white.opacity(0.62))
+                    .foregroundStyle(Color.textTertiary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -207,7 +207,7 @@ struct CompletionCheckAnimationView: View {
                 .fill(FlowTheme.sparkleBackground)
                 .overlay {
                     Circle()
-                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                        .stroke(Color.hairline, lineWidth: 1)
                 }
                 .overlay {
                     Circle()
@@ -273,7 +273,7 @@ struct FlowInfoHint: View {
     var body: some View {
         Text(text)
             .font(.pretendard(12, weight: .medium))
-            .foregroundStyle(Color.white.opacity(0.52))
+            .foregroundStyle(Color.textTertiary)
     }
 }
 
@@ -285,12 +285,12 @@ struct FlowSummaryRow: View {
         HStack(alignment: .top, spacing: 12) {
             Text(title)
                 .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.52))
+                .foregroundStyle(Color.textTertiary)
                 .frame(width: 74, alignment: .leading)
 
             Text(value)
                 .font(.pretendard(14, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.88))
+                .foregroundStyle(Color.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
