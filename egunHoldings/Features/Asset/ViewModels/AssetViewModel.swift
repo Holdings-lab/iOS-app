@@ -12,7 +12,8 @@ final class AssetViewModel: ObservableObject {
 
     let dashboard: AssetDashboard
 
-    init(repository: AssetRepositoryProtocol = MockAssetRepository()) {
+    init(repository: AssetRepositoryProtocol? = nil) {
+        let repository = repository ?? MockAssetRepository()
         dashboard = repository.fetchDashboard()
     }
 
