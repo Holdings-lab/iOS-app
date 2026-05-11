@@ -8,6 +8,9 @@ struct AuthInputField: View {
     var disablePasswordAutofill: Bool = false
     var forceASCIIKeyboard: Bool = false
     var keyboardType: UIKeyboardType = .default
+    var textContentType: UITextContentType?
+    var submitLabel: SubmitLabel = .done
+    var onSubmit: () -> Void = {}
 
     @State private var isSecureEntry: Bool = true
 
@@ -40,8 +43,10 @@ struct AuthInputField: View {
             }
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled(true)
-            .textContentType(disablePasswordAutofill ? .oneTimeCode : nil)
+            .textContentType(disablePasswordAutofill ? .oneTimeCode : textContentType)
             .keyboardType(forceASCIIKeyboard ? .asciiCapable : keyboardType)
+            .submitLabel(submitLabel)
+            .onSubmit(onSubmit)
             .font(inputFont)
             .foregroundStyle(Color.textPrimary)
 
