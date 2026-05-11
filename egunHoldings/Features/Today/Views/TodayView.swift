@@ -38,7 +38,10 @@ struct TodayView: View {
                         onNotifications: { viewModel.present(.dataStatus) }
                     )
 
-                    ExchangeRateSnapshotCard(viewModel: exchangeRateViewModel)
+                    ExchangeRateSnapshotCard(
+                        viewModel: exchangeRateViewModel,
+                        displayMode: .compact
+                    )
 
                     TodayJudgmentHeroCard(
                         judgment: viewModel.judgment,
