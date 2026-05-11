@@ -49,6 +49,14 @@ nonisolated enum BackendEndpoint {
         Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/profile", authorizationRequirement: .bearerToken)
     }
 
+    static func investmentProfile(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/investment-profile", authorizationRequirement: .bearerToken)
+    }
+
+    static func updateInvestmentProfile(userId: Int64, body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/investment-profile", method: .patch, body: body, authorizationRequirement: .bearerToken)
+    }
+
     static func watchAssets(userId: Int64) -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/watch-assets", authorizationRequirement: .bearerToken)
     }
@@ -163,6 +171,14 @@ nonisolated enum BackendEndpoint {
 
     static func portfolio(userId: Int64) -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)", authorizationRequirement: .bearerToken)
+    }
+
+    static func portfolioRebalancing(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)/rebalancing", authorizationRequirement: .bearerToken)
+    }
+
+    static func portfolioRebalancingPreview(userId: Int64, body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)/rebalancing/preview", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func insightSection(_ sectionPath: InsightSectionPath) -> Endpoint {

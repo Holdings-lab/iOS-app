@@ -2,15 +2,19 @@ import SwiftUI
 
 @MainActor
 struct AssetView: View {
-    @ObservedObject var signalViewModel: SignalViewModel
     @StateObject private var viewModel: AssetViewModel
 
     init(
-        signalViewModel: SignalViewModel,
+        userId: Int64? = nil,
+        brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
         viewModel: AssetViewModel? = nil
     ) {
-        self.signalViewModel = signalViewModel
-        _viewModel = StateObject(wrappedValue: viewModel ?? AssetViewModel())
+        _viewModel = StateObject(
+            wrappedValue: viewModel ?? AssetViewModel(
+                userId: userId,
+                brokerBalanceSnapshot: brokerBalanceSnapshot
+            )
+        )
     }
 
     var body: some View {
@@ -56,26 +60,37 @@ struct AssetView: View {
     }
 
     private var rebalanceContent: some View {
-        PFContentScrollView(spacing: 20, topPadding: 4, scrollsToTopOnAppear: true) {
-            AssetRebalanceSection(
-                dashboard: viewModel.dashboard,
-                semiconductorTarget: $viewModel.semiconductorTarget,
-                bondTarget: $viewModel.bondTarget,
-                energyTarget: $viewModel.energyTarget,
-                cashTarget: $viewModel.cashTarget,
-                expectedReturnText: signalViewModel.expectedReturnText,
-                estimatedFeeAmountText: signalViewModel.estimatedFeeAmountText,
-                exchangeRateText: signalViewModel.exchangeRateText,
-                isExchangeRateLoading: signalViewModel.isExchangeRateLoading,
-                onRefreshExchangeRate: signalViewModel.refreshExchangeRate,
-                onCreateExecutionPlan: {}
-            )
+        GeometryReader { proxy in
+            PFContentScrollView(spacing: 20, topPadding: 4, scrollsToTopOnAppear: true) {
+                AssetRebalanceSection(
+                    dashboard: viewModel.rebalancingDashboard,
+                    loadState: viewModel.rebalancingLoadState,
+                    dataStatusText: viewModel.rebalancingDataStatusText,
+                    dataFootnote: viewModel.rebalancingDataFootnote,
+                    selectedFilter: viewModel.selectedRecommendationFilter,
+                    filteredRecommendations: viewModel.filteredRebalancingRecommendations,
+                    onSelectFilter: viewModel.selectRecommendationFilter,
+                    onRefresh: {
+                        Task {
+                            await viewModel.refreshRebalancing()
+                        }
+                    }
+                )
+                .frame(
+                    width: max(0, proxy.size.width - KDXSpacing.screenHorizontal * 2),
+                    alignment: .leading
+                )
+                .clipped()
+                .task {
+                    await viewModel.loadRebalancingIfNeeded()
+                }
+            }
         }
     }
 }
 
 #Preview {
     NavigationStack {
-        AssetView(signalViewModel: SignalViewModel())
+        AssetView()
     }
 }
