@@ -83,17 +83,29 @@ final class AssetViewModel: ObservableObject {
     func refreshRebalancing() async {
         rebalancingLoadState = .loading
 
+        let startedAt = Date()
+        let minimumDuration: TimeInterval = 0.8
+
+        let nextState: RebalancingLoadState
         do {
             let dashboard = try await rebalancingRepository.fetchRebalancing(
                 userId: userId,
                 brokerBalanceSnapshot: brokerBalanceSnapshot
             )
             rebalancingDashboard = dashboard
-            rebalancingLoadState = .loaded
+            nextState = .loaded
         } catch {
             rebalancingDashboard = MockAssetRebalancingRepository.makeDashboard(userId: userId)
-            rebalancingLoadState = .usingFallback(message: Self.errorMessage(for: error))
+            nextState = .usingFallback(message: Self.errorMessage(for: error))
         }
+
+        let elapsed = Date().timeIntervalSince(startedAt)
+        if elapsed < minimumDuration {
+            let remaining = minimumDuration - elapsed
+            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+        }
+
+        rebalancingLoadState = nextState
     }
 
     func presentBrokerConnection() {

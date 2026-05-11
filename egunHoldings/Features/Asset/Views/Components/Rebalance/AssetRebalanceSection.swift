@@ -10,6 +10,8 @@ struct AssetRebalanceSection: View {
     let onSelectFilter: (RebalancingRecommendationFilter) -> Void
     let onRefresh: () -> Void
 
+    @State private var refreshRotation: Double = 0
+
     var body: some View {
         VStack(spacing: 20) {
             summaryHeader
@@ -18,6 +20,18 @@ struct AssetRebalanceSection: View {
             recommendationFilter
             recommendationList
             notesSection
+        }
+        .onChange(of: loadState == .loading) { _, isLoading in
+            if isLoading {
+                refreshRotation = 0
+                withAnimation(.linear(duration: 0.8).repeatForever(autoreverses: false)) {
+                    refreshRotation = 360
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    refreshRotation = 0
+                }
+            }
         }
     }
 
@@ -41,6 +55,7 @@ struct AssetRebalanceSection: View {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.electricBlue)
+                        .rotationEffect(.degrees(refreshRotation))
                         .frame(width: 34, height: 34)
                         .background(Color.electricBlue.opacity(0.08), in: Circle())
                 }
