@@ -27,7 +27,9 @@ final class ExchangeRateViewModel: ObservableObject {
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
+
+        let startedAt = Date()
+        let minimumDuration: TimeInterval = 0.8
 
         do {
             let quote = try await provider.fetchUSDKRW()
@@ -36,6 +38,14 @@ final class ExchangeRateViewModel: ObservableObject {
         } catch {
             errorMessage = "업데이트 실패"
         }
+
+        let elapsed = Date().timeIntervalSince(startedAt)
+        if elapsed < minimumDuration {
+            let remaining = minimumDuration - elapsed
+            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+        }
+
+        isLoading = false
     }
 
     var rateText: String {
@@ -97,12 +107,26 @@ struct ExchangeRateSnapshotCard: View {
     var caption: String = "USD/KRW"
     var displayMode: DisplayMode = .full
 
+    @State private var refreshRotation: Double = 0
+
     var body: some View {
         KDXCard(padding: cardPadding) {
             content
         }
         .task {
             await viewModel.loadIfNeeded()
+        }
+        .onChange(of: viewModel.isLoading) { _, isLoading in
+            if isLoading {
+                refreshRotation = 0
+                withAnimation(.linear(duration: 0.8).repeatForever(autoreverses: false)) {
+                    refreshRotation = 360
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    refreshRotation = 0
+                }
+            }
         }
     }
 
@@ -175,13 +199,7 @@ struct ExchangeRateSnapshotCard: View {
             Image(systemName: "arrow.clockwise")
                 .font(.system(size: displayMode == .compact ? 12 : 14, weight: .semibold))
                 .foregroundStyle(Color.brand)
-                .rotationEffect(.degrees(viewModel.isLoading ? 360 : 0))
-                .animation(
-                    viewModel.isLoading
-                        ? .linear(duration: 0.8).repeatForever(autoreverses: false)
-                        : .default,
-                    value: viewModel.isLoading
-                )
+                .rotationEffect(.degrees(refreshRotation))
                 .frame(
                     width: displayMode == .compact ? 30 : 36,
                     height: displayMode == .compact ? 30 : 36
