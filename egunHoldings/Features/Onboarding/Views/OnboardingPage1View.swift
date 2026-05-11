@@ -22,7 +22,7 @@ struct OnboardingPage1View: View {
             topPadding: 16,
             bottomPadding: 32
         ) {
-            FlowProgressHeader(currentStep: 1, totalSteps: 4, onBack: onBack)
+            FlowProgressHeader(currentStep: 1, totalSteps: 5, stepTitle: "맞춤 설정 · 관심 산업", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("어떤 산업을 주로 보시나요?")

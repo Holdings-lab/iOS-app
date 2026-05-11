@@ -23,7 +23,7 @@ struct OnboardingPage3View: View {
             topPadding: 16,
             bottomPadding: 168
         ) {
-            FlowProgressHeader(currentStep: 3, totalSteps: 4, onBack: onBack)
+            FlowProgressHeader(currentStep: 3, totalSteps: 5, stepTitle: "맞춤 설정 · 계좌 연결", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("조회 전용 계좌를 연결해주세요")

@@ -33,7 +33,13 @@ struct OnboardingFlowView: View {
                     OnboardingPage3View(
                         viewModel: onboardingViewModel,
                         onBack: navigateBack,
-                        onNext: { path.append(.brokerageSync) }
+                        onNext: {
+                            if onboardingViewModel.connectedInstitutionID == nil {
+                                path.append(.completion)
+                            } else {
+                                path.append(.brokerageSync)
+                            }
+                        }
                     )
                 case .brokerageSync:
                     OnboardingBrokerageLoadingView(

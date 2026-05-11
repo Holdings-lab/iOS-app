@@ -11,7 +11,7 @@ struct OnboardingPage4View: View {
             topPadding: 16,
             bottomPadding: 120
         ) {
-            FlowProgressHeader(currentStep: 4, totalSteps: 4, showsBack: false, onBack: {})
+            FlowProgressHeader(currentStep: 5, totalSteps: 5, stepTitle: "맞춤 설정 · 완료", showsBack: false, onBack: {})
 
             Spacer(minLength: 24)
 
@@ -23,7 +23,7 @@ struct OnboardingPage4View: View {
                         .font(.pretendard(28, weight: .bold))
                         .foregroundStyle(Color.textPrimary)
 
-                    Text("맞춤 설정 기준으로 홈을 구성했어요")
+                    Text(completionSubtitle)
                         .font(.pretendard(15, weight: .medium))
                         .foregroundStyle(Color.textTertiary)
                         .multilineTextAlignment(.center)
@@ -59,6 +59,14 @@ struct OnboardingPage4View: View {
         }
         .background(PFGradientBackground())
         .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private var completionSubtitle: String {
+        if viewModel.connectedInstitution == nil {
+            return "계좌는 나중에 연결하고, 선택한 기준으로 홈을 구성했어요"
+        }
+
+        return "맞춤 설정 기준으로 홈을 구성했어요"
     }
 }
 
