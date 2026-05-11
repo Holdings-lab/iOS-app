@@ -200,32 +200,27 @@ struct SignupEmailAuthView: View {
         }
     }
 
-    @ViewBuilder
     private var otpStatusBadge: some View {
-        let title: String
-        let foreground: Color
-        let background: Color
+        let status = otpStatus
 
-        if isVerified {
-            title = "인증 완료"
-            foreground = Color.success
-            background = Color.successBg
-        } else if secondsRemaining == 0 {
-            title = "시간 만료"
-            foreground = Color.up
-            background = Color.upBg
-        } else {
-            title = "\(otpCode.count)/6 입력"
-            foreground = Color.brand
-            background = Color.brandTintBg
-        }
-
-        Text(title)
+        return Text(status.title)
             .font(.pretendard(12, weight: .semibold))
-            .foregroundStyle(foreground)
+            .foregroundStyle(status.foreground)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            .background(background, in: Capsule(style: .continuous))
+            .background(status.background, in: Capsule(style: .continuous))
+    }
+
+    private var otpStatus: (title: String, foreground: Color, background: Color) {
+        if isVerified {
+            return ("인증 완료", Color.success, Color.successBg)
+        }
+
+        if secondsRemaining == 0 {
+            return ("시간 만료", Color.up, Color.upBg)
+        }
+
+        return ("\(otpCode.count)/6 입력", Color.brand, Color.brandTintBg)
     }
 
     private var tipCard: some View {
