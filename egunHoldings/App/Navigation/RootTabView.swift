@@ -12,6 +12,7 @@ struct RootTabView: View {
     let portfolioSnapshot: PortfolioSnapshot
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     @State private var selectedTab: RootTab = .today
+    @StateObject private var exchangeRateViewModel = ExchangeRateViewModel()
 
     init(
         userId: Int64? = nil,
@@ -32,6 +33,7 @@ struct RootTabView: View {
                 userId: userId,
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
+                exchangeRateViewModel: exchangeRateViewModel,
                 onAssetTabRequested: {
                     selectedTab = .asset
                 }
@@ -45,7 +47,8 @@ struct RootTabView: View {
             NavigationStack {
                 AssetView(
                     userId: userId,
-                    brokerBalanceSnapshot: brokerBalanceSnapshot
+                    brokerBalanceSnapshot: brokerBalanceSnapshot,
+                    exchangeRateViewModel: exchangeRateViewModel
                 )
             }
             .id(brokerBalanceSnapshot?.fetchedAt)

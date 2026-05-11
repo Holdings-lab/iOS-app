@@ -4,6 +4,7 @@ import SwiftUI
 
 struct TodayView: View {
     @StateObject private var viewModel: TodayViewModel
+    @ObservedObject private var exchangeRateViewModel: ExchangeRateViewModel
     private let onAssetTabRequested: () -> Void
 
     init(
@@ -11,6 +12,7 @@ struct TodayView: View {
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         viewModel: TodayViewModel? = nil,
+        exchangeRateViewModel: ExchangeRateViewModel? = nil,
         onAssetTabRequested: @escaping () -> Void = {}
     ) {
         self.onAssetTabRequested = onAssetTabRequested
@@ -21,6 +23,7 @@ struct TodayView: View {
                 portfolioSnapshot: portfolioSnapshot
             )
         )
+        self.exchangeRateViewModel = exchangeRateViewModel ?? ExchangeRateViewModel()
     }
 
     var body: some View {
@@ -34,6 +37,8 @@ struct TodayView: View {
                         hasUnreadNotifications: true,
                         onNotifications: { viewModel.present(.dataStatus) }
                     )
+
+                    ExchangeRateSnapshotCard(viewModel: exchangeRateViewModel)
 
                     TodayJudgmentHeroCard(
                         judgment: viewModel.judgment,
