@@ -2,9 +2,9 @@ import Foundation
 
 struct AppMockData {
     static let portfolioSnapshot = PortfolioSnapshot(
-        amountText: "₩13,550,000",
+        amountText: "₩134,820,000",
         changePercentText: "+1.2%",
-        insightText: "오늘 자산이 1.2% 올랐어요. 주로 반도체 보조금 기대감으로 SOXX가 끌어올렸어요."
+        insightText: "오늘 자산이 1.2% 올랐어요. 정책 영향은 관리 가능한 범위에 있습니다."
     )
 
     static let userAssetProfile = UserAssetProfile(

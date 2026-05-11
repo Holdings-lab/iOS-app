@@ -20,15 +20,15 @@ struct GroupedConsentList: View {
 
                 if index < items.count - 1 {
                     Divider()
-                        .overlay(Color.midnightBorder)
+                        .overlay(Color.divider)
                         .padding(.leading, 52)
                 }
             }
         }
-        .background(Color.midnightSurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.midnightBorder, lineWidth: 1)
+                .stroke(Color.hairline, lineWidth: 1)
         }
     }
 
@@ -38,23 +38,23 @@ struct GroupedConsentList: View {
                 onToggle(item)
             } label: {
                 HStack(alignment: .top, spacing: 12) {
-                    PFSelectionIndicator(isSelected: item.isChecked, tint: .midnightAccent, size: 22)
+                    PFSelectionIndicator(isSelected: item.isChecked, tint: .brand, size: 22)
                         .padding(.top, 1)
 
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(spacing: 8) {
                             Text(item.title)
                                 .font(.pretendard(15, weight: .semibold))
-                                .foregroundStyle(Color.midnightTextPrimary)
+                                .foregroundStyle(Color.textPrimary)
 
                             Text(item.isRequired ? "필수" : "선택")
                                 .font(.pretendard(11, weight: .semibold))
-                                .foregroundStyle(item.isRequired ? Color.policyAmber : Color.midnightTextTertiary)
+                                .foregroundStyle(item.isRequired ? Color.warning : Color.textQuaternary)
                         }
 
                         Text(item.summary)
                             .font(.pretendard(13, weight: .regular))
-                            .foregroundStyle(Color.midnightTextSecondary)
+                            .foregroundStyle(Color.textTertiary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -65,7 +65,7 @@ struct GroupedConsentList: View {
                 onView(item)
             }
             .font(.pretendard(13, weight: .semibold))
-            .foregroundStyle(Color.midnightTextSecondary)
+            .foregroundStyle(Color.textTertiary)
             .buttonStyle(.plain)
             .frame(minWidth: 44, minHeight: 44)
         }

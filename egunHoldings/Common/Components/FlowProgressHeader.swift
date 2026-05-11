@@ -3,6 +3,7 @@ import SwiftUI
 struct FlowProgressHeader: View {
     let currentStep: Int
     let totalSteps: Int
+    var stepTitle: String? = nil
     var showsBack: Bool = true
     let onBack: () -> Void
 
@@ -16,7 +17,7 @@ struct FlowProgressHeader: View {
                             Text("이전")
                         }
                         .font(.pretendard(14, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.62))
+                        .foregroundStyle(Color.textTertiary)
                     }
                     .buttonStyle(.plain)
                 } else {
@@ -26,9 +27,17 @@ struct FlowProgressHeader: View {
 
                 Spacer()
 
-                Text("\(currentStep)/\(totalSteps)")
-                    .font(.pretendard(14, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.62))
+                VStack(alignment: .trailing, spacing: 2) {
+                    if let stepTitle {
+                        Text(stepTitle)
+                            .font(.pretendard(12, weight: .semibold))
+                            .foregroundStyle(Color.brand)
+                    }
+
+                    Text("\(currentStep)/\(totalSteps)")
+                        .font(.pretendard(14, weight: .semibold))
+                        .foregroundStyle(Color.textTertiary)
+                }
             }
 
             FlowProgressBar(progress: Double(currentStep) / Double(totalSteps))

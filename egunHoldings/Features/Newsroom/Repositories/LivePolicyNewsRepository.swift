@@ -1,25 +1,28 @@
 import Foundation
 
 nonisolated struct LivePolicyNewsRepository: PolicyNewsRepositoryProtocol {
+    private let userId: Int64?
     private let apiClient: APIClient
     private let fallbackRepository: MockPolicyNewsRepository
 
     init(
+        userId: Int64? = nil,
         apiClient: APIClient = APIClientFactory.makeDefault(),
         fallbackRepository: MockPolicyNewsRepository = MockPolicyNewsRepository()
     ) {
+        self.userId = userId
         self.apiClient = apiClient
         self.fallbackRepository = fallbackRepository
     }
 
     func fetchNews() async throws -> [PolicyNewsItem] {
-        let requestBody = try NetworkJSONCoding.encodeJSON(
-            PolicyNewsFeedRequestDTO(cursor: nil, limit: 20)
-        )
+        guard let userId else {
+            return try await fallbackRepository.fetchNews()
+        }
 
         do {
             let response = try await apiClient.requestResult(
-                BackendEndpoint.policyFeed(body: requestBody),
+                BackendEndpoint.policyFeed(userId: userId, limit: 20, category: "all"),
                 as: PolicyNewsFeedResponseDTO.self
             )
 

@@ -5,26 +5,11 @@ import SwiftUI
 private struct SheetBackground: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background {
-                ZStack {
-                    LinearGradient(
-                        colors: [PSColor.bgCard, PSColor.bgDeepNavy],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .ignoresSafeArea()
-
-                    VStack(spacing: 0) {
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.08), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .frame(height: 1)
-                        Spacer()
-                    }
-                    .ignoresSafeArea()
-                }
+            .background(Color.elevated)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(Color.divider)
+                    .frame(height: 1)
             }
     }
 }
@@ -36,7 +21,7 @@ private extension View {
 private struct SheetDragIndicator: View {
     var body: some View {
         Capsule()
-            .fill(Color.white.opacity(0.10))
+            .fill(Color(hex: "E5E7EB"))
             .frame(width: 40, height: 4)
             .padding(.top, 12)
             .padding(.bottom, 4)
@@ -121,10 +106,10 @@ struct SettingsSheet: View {
                     Button(action: {}) {
                         Text("로그아웃")
                             .font(PSFont.semibold(15))
-                            .foregroundStyle(PSColor.red.opacity(0.70))
+                            .foregroundStyle(Color.up)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(PSColor.red.opacity(0.06), in: RoundedRectangle(cornerRadius: PSRadius.inner, style: .continuous))
+                            .background(Color.upBg, in: RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous))
                     }
                     .buttonStyle(PSPressStyle())
                     .padding(.horizontal, 20)
@@ -407,7 +392,7 @@ struct SaveCheckpointSheet: View {
                 .background(
                     isSelected
                         ? PSColor.electricBlue.opacity(0.15)
-                        : Color.white.opacity(0.04),
+                        : Color.muted,
                     in: RoundedRectangle(cornerRadius: PSRadius.small, style: .continuous)
                 )
                 .overlay {
@@ -443,7 +428,7 @@ struct SaveCheckpointSheet: View {
             .padding(.vertical, 12)
             .padding(.horizontal, 14)
             .background(
-                isSelected ? Color.white.opacity(0.04) : Color.clear,
+                isSelected ? Color.subtle : Color.clear,
                 in: RoundedRectangle(cornerRadius: PSRadius.small, style: .continuous)
             )
         }
@@ -500,6 +485,7 @@ struct SnoozeSheet: View {
                             }
                         }
                     }
+                    .contentShape(RoundedRectangle(cornerRadius: PSRadius.card, style: .continuous))
                     .buttonStyle(PSPressStyle())
                 }
             }
@@ -507,6 +493,181 @@ struct SnoozeSheet: View {
             .padding(.bottom, 40)
         }
         .sheetBackground()
+    }
+}
+
+// MARK: - PolicyDetailSheet
+
+struct PolicyDetailSheet: View {
+    let policy: TodayPolicyEvent
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SheetDragIndicator()
+
+            HStack(alignment: .center, spacing: 10) {
+                PolicyColorDot(color: policy.color, size: 8)
+                Text(policy.title)
+                    .font(PSFont.semibold(18))
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(Color.textTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 12) {
+                    PSGlassCard(variant: .primary) {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                PSStatusChip(label: policy.dDay, color: Color.brand)
+                                PSStatusChip(label: policy.status.rawValue, color: policy.status.color)
+                                Spacer()
+                                Text("내 자산 \(policy.myExposure)% 관련")
+                                    .font(PSFont.semibold(12))
+                                    .foregroundStyle(Color.brand)
+                            }
+
+                            Text(policy.summary)
+                                .font(PSFont.body(14))
+                                .foregroundStyle(Color.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .lineSpacing(3)
+                        }
+                    }
+
+                    PSGlassCard(variant: .secondary) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("확인 근거")
+                                .font(PSFont.semibold(13))
+                                .foregroundStyle(Color.textPrimary)
+
+                            ForEach(policy.evidence, id: \.self) { evidence in
+                                policyEvidenceRow(evidence, icon: "checkmark.circle.fill", color: Color.brand)
+                            }
+
+                            policyEvidenceRow(policy.counterEvidence, icon: "exclamationmark.circle.fill", color: Color.warning)
+                        }
+                    }
+
+                    if !policy.invalidationConditions.isEmpty {
+                        PSGlassCard(variant: .secondary) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("다시 볼 조건")
+                                    .font(PSFont.semibold(13))
+                                    .foregroundStyle(Color.warning)
+
+                                ForEach(policy.invalidationConditions, id: \.self) { condition in
+                                    policyEvidenceRow(condition, icon: "clock", color: Color.warning)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+            }
+        }
+        .sheetBackground()
+    }
+
+    private func policyEvidenceRow(_ text: String, icon: String, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(color)
+                .padding(.top, 1)
+            Text(text)
+                .font(PSFont.body(13))
+                .foregroundStyle(Color.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(2)
+        }
+    }
+}
+
+// MARK: - PolicyListSheet
+
+struct PolicyListSheet: View {
+    let policies: [TodayPolicyEvent]
+    let onSelect: (TodayPolicyEvent) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SheetDragIndicator()
+
+            HStack {
+                Text("오늘 정책")
+                    .font(PSFont.semibold(18))
+                    .foregroundStyle(Color.textPrimary)
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(Color.textTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 16)
+
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 10) {
+                    ForEach(policies) { policy in
+                        Button {
+                            onSelect(policy)
+                        } label: {
+                            PSGlassCard(variant: .secondary, padding: 14) {
+                                HStack(spacing: 10) {
+                                    PolicyColorDot(color: policy.color)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(policy.title)
+                                            .font(PSFont.semibold(14))
+                                            .foregroundStyle(Color.textPrimary)
+                                            .lineLimit(1)
+                                        Text("내 자산 중 \(policy.myExposure)% 관련")
+                                            .font(PSFont.caption())
+                                            .foregroundStyle(Color.textTertiary)
+                                    }
+                                    Spacer()
+                                    ImpactDotsForSheet(score: min(5, max(1, (policy.myExposure + 19) / 20)))
+                                }
+                            }
+                        }
+                        .buttonStyle(PSPressStyle())
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 40)
+            }
+        }
+        .sheetBackground()
+    }
+}
+
+private struct ImpactDotsForSheet: View {
+    let score: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(1...5, id: \.self) { index in
+                Circle()
+                    .fill(index <= score ? Color.brand : Color.divider)
+                    .frame(width: 5, height: 5)
+            }
+        }
     }
 }
 

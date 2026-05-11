@@ -46,21 +46,21 @@ struct SignupPasswordView: View {
             topPadding: 16,
             bottomPadding: 120
         ) {
-            FlowProgressHeader(currentStep: 3, totalSteps: 4, onBack: onBack)
+            FlowProgressHeader(currentStep: 3, totalSteps: 4, stepTitle: "계정 만들기 · 비밀번호", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("비밀번호를 설정해주세요")
                     .font(.pretendard(28, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.92))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text("로그인에 사용할 비밀번호예요.")
                     .font(.pretendard(16, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.62))
+                    .foregroundStyle(Color.textTertiary)
             }
 
             Text("✓ \(email)")
                 .font(.pretendard(14, weight: .semibold))
-                .foregroundStyle(Color.midnightSuccess)
+                .foregroundStyle(Color.success)
 
             VStack(alignment: .leading, spacing: 12) {
                 AuthInputField(
@@ -117,18 +117,18 @@ struct SignupPasswordView: View {
         HStack(spacing: 10) {
             Image(systemName: isValid ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(isValid ? Color.electricBlue : Color.white.opacity(0.28))
+                .foregroundStyle(isValid ? Color.brand : Color.textDisabled)
 
             Text(text)
                 .font(.pretendard(14, weight: .medium))
-                .foregroundStyle(isValid ? Color.electricBlue : Color.white.opacity(0.52))
+                .foregroundStyle(isValid ? Color.brand : Color.textTertiary)
         }
     }
 }
 
 #Preview {
     PreviewSignupPassword()
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
 }
 
 private struct PreviewSignupPassword: View {

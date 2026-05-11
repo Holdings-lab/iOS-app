@@ -225,6 +225,8 @@ enum TodaySheet: Identifiable {
     case saveCheckpoint
     case snooze
     case exposureTheme(TodayExposureItem)
+    case policyDetail(TodayPolicyEvent)
+    case policyList
 
     var id: String {
         switch self {
@@ -234,6 +236,8 @@ enum TodaySheet: Identifiable {
         case .saveCheckpoint:        return "saveCheckpoint"
         case .snooze:                return "snooze"
         case .exposureTheme(let i):  return "exposure-\(i.theme)"
+        case .policyDetail(let p):   return "policy-\(p.id)"
+        case .policyList:            return "policyList"
         }
     }
 }

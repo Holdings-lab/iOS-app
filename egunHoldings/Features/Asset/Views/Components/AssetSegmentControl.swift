@@ -24,7 +24,7 @@ struct AssetSegmentControl: View {
             }
         }
         .padding(4)
-        .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(Color.muted, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.hairline, lineWidth: 1)

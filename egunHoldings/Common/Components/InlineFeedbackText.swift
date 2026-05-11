@@ -8,11 +8,11 @@ enum InlineFeedbackTone {
     var color: Color {
         switch self {
         case .neutral:
-            return Color.midnightTextSecondary
+            return Color.textTertiary
         case .success:
-            return Color.midnightSuccess
+            return Color.success
         case .error:
-            return Color.midnightError
+            return Color.up
         }
     }
 }

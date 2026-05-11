@@ -5,20 +5,95 @@ import SwiftUI
 final class AssetViewModel: ObservableObject {
     @Published var selectedSegment: AssetSegment = .overview
     @Published var isBrokerConnectionPresented = false
-    @Published var semiconductorTarget: Double = 32
-    @Published var bondTarget: Double = 24
-    @Published var energyTarget: Double = 18
-    @Published var cashTarget: Double = 26
+    @Published var selectedRecommendationFilter: RebalancingRecommendationFilter = .all
+    @Published private(set) var rebalancingLoadState: RebalancingLoadState = .idle
+    @Published private(set) var rebalancingDashboard: RebalancingDashboard
 
     let dashboard: AssetDashboard
 
-    init(repository: AssetRepositoryProtocol? = nil) {
-        let repository = repository ?? MockAssetRepository()
-        dashboard = repository.fetchDashboard()
+    private let userId: Int64?
+    private let brokerBalanceSnapshot: BrokerBalanceSnapshot?
+    private let rebalancingRepository: AssetRebalancingRepositoryProtocol
+    private var didLoadRebalancing = false
+
+    init(
+        userId: Int64? = nil,
+        brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
+        repository: AssetRepositoryProtocol? = nil,
+        rebalancingRepository: AssetRebalancingRepositoryProtocol? = nil
+    ) {
+        self.userId = userId
+        self.brokerBalanceSnapshot = brokerBalanceSnapshot
+        self.rebalancingRepository = rebalancingRepository ?? AssetRebalancingRepositoryFactory.makeDefault()
+        dashboard = (repository ?? MockAssetRepository()).fetchDashboard()
+        rebalancingDashboard = MockAssetRebalancingRepository.makeDashboard(userId: userId)
+    }
+
+    var filteredRebalancingRecommendations: [RebalancingRecommendation] {
+        guard let action = selectedRecommendationFilter.action else {
+            return rebalancingDashboard.recommendations
+        }
+
+        return rebalancingDashboard.recommendations.filter { $0.action == action }
+    }
+
+    var rebalancingDataStatusText: String {
+        switch rebalancingLoadState {
+        case .idle:
+            return "추천 준비 중"
+        case .loading:
+            return "추천 계산 중"
+        case .loaded:
+            return rebalancingDashboard.dataSource == "MOCK" ? "예시 데이터" : "서버 추천 연결됨"
+        case .usingFallback:
+            return "예시 데이터"
+        }
+    }
+
+    var rebalancingDataFootnote: String {
+        switch rebalancingLoadState {
+        case .idle:
+            return "투자성향과 보유자산 기준의 리밸런싱 추천을 준비하고 있습니다."
+        case .loading:
+            return "서버가 투자성향, 보유수량, 현재가, 현금을 기준으로 추천을 계산 중입니다."
+        case .loaded:
+            return rebalancingDashboard.dataSource == "REQUEST"
+                ? "실계좌 보유수량, 현재가, 현금을 서버 preview API로 보내 계산한 결과입니다."
+                : "서버의 관심자산 기반 예시 포지션으로 계산한 결과입니다."
+        case .usingFallback(let message):
+            return message.map { "서버 연결 실패로 예시 추천을 표시합니다. \($0)" }
+                ?? "서버 연결 전까지 예시 추천을 표시합니다."
+        }
     }
 
     func selectSegment(_ segment: AssetSegment) {
         selectedSegment = segment
+    }
+
+    func selectRecommendationFilter(_ filter: RebalancingRecommendationFilter) {
+        selectedRecommendationFilter = filter
+    }
+
+    func loadRebalancingIfNeeded() async {
+        guard !didLoadRebalancing else { return }
+        didLoadRebalancing = true
+        await refreshRebalancing()
+    }
+
+    func refreshRebalancing() async {
+        rebalancingLoadState = .loading
+
+        do {
+            let dashboard = try await rebalancingRepository.fetchRebalancing(
+                userId: userId,
+                brokerBalanceSnapshot: brokerBalanceSnapshot
+            )
+            rebalancingDashboard = dashboard
+            rebalancingLoadState = .loaded
+        } catch {
+            rebalancingDashboard = MockAssetRebalancingRepository.makeDashboard(userId: userId)
+            rebalancingLoadState = .usingFallback(message: Self.errorMessage(for: error))
+        }
     }
 
     func presentBrokerConnection() {
@@ -27,5 +102,13 @@ final class AssetViewModel: ObservableObject {
 
     func dismissBrokerConnection() {
         isBrokerConnectionPresented = false
+    }
+
+    private static func errorMessage(for error: Error) -> String {
+        if let networkError = error as? NetworkError {
+            return networkError.localizedDescription
+        }
+
+        return error.localizedDescription
     }
 }

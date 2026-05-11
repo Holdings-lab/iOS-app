@@ -7,22 +7,12 @@ struct OnboardingPage3View: View {
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
     @State private var showsConnectionReviewSheet = false
 
-    private let categories = ["저축은행", "페이머니", "카드", "증권", "할부금융", "보험", "기타"]
-
     private var selectedInstitutionCount: Int {
         viewModel.connectedInstitutionID == nil ? 0 : 1
     }
 
-    private var selectedInstitutionCountText: String {
-        selectedInstitutionCount == 0 ? "선택 안 함" : "\(selectedInstitutionCount)개 선택"
-    }
-
-    private var accentGradient: LinearGradient {
-        LinearGradient(
-            colors: [Color.midnightAccent, Color.electricBlue],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+    private var selectedInstitutionLabel: String {
+        viewModel.connectedInstitution?.name ?? "한국투자증권을 선택하면 연결할 수 있어요"
     }
 
     var body: some View {
@@ -33,40 +23,40 @@ struct OnboardingPage3View: View {
             topPadding: 16,
             bottomPadding: 168
         ) {
-            FlowProgressHeader(currentStep: 3, totalSteps: 4, onBack: onBack)
+            FlowProgressHeader(currentStep: 3, totalSteps: 5, stepTitle: "맞춤 설정 · 계좌 연결", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("증권 계좌를 연결해주세요")
+                Text("조회 전용 계좌를 연결해주세요")
                     .font(.pretendard(26, weight: .bold))
-                    .foregroundStyle(Color.white.opacity(0.92))
+                    .foregroundStyle(Color.textPrimary)
 
-                Text("현재는 한국투자증권 계좌만 연결할 수 있고, 연결된 자산 기준으로 정책 민감도를 계산합니다.")
+                Text("보유 종목과 잔고만 불러와 정책 민감도를 계산합니다. 주문 권한은 요청하지 않아요.")
                     .font(.pretendard(15, weight: .regular))
-                    .foregroundStyle(Color.white.opacity(0.62))
+                    .foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            categoryStrip
+            connectionTrustCard
 
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.electricBlue)
+                        .foregroundStyle(Color.brand)
 
-                    Text("증권")
+                    Text("지원 가능 증권사")
                         .font(.pretendard(18, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.92))
+                        .foregroundStyle(Color.textPrimary)
 
                     Text("\(selectedInstitutionCount)")
                         .font(.pretendard(18, weight: .bold))
-                        .foregroundStyle(Color.electricBlue)
+                        .foregroundStyle(Color.brand)
 
                     Spacer()
 
                     Image(systemName: "chevron.up")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.white.opacity(0.42))
+                        .foregroundStyle(Color.textTertiary)
                 }
 
                 LazyVGrid(columns: columns, spacing: 12) {
@@ -85,7 +75,7 @@ struct OnboardingPage3View: View {
 
             Text("다른 증권사는 준비 중이며, 현재는 한국투자증권만 선택 가능합니다.")
                 .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.white.opacity(0.42))
+                .foregroundStyle(Color.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .safeAreaInset(edge: .bottom) {
@@ -104,89 +94,74 @@ struct OnboardingPage3View: View {
                 )
                 .presentationDetents([.height(520), .large])
                 .presentationDragIndicator(.visible)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
             }
         }
         .background(PFGradientBackground())
         .toolbar(.hidden, for: .navigationBar)
     }
 
-    private var categoryStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 18) {
-                ForEach(categories, id: \.self) { category in
-                    VStack(spacing: 8) {
-                        Text(category)
-                            .font(.pretendard(14, weight: category == "증권" ? .semibold : .medium))
-                            .foregroundStyle(category == "증권" ? Color.white.opacity(0.9) : Color.white.opacity(0.26))
+    private var connectionTrustCard: some View {
+        FlowSurfaceCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("연결 전 확인")
+                    .font(.pretendard(13, weight: .semibold))
+                    .foregroundStyle(Color.textTertiary)
 
-                        Capsule()
-                            .fill(category == "증권" ? Color.white.opacity(0.9) : .clear)
-                            .frame(height: 2)
-                    }
-                }
+                ConnectionTrustRow(
+                    icon: "eye",
+                    title: "조회 전용",
+                    description: "잔고와 보유 종목만 분석에 사용합니다."
+                )
+
+                ConnectionTrustRow(
+                    icon: "lock.shield",
+                    title: "주문 권한 없음",
+                    description: "매수와 매도는 실행할 수 없습니다."
+                )
+
+                ConnectionTrustRow(
+                    icon: "clock",
+                    title: "나중에 연결 가능",
+                    description: "건너뛰어도 홈에서 다시 설정할 수 있어요."
+                )
             }
-            .padding(.bottom, 4)
-        }
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.white.opacity(0.06))
-                .frame(height: 1)
         }
     }
 
     private var bottomActionBar: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                Text(selectedInstitutionCountText)
-                    .font(.pretendard(18, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.88))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 58)
-                    .background(Color.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            Text(selectedInstitutionLabel)
+                .font(.pretendard(13, weight: .semibold))
+                .foregroundStyle(selectedInstitutionCount > 0 ? Color.textPrimary : Color.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Button {
+            FlowPrimaryButton(
+                title: "조회 전용으로 연결하기",
+                isEnabled: selectedInstitutionCount > 0,
+                action: {
                     showsConnectionReviewSheet = true
-                } label: {
-                    Text("연결하기")
-                        .font(.pretendard(18, weight: .bold))
-                        .foregroundStyle(selectedInstitutionCount > 0 ? .white : Color.white.opacity(0.34))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 58)
-                        .background(
-                            selectedInstitutionCount > 0
-                                ? AnyShapeStyle(accentGradient)
-                                : AnyShapeStyle(Color.white.opacity(0.10)),
-                            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        )
                 }
-                .buttonStyle(.plain)
-                .allowsHitTesting(selectedInstitutionCount > 0)
-                .shadow(
-                    color: selectedInstitutionCount > 0 ? Color.midnightAccent.opacity(0.22) : .clear,
-                    radius: 14,
-                    y: 6
-                )
-            }
+            )
 
-            Button("나중에 할게요") {
+            Button("나중에 설정하기") {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     viewModel.skipBrokerageConnection()
                 }
                 onNext()
             }
-            .font(.pretendard(14, weight: .medium))
-            .foregroundStyle(Color.white.opacity(0.46))
+            .font(.pretendard(14, weight: .semibold))
+            .foregroundStyle(Color.textTertiary)
             .buttonStyle(.plain)
         }
         .padding(.horizontal, MidnightLayout.horizontal)
         .padding(.top, 12)
         .padding(.bottom, 12)
         .background(
-            Color(hex: "090E25").opacity(0.94)
+            Color.elevated
                 .overlay(alignment: .top) {
                     Rectangle()
-                        .fill(Color.white.opacity(0.06))
+                        .fill(Color.hairline)
                         .frame(height: 1)
                 }
                 .ignoresSafeArea()
@@ -206,6 +181,36 @@ struct OnboardingPage3View: View {
     }
 }
 
+private struct ConnectionTrustRow: View {
+    let icon: String
+    let title: String
+    let description: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Circle()
+                .fill(Color.brandTintBg)
+                .frame(width: 32, height: 32)
+                .overlay {
+                    Image(systemName: icon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.brand)
+                }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.pretendard(14, weight: .semibold))
+                    .foregroundStyle(Color.textPrimary)
+
+                Text(description)
+                    .font(.pretendard(13, weight: .medium))
+                    .foregroundStyle(Color.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
 private struct BrokerInstitutionCard: View {
     let institution: AccountInstitution
     let isSelected: Bool
@@ -219,15 +224,15 @@ private struct BrokerInstitutionCard: View {
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Color.electricBlue)
+                            .foregroundStyle(Color.brand)
                     } else if isConnectable {
                         Circle()
-                            .stroke(Color.white.opacity(0.20), lineWidth: 1)
+                            .stroke(Color.textDisabled, lineWidth: 1)
                             .frame(width: 16, height: 16)
                     } else {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.white.opacity(0.20))
+                            .foregroundStyle(Color.textDisabled)
                     }
 
                     Spacer()
@@ -242,7 +247,7 @@ private struct BrokerInstitutionCard: View {
 
                 Text(institution.name)
                     .font(.pretendard(13, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(isConnectable ? 0.88 : 0.52))
+                    .foregroundStyle(isConnectable ? Color.textPrimary : Color.textDisabled)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
@@ -262,18 +267,18 @@ private struct BrokerInstitutionCard: View {
 
     private var cardBackground: Color {
         if isSelected {
-            return Color.midnightAccent.opacity(0.10)
+            return Color.brand.opacity(0.10)
         }
 
-        return Color.white.opacity(isConnectable ? 0.07 : 0.05)
+        return isConnectable ? Color.elevated : Color.muted
     }
 
     private var cardBorder: Color {
         if isSelected {
-            return Color.midnightAccent.opacity(0.82)
+            return Color.brand.opacity(0.82)
         }
 
-        return Color.white.opacity(isConnectable ? 0.08 : 0.04)
+        return isConnectable ? Color.hairline : Color.divider
     }
 
     @ViewBuilder
@@ -331,11 +336,11 @@ private struct BrokerageConnectionReviewSheet: View {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("조회 전용으로 연결할게요")
                                 .font(.pretendard(24, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.92))
+                                .foregroundStyle(Color.textPrimary)
 
                             Text("매수나 매도 기능 없이, 계좌 잔고와 보유 종목만 불러옵니다.")
                                 .font(.pretendard(15, weight: .regular))
-                                .foregroundStyle(Color.white.opacity(0.62))
+                                .foregroundStyle(Color.textTertiary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
 
@@ -346,11 +351,11 @@ private struct BrokerageConnectionReviewSheet: View {
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(institution.name)
                                         .font(.pretendard(17, weight: .semibold))
-                                        .foregroundStyle(Color.white.opacity(0.92))
+                                        .foregroundStyle(Color.textPrimary)
 
                                     Text("연결 후 홈과 내 자산 화면에 실계좌 기준 분석이 반영돼요.")
                                         .font(.pretendard(13, weight: .medium))
-                                        .foregroundStyle(Color.white.opacity(0.58))
+                                        .foregroundStyle(Color.textTertiary)
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                             }
@@ -389,7 +394,7 @@ private struct BrokerageConnectionReviewSheet: View {
                         dismiss()
                     }
                     .font(.pretendard(14, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.62))
+                    .foregroundStyle(Color.textTertiary)
                 }
             }
         }
@@ -404,22 +409,22 @@ private struct ReviewBulletRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Circle()
-                .fill(Color.midnightAccent.opacity(0.14))
+                .fill(Color.brand.opacity(0.14))
                 .frame(width: 34, height: 34)
                 .overlay {
                     Image(systemName: icon)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.electricBlue)
+                        .foregroundStyle(Color.brand)
                 }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.pretendard(14, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.9))
+                    .foregroundStyle(Color.textPrimary)
 
                 Text(description)
                     .font(.pretendard(13, weight: .medium))
-                    .foregroundStyle(Color.white.opacity(0.56))
+                    .foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -433,7 +438,7 @@ struct SelectedInstitutionBadge: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.06))
+                .fill(Color.subtle)
 
             if institution.id == AccountInstitution.koreaInvestmentID {
                 Image("hantoo")
@@ -448,12 +453,12 @@ struct SelectedInstitutionBadge: View {
         .frame(width: size, height: size)
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(Color.divider, lineWidth: 1)
         }
     }
 }
 
 #Preview {
     OnboardingPage3View(viewModel: OnboardingFlowViewModel(), onBack: {}, onNext: {})
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
 }

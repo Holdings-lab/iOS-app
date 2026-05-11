@@ -47,7 +47,7 @@ struct TransmissionMatchSection: View {
                         }
                     }
 
-                    Divider().background(Color.white.opacity(0.08))
+                    Divider().background(Color.divider)
 
                     VStack(alignment: .leading, spacing: 6) {
                         Text("반대 근거")

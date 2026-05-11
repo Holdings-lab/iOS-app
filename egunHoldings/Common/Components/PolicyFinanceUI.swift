@@ -12,15 +12,10 @@ enum PFRadius {
     static let button: CGFloat = 14
 }
 
-// Legacy gradient background — auth/onboarding only
+// Auth/onboarding background aligned with KODEX light surfaces.
 struct PFGradientBackground: View {
     var body: some View {
-        LinearGradient(
-            colors: [Color.midnightTop, Color.midnightBottom],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
+        Color.canvas.ignoresSafeArea()
     }
 }
 
@@ -32,17 +27,17 @@ struct PFStepHeader: View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
                 .font(.pretendard(30, weight: .bold))
-                .foregroundStyle(Color.midnightTextPrimary)
+                .foregroundStyle(Color.textPrimary)
 
             Text(subtitle)
                 .font(.pretendard(15, weight: .medium))
-                .foregroundStyle(Color.midnightTextSecondary)
+                .foregroundStyle(Color.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
 
-// KODEX light progress bar (replaces legacy midnight version)
+// KODEX light progress bar.
 struct PFProgressBar: View {
     let progress: Double
 
@@ -201,7 +196,7 @@ struct PFSelectionIndicator: View {
                         .overlay {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Color.textOnAccent)
                         }
                 }
             }

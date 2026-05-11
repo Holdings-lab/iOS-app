@@ -4,13 +4,16 @@ import SwiftUI
 
 struct TodayView: View {
     @StateObject private var viewModel: TodayViewModel
+    private let onAssetTabRequested: () -> Void
 
     init(
         userId: Int64? = nil,
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
-        viewModel: TodayViewModel? = nil
+        viewModel: TodayViewModel? = nil,
+        onAssetTabRequested: @escaping () -> Void = {}
     ) {
+        self.onAssetTabRequested = onAssetTabRequested
         _viewModel = StateObject(
             wrappedValue: viewModel ?? TodayViewModel(
                 userId: userId,
@@ -22,55 +25,64 @@ struct TodayView: View {
 
     var body: some View {
         ZStack {
-            todayBackground
+            Color.canvas.ignoresSafeArea()
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: PSSpacing.sectionGap) {
+                LazyVStack(alignment: .leading, spacing: 24) {
                     TodayHeaderSection(
-                        onDataStatus: { viewModel.present(.dataStatus) },
-                        onSettings:   { viewModel.present(.settings) }
+                        name: "투자자",
+                        hasUnreadNotifications: true,
+                        onNotifications: { viewModel.present(.dataStatus) }
                     )
 
-                    TodayJudgmentSection(
+                    TodayJudgmentHeroCard(
                         judgment: viewModel.judgment,
-                        onWhy:             { viewModel.present(.quickReason) },
-                        onSaveCheckpoint:  { viewModel.present(.saveCheckpoint) },
-                        onSnooze:          { viewModel.present(.snooze) }
+                        state: judgmentState,
+                        onDetail: { viewModel.present(.quickReason) }
                     )
 
-                    TodayPortfolioSection(
+                    TodayAssetSummaryCard(
                         portfolio: viewModel.portfolio,
-                        onExposureTap: { item in
-                            viewModel.present(.exposureTheme(item))
-                        }
+                        holdings: viewModel.userAssetProfile.holdings,
+                        onAssetTabRequested: onAssetTabRequested
                     )
 
-                    if let topPolicy = viewModel.topPolicy {
-                        TodayTopPolicySection(policy: topPolicy)
-                    }
+                    TodayPolicyImpactCard(
+                        policies: Array(viewModel.policyEvents.prefix(3)),
+                        totalPolicyCount: viewModel.policyEvents.count,
+                        onPolicyTap: { viewModel.present(.policyDetail($0)) },
+                        onShowAll: { viewModel.present(.policyList) }
+                    )
 
-                    TodayNoActionSection(
-                        reasons: viewModel.noActionReasons,
-                        watchCondition: viewModel.noActionWatchCondition
+                    TodayDecisionSupportCard(
+                        state: judgmentState,
+                        noActionReasons: viewModel.noActionReasons,
+                        actionEvidence: viewModel.judgment.forEvidence,
+                        watchCondition: viewModel.noActionWatchCondition,
+                        invalidationCondition: viewModel.judgment.invalidationCondition
                     )
                 }
-                .padding(.horizontal, PSSpacing.pagePad)
-                .padding(.top, 8)
-                .padding(.bottom, 110)
+                .padding(.horizontal, KDXSpacing.screenHorizontal)
+                .padding(.top, 12)
+                .padding(.bottom, 112)
             }
             .refreshable {
                 await viewModel.refresh()
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .task {
             await viewModel.load()
         }
         .sheet(item: $viewModel.activeSheet) { sheet in
             sheetContent(for: sheet)
                 .presentationBackground(.clear)
-                .presentationCornerRadius(28)
+                .presentationCornerRadius(KDXRadius.bottomSheet)
         }
+    }
+
+    private var judgmentState: TodayJudgmentDisplayState {
+        TodayJudgmentDisplayState(type: viewModel.judgment.type)
     }
 
     @ViewBuilder
@@ -86,11 +98,11 @@ struct TodayView: View {
                 connectionStatusText: viewModel.connectionStatusText,
                 footnote: viewModel.dataStatusFootnote
             )
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         case .quickReason:
             QuickReasonSheet(judgment: viewModel.judgment)
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         case .saveCheckpoint:
             SaveCheckpointSheet(conditionText: viewModel.primaryCheckpointText)
@@ -108,516 +120,510 @@ struct TodayView: View {
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+        case .policyDetail(let policy):
+            PolicyDetailSheet(policy: policy)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        case .policyList:
+            PolicyListSheet(
+                policies: viewModel.policyEvents,
+                onSelect: { viewModel.present(.policyDetail($0)) }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
-    }
-
-    private var todayBackground: some View {
-        ZStack {
-            Color(hex: "0A0E27").ignoresSafeArea()
-            Circle()
-                .fill(PSColor.electricBlue.opacity(0.14))
-                .frame(width: 340)
-                .blur(radius: 130)
-                .offset(x: -140, y: -320)
-            Circle()
-                .fill(PSColor.purple.opacity(0.10))
-                .frame(width: 260)
-                .blur(radius: 120)
-                .offset(x: 160, y: -200)
-        }
-        .ignoresSafeArea()
     }
 }
 
-// MARK: - ① Header
+// MARK: - Header
 
 private struct TodayHeaderSection: View {
-    let onDataStatus: () -> Void
-    let onSettings:   () -> Void
+    let name: String
+    let hasUnreadNotifications: Bool
+    let onNotifications: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Text("PolSignal")
-                    .font(PSFont.semibold(15))
-                    .foregroundStyle(PSColor.electricBlue.opacity(0.80))
-                Spacer()
-                iconButton(systemName: "bell", action: {})
-                iconButton(systemName: "gearshape", action: onSettings)
+        HStack(alignment: .center, spacing: 16) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(Self.dateText)
+                    .font(.pretendard(12, weight: .medium))
+                    .foregroundStyle(Color.textQuaternary)
+                Text("안녕하세요, \(name)님")
+                    .font(.pretendard(22, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
             }
 
-            Text("안녕하세요, 투자자님")
-                .font(PSFont.title(22))
-                .foregroundStyle(PSColor.textPrimary)
+            Spacer()
 
-            Button(action: onDataStatus) {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(PSColor.emerald)
-                        .frame(width: 6, height: 6)
-                        .overlay {
-                            Circle()
-                                .fill(PSColor.emerald.opacity(0.35))
-                                .frame(width: 12, height: 12)
-                        }
-                    Text("오전 11:24 업데이트")
-                        .font(PSFont.caption())
-                        .foregroundStyle(PSColor.textMuted)
+            Button(action: onNotifications) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "bell")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(Color.textSecondary)
+                        .frame(width: 40, height: 40)
+
+                    if hasUnreadNotifications {
+                        Circle()
+                            .fill(Color.up)
+                            .frame(width: 7, height: 7)
+                            .offset(x: -7, y: 8)
+                    }
+                }
+                .background(Color.elevated, in: Circle())
+                .overlay { Circle().stroke(Color.hairline, lineWidth: 1) }
+            }
+            .buttonStyle(PSPressStyle())
+        }
+    }
+
+    private static var dateText: String {
+        let date = Date()
+        let calendar = Calendar(identifier: .gregorian)
+        let components = calendar.dateComponents([.month, .day, .weekday], from: date)
+        let weekdays = ["", "일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"]
+        let month = components.month ?? 1
+        let day = components.day ?? 1
+        let weekday = weekdays[safe: components.weekday ?? 0] ?? ""
+        return "\(month)월 \(day)일 \(weekday)"
+    }
+}
+
+// MARK: - Judgment Hero
+
+private struct TodayJudgmentHeroCard: View {
+    let judgment: TodayJudgment
+    let state: TodayJudgmentDisplayState
+    let onDetail: () -> Void
+
+    var body: some View {
+        Button(action: onDetail) {
+            KDXCard(
+                padding: EdgeInsets(top: 24, leading: 16, bottom: 24, trailing: 16)
+            ) {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text(state.label)
+                        .font(.pretendard(11, weight: .semibold))
+                        .foregroundStyle(state.foreground)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(state.background, in: RoundedRectangle(cornerRadius: KDXRadius.chip, style: .continuous))
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(state.heroTitle(for: judgment))
+                            .font(.pretendard(22, weight: .bold))
+                            .foregroundStyle(Color.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .lineSpacing(3)
+
+                        Text(state.heroSubtitle(for: judgment))
+                            .font(.pretendard(14, weight: .regular))
+                            .foregroundStyle(Color.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .lineSpacing(3)
+                    }
+
+                    HStack {
+                        Spacer()
+                        Text("자세히 보기")
+                            .font(.pretendard(13, weight: .semibold))
+                            .foregroundStyle(Color.brand)
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.brand)
+                    }
                 }
             }
-            .buttonStyle(.plain)
-        }
-        .padding(.top, 4)
-    }
-
-    private func iconButton(systemName: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(PSColor.textMuted)
-                .frame(width: 36, height: 36)
-                .background(Color.white.opacity(0.05), in: Circle())
         }
         .buttonStyle(PSPressStyle())
     }
 }
 
-// MARK: - ② 오늘의 대표 판단
+// MARK: - Asset Summary
 
-private struct TodayJudgmentSection: View {
-    let judgment: TodayJudgment
-    let onWhy:            () -> Void
-    let onSaveCheckpoint: () -> Void
-    let onSnooze:         () -> Void
-
-    var body: some View {
-        PSGlassCard(variant: .primary) {
-            VStack(alignment: .leading, spacing: 16) {
-                topRow
-                titleText
-                metricsRow
-                actionButtons
-            }
-        }
-    }
-
-    private var topRow: some View {
-        HStack {
-            JudgmentTypeBadge(type: judgment.type)
-            Text("오늘의 판단")
-                .font(PSFont.caption())
-                .foregroundStyle(PSColor.textMuted)
-            Spacer()
-            HStack(spacing: 4) {
-                Image(systemName: "clock")
-                    .font(.system(size: 10))
-                Text(judgment.validUntil)
-                    .font(PSFont.caption())
-            }
-            .foregroundStyle(PSColor.textFaint)
-        }
-    }
-
-    private var titleText: some View {
-        Text(judgment.title)
-            .font(PSFont.semibold(17))
-            .foregroundStyle(PSColor.textPrimary)
-            .fixedSize(horizontal: false, vertical: true)
-            .lineSpacing(4)
-    }
-
-    private var metricsRow: some View {
-        HStack(alignment: .top, spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("내 자산 영향권")
-                    .font(PSFont.caption())
-                    .foregroundStyle(PSColor.textMuted)
-                Text("\(judgment.myExposure)%")
-                    .font(PSFont.semibold(20))
-                    .foregroundStyle(PSColor.electricBlue)
-                    .monospacedDigit()
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("무효화 조건")
-                    .font(PSFont.caption())
-                    .foregroundStyle(PSColor.textMuted)
-                Text(judgment.invalidationCondition)
-                    .font(PSFont.body(12))
-                    .foregroundStyle(PSColor.yellow.opacity(0.80))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .lineSpacing(2)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    private var actionButtons: some View {
-        HStack(spacing: 8) {
-            judgeButton(
-                label: "왜?",
-                icon: "questionmark.circle",
-                bg: Color.white.opacity(0.05),
-                fg: PSColor.textMuted.opacity(0.70),
-                action: onWhy
-            )
-            judgeButton(
-                label: "체크포인트 저장",
-                icon: "bookmark.badge.plus",
-                bg: PSColor.electricBlue.opacity(0.10),
-                fg: PSColor.electricBlue,
-                action: onSaveCheckpoint
-            )
-            judgeButton(
-                label: "나중에 보기",
-                icon: "clock",
-                bg: Color.white.opacity(0.03),
-                fg: PSColor.textMuted.opacity(0.40),
-                action: onSnooze,
-                compact: true
-            )
-        }
-    }
-
-    private func judgeButton(
-        label: String,
-        icon: String,
-        bg: Color,
-        fg: Color,
-        action: @escaping () -> Void,
-        compact: Bool = false
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
-                Text(label)
-                    .font(PSFont.semibold(12))
-            }
-            .foregroundStyle(fg)
-            .padding(.horizontal, compact ? 12 : 14)
-            .padding(.vertical, 9)
-            .background(bg, in: RoundedRectangle(cornerRadius: PSRadius.small, style: .continuous))
-        }
-        .buttonStyle(PSPressStyle())
-    }
-}
-
-// MARK: - ③ 내 총자산
-
-private struct TodayPortfolioSection: View {
+private struct TodayAssetSummaryCard: View {
     let portfolio: TodayPortfolioSummary
-    let onExposureTap: (TodayExposureItem) -> Void
+    let holdings: [UserHoldingItem]
+    let onAssetTabRequested: () -> Void
 
     var body: some View {
-        PSGlassCard(variant: .secondary) {
+        KDXCard {
             VStack(alignment: .leading, spacing: 16) {
-                topRow
-                amountRow
-                exposureBars
-                miniIndicators
-            }
-        }
-    }
+                Button(action: onAssetTabRequested) {
+                    HStack(spacing: 8) {
+                        Text("내 총자산")
+                            .font(.pretendard(16, weight: .bold))
+                            .foregroundStyle(Color.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.textDisabled)
+                    }
+                }
+                .buttonStyle(.plain)
 
-    private var topRow: some View {
-        HStack {
-            Text("총 자산")
-                .font(PSFont.caption())
-                .foregroundStyle(PSColor.textMuted)
-            Spacer()
-            PSStatusChip(label: portfolio.riskLevel, color: PSColor.yellow, bgOpacity: 0.08)
-        }
-    }
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    Text("₩ \(portfolio.totalAsset.formattedKRW)")
+                        .font(.pretendard(34, weight: .heavy))
+                        .foregroundStyle(Color.textPrimary)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
 
-    private var amountRow: some View {
-        HStack(alignment: .center, spacing: 12) {
-            Text("₩\(portfolio.totalAsset.formattedKRW)")
-                .font(PSFont.semibold(26))
-                .foregroundStyle(PSColor.textPrimary)
-                .monospacedDigit()
-                .minimumScaleFactor(0.8)
-                .lineLimit(1)
+                    Spacer(minLength: 4)
 
-            Spacer()
-
-            let isPositive = portfolio.todayChange >= 0
-            HStack(spacing: 4) {
-                Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
-                    .font(.system(size: 11, weight: .bold))
-                Text(portfolio.todayChangeFormatted)
-                    .font(PSFont.semibold(13))
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(portfolio.todayChangePercentText)
+                            .font(.pretendard(13, weight: .bold))
+                        Text(portfolio.todayChangeAmountText)
+                            .font(.pretendard(11, weight: .semibold))
+                    }
+                    .foregroundStyle(portfolio.todayChangeColor)
                     .monospacedDigit()
+                }
+
+                AssetDistributionBar(segments: AssetDistributionSegment.make(from: holdings))
             }
-            .foregroundStyle(isPositive ? PSColor.emerald : PSColor.red)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(
-                (isPositive ? PSColor.emerald : PSColor.red).opacity(0.08),
-                in: Capsule()
-            )
         }
     }
+}
 
-    private var exposureBars: some View {
-        VStack(spacing: 10) {
-            ForEach(portfolio.topExposures, id: \.theme) { item in
-                Button {
-                    onExposureTap(item)
-                } label: {
-                    PSExposureBar(theme: item.theme, pct: item.pct, color: item.color)
+private struct AssetDistributionBar: View {
+    let segments: [AssetDistributionSegment]
+
+    var body: some View {
+        GeometryReader { proxy in
+            let total = max(segments.map(\.weight).reduce(0, +), 1)
+            HStack(spacing: 2) {
+                ForEach(segments) { segment in
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(segment.color)
+                        .frame(width: max(6, proxy.size.width * CGFloat(segment.weight) / CGFloat(total)))
+                }
+            }
+        }
+        .frame(height: 6)
+        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+        .accessibilityHidden(true)
+    }
+}
+
+private struct AssetDistributionSegment: Identifiable {
+    let id: AssetCategory
+    let weight: Int
+    let color: Color
+
+    static func make(from holdings: [UserHoldingItem]) -> [AssetDistributionSegment] {
+        let grouped = Dictionary(grouping: holdings, by: \.category)
+            .mapValues { $0.map(\.weightPercent).reduce(0, +) }
+
+        let ordered: [(AssetCategory, Color)] = [
+            (.etf, Color.brand),
+            (.stock, Color(hex: "8D96A3")),
+            (.depositSavings, Color(hex: "C5CAD3")),
+            (.loan, Color(hex: "E1E4EA"))
+        ]
+
+        let result = ordered.compactMap { category, color -> AssetDistributionSegment? in
+            guard let weight = grouped[category], weight > 0 else { return nil }
+            return AssetDistributionSegment(id: category, weight: weight, color: color)
+        }
+
+        return result.isEmpty
+            ? [AssetDistributionSegment(id: .etf, weight: 100, color: Color.divider)]
+            : result
+    }
+}
+
+// MARK: - Policy Impact
+
+private struct TodayPolicyImpactCard: View {
+    let policies: [TodayPolicyEvent]
+    let totalPolicyCount: Int
+    let onPolicyTap: (TodayPolicyEvent) -> Void
+    let onShowAll: () -> Void
+
+    var body: some View {
+        KDXCard {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("오늘 가장 영향 큰 정책")
+                        .font(.pretendard(16, weight: .bold))
+                        .foregroundStyle(Color.textPrimary)
+                    Spacer()
+                    Text("오늘 정책 \(min(totalPolicyCount, 3))건")
+                        .font(.pretendard(11, weight: .semibold))
+                        .foregroundStyle(Color.textQuaternary)
+                }
+
+                VStack(spacing: 0) {
+                    ForEach(Array(policies.enumerated()), id: \.element.id) { index, policy in
+                        Button { onPolicyTap(policy) } label: {
+                            PolicyImpactRow(policy: policy)
+                                .padding(.vertical, 13)
+                        }
+                        .buttonStyle(.plain)
+
+                        if index < policies.count - 1 {
+                            Divider().background(Color.divider)
+                        }
+                    }
+                }
+
+                Button(action: onShowAll) {
+                    HStack {
+                        Text("정책 전체 보기")
+                            .font(.pretendard(13, weight: .semibold))
+                            .foregroundStyle(Color.brand)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.brand)
+                    }
+                    .padding(.top, 2)
                 }
                 .buttonStyle(.plain)
             }
         }
     }
-
-    private var miniIndicators: some View {
-        HStack(spacing: 8) {
-            MiniIndicator(label: "현금 방어력", value: "\(portfolio.cashDefense)%", valueColor: PSColor.electricBlue)
-            MiniIndicator(label: "달러 비중", value: "\(portfolio.dollarDefense)%", valueColor: PSColor.yellow)
-            MiniIndicator(label: "과매수 위험", value: portfolio.overtradeRisk, valueColor: PSColor.emerald)
-        }
-    }
 }
 
-private struct MiniIndicator: View {
-    let label: String
-    let value: String
-    let valueColor: Color
-
-    var body: some View {
-        VStack(spacing: 5) {
-            Text(label)
-                .font(PSFont.caption(10))
-                .foregroundStyle(PSColor.textMuted)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            Text(value)
-                .font(PSFont.semibold(13))
-                .foregroundStyle(valueColor)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(10)
-        .background(Color.white.opacity(0.03), in: RoundedRectangle(cornerRadius: PSRadius.small, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: PSRadius.small, style: .continuous)
-                .stroke(PSColor.border, lineWidth: 0.5)
-        }
-    }
-}
-
-// MARK: - ④ 오늘 가장 영향 큰 정책
-
-private struct TodayTopPolicySection: View {
+private struct PolicyImpactRow: View {
     let policy: TodayPolicyEvent
-    @State private var showsDetail = false
 
     var body: some View {
-        PSGlassCard(variant: .primary) {
-            VStack(alignment: .leading, spacing: 14) {
-                topRow
-                policyTitle
-                metricsRow
-                summaryBox
-                assetTags
-                detailButton
-            }
-        }
-    }
-
-    private var topRow: some View {
-        HStack(spacing: 8) {
-            Text("오늘 가장 영향 큰 정책")
-                .font(PSFont.caption())
-                .foregroundStyle(PSColor.electricBlue.opacity(0.60))
-                .tracking(0.3)
-            Spacer()
-            PSStatusChip(label: policy.dDay, color: PSColor.electricBlue)
-            PSStatusChip(label: policy.status.rawValue, color: policy.status.color)
-        }
-    }
-
-    private var policyTitle: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(policy.title)
-                .font(PSFont.semibold(18))
-                .foregroundStyle(PSColor.textPrimary)
-            Text(policy.institution)
-                .font(PSFont.body(12))
-                .foregroundStyle(PSColor.textMuted.opacity(0.50))
-        }
-    }
-
-    private var metricsRow: some View {
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("내 자산 노출")
-                    .font(PSFont.caption())
-                    .foregroundStyle(PSColor.textMuted)
-                Text("\(policy.myExposure)%")
-                    .font(PSFont.semibold(20))
-                    .foregroundStyle(PSColor.electricBlue)
-                    .monospacedDigit()
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(alignment: .center, spacing: 12) {
+            Text(policy.categoryLabel)
+                .font(.pretendard(11, weight: .semibold))
+                .foregroundStyle(Color.textSecondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color(hex: "F2F4F7"), in: RoundedRectangle(cornerRadius: KDXRadius.chip, style: .continuous))
 
             VStack(alignment: .leading, spacing: 5) {
-                Text("신뢰도")
-                    .font(PSFont.caption())
-                    .foregroundStyle(PSColor.textMuted)
-                Text("\(policy.confidence)%")
-                    .font(PSFont.semibold(20))
-                    .foregroundStyle(PSColor.textPrimary)
-                    .monospacedDigit()
+                Text(policy.title)
+                    .font(.pretendard(15, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                Text("내 자산 중 \(policy.myExposure)% 관련")
+                    .font(.pretendard(12, weight: .regular))
+                    .foregroundStyle(Color.textTertiary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
 
-    private var summaryBox: some View {
-        Text(policy.summary)
-            .font(PSFont.body(12))
-            .foregroundStyle(PSColor.textPrimary.opacity(0.70))
-            .fixedSize(horizontal: false, vertical: true)
-            .lineSpacing(4)
-            .padding(14)
-            .background(
-                PSColor.electricBlue.opacity(0.06),
-                in: RoundedRectangle(cornerRadius: PSRadius.inner, style: .continuous)
-            )
-    }
+            Spacer(minLength: 8)
 
-    private var assetTags: some View {
-        HStack(spacing: 8) {
-            ForEach(policy.relatedAssets, id: \.self) { asset in
-                Text(asset)
-                    .font(PSFont.caption(11))
-                    .foregroundStyle(PSColor.blueSubtle)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(PSColor.electricBlue.opacity(0.08), in: Capsule())
+            VStack(alignment: .trailing, spacing: 5) {
+                Text("영향")
+                    .font(.pretendard(10, weight: .semibold))
+                    .foregroundStyle(Color.textQuaternary)
+                ImpactDots(score: policy.impactScore)
             }
         }
-    }
-
-    private var detailButton: some View {
-        Button(action: {}) {
-            HStack {
-                Text("정책 상세 보기")
-                    .font(PSFont.semibold(14))
-                    .foregroundStyle(PSColor.textMuted.opacity(0.80))
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(PSColor.textFaint)
-            }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 14)
-            .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: PSRadius.inner, style: .continuous))
-        }
-        .buttonStyle(PSPressStyle())
     }
 }
 
-// MARK: - ⑤ 아무것도 안 해도 되는 이유
-
-private struct TodayNoActionSection: View {
-    let reasons: [String]
-    let watchCondition: String
+private struct ImpactDots: View {
+    let score: Int
 
     var body: some View {
-        PSGlassCard(variant: .tinted(PSColor.emerald)) {
-            VStack(alignment: .leading, spacing: 14) {
-                header
-                reasonsList
-                watchText
-                actionButtons
+        HStack(spacing: 3) {
+            ForEach(1...5, id: \.self) { index in
+                Circle()
+                    .fill(index <= score ? Color.brand : Color.divider)
+                    .frame(width: 5, height: 5)
             }
         }
+        .accessibilityLabel("영향 \(score)점")
     }
+}
 
-    private var header: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "shield.fill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(PSColor.emerald)
-            Text("지금은 아무것도 안 해도 되는 구간")
-                .font(PSFont.semibold(13))
-                .foregroundStyle(PSColor.emerald)
-        }
-    }
+// MARK: - Decision Support
 
-    private var reasonsList: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ForEach(reasons, id: \.self) { reason in
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(PSColor.emerald.opacity(0.60))
-                        .padding(.top, 1)
-                    Text(reason)
-                        .font(PSFont.body(13))
-                        .foregroundStyle(PSColor.textPrimary.opacity(0.60))
-                        .fixedSize(horizontal: false, vertical: true)
-                        .lineSpacing(2)
+private struct TodayDecisionSupportCard: View {
+    let state: TodayJudgmentDisplayState
+    let noActionReasons: [String]
+    let actionEvidence: [String]
+    let watchCondition: String
+    let invalidationCondition: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(state.supportTitle)
+                .font(.pretendard(16, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
+
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(items.prefix(3), id: \.self) { item in
+                    HStack(alignment: .top, spacing: 9) {
+                        Image(systemName: state.supportIcon)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(state.supportIconColor)
+                            .padding(.top, 1)
+                        Text(item)
+                            .font(.pretendard(14, weight: .regular))
+                            .foregroundStyle(Color.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .lineSpacing(3)
+                    }
                 }
             }
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(state.supportBackground, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
     }
 
-    private var watchText: some View {
-        Text("조건이 바뀌면 다시 볼 기준: \(watchCondition)")
-            .font(PSFont.caption())
-            .foregroundStyle(PSColor.textFaint)
-            .fixedSize(horizontal: false, vertical: true)
-            .lineSpacing(2)
-    }
+    private var items: [String] {
+        if state == .noAction {
+            return noActionReasons
+        }
 
-    private var actionButtons: some View {
-        HStack(spacing: 8) {
-            noActionButton(
-                label: "판단 저장",
-                icon: "bookmark.badge.plus",
-                bg: PSColor.emerald.opacity(0.08),
-                fg: PSColor.emerald.opacity(0.80),
-                action: {}
-            )
-            noActionButton(
-                label: "조건 바뀌면 알림",
-                icon: "bell",
-                bg: Color.white.opacity(0.03),
-                fg: PSColor.textMuted.opacity(0.50),
-                action: {}
-            )
+        let evidence = actionEvidence.prefix(2)
+        return Array(evidence) + ["확인 기준: \(invalidationCondition.isEmpty ? watchCondition : invalidationCondition)"]
+    }
+}
+
+// MARK: - Display State
+
+private enum TodayJudgmentDisplayState: Equatable {
+    case noAction
+    case review
+    case immediate
+
+    init(type: JudgmentType) {
+        switch type {
+        case .simulate:
+            self = .noAction
+        case .wait, .confirm:
+            self = .review
+        case .defend:
+            self = .immediate
         }
     }
 
-    private func noActionButton(
-        label: String,
-        icon: String,
-        bg: Color,
-        fg: Color,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .medium))
-                Text(label)
-                    .font(PSFont.semibold(13))
-            }
-            .foregroundStyle(fg)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 11)
-            .background(bg, in: RoundedRectangle(cornerRadius: PSRadius.small, style: .continuous))
+    var label: String {
+        switch self {
+        case .noAction:  return "행동 불필요"
+        case .review:    return "검토 권장"
+        case .immediate: return "즉시 확인"
         }
-        .buttonStyle(PSPressStyle())
+    }
+
+    var background: Color {
+        switch self {
+        case .noAction:  return Color(hex: "EEF3FE")
+        case .review:    return Color(hex: "FFF4E5")
+        case .immediate: return Color(hex: "FDECEC")
+        }
+    }
+
+    var foreground: Color {
+        switch self {
+        case .noAction:  return Color.brand
+        case .review:    return Color(hex: "B86E00")
+        case .immediate: return Color.up
+        }
+    }
+
+    var supportTitle: String {
+        switch self {
+        case .noAction:
+            return "아무것도 안 해도 되는 이유"
+        case .review:
+            return "지금 확인이 필요한 항목"
+        case .immediate:
+            return "즉시 확인이 필요한 항목"
+        }
+    }
+
+    var supportIcon: String {
+        switch self {
+        case .noAction:
+            return "checkmark.circle.fill"
+        case .review:
+            return "exclamationmark.circle.fill"
+        case .immediate:
+            return "exclamationmark.triangle.fill"
+        }
+    }
+
+    var supportIconColor: Color {
+        switch self {
+        case .noAction:  return Color.brand
+        case .review:    return Color.warning
+        case .immediate: return Color.up
+        }
+    }
+
+    var supportBackground: Color {
+        switch self {
+        case .noAction:  return Color.subtle
+        case .review:    return Color.warningBg
+        case .immediate: return Color.upBg
+        }
+    }
+
+    func heroTitle(for judgment: TodayJudgment) -> String {
+        switch self {
+        case .noAction:
+            return "오늘은 특별히 행동할 필요가 없습니다"
+        case .review, .immediate:
+            return judgment.title
+        }
+    }
+
+    func heroSubtitle(for judgment: TodayJudgment) -> String {
+        switch self {
+        case .noAction:
+            return judgment.forEvidence.first ?? "보유 자산과 오늘 정책 영향이 관리 가능한 범위에 있습니다."
+        case .review:
+            return "정책 영향은 제한적이지만 \(judgment.invalidationCondition)을 확인해야 합니다."
+        case .immediate:
+            return judgment.invalidationCondition
+        }
     }
 }
 
 // MARK: - Helpers
+
+private extension TodayPortfolioSummary {
+    var todayChangePercentText: String {
+        let sign = todayChange >= 0 ? "+" : ""
+        return "\(sign)\(String(format: "%.1f", todayChange))%"
+    }
+
+    var todayChangeAmountText: String {
+        let sign = todayChangeAmt >= 0 ? "+" : ""
+        return "\(sign)₩\(abs(todayChangeAmt).formattedKRW)"
+    }
+
+    var todayChangeColor: Color {
+        todayChange >= 0 ? Color.up : Color.down
+    }
+}
+
+private extension TodayPolicyEvent {
+    var categoryLabel: String {
+        if title.contains("금리") || title.localizedCaseInsensitiveContains("FOMC") {
+            return "금리"
+        }
+        if title.contains("세제") || title.contains("세금") {
+            return "세제"
+        }
+        if title.contains("부동산") {
+            return "부동산"
+        }
+        if title.contains("반도체") {
+            return "산업"
+        }
+        return "정책"
+    }
+
+    var impactScore: Int {
+        min(5, max(1, (myExposure + 19) / 20))
+    }
+}
 
 private extension Int {
     var formattedKRW: String {
@@ -627,10 +633,9 @@ private extension Int {
     }
 }
 
-private extension TodayPortfolioSummary {
-    var todayChangeFormatted: String {
-        let sign = todayChange >= 0 ? "+" : ""
-        return "\(sign)\(String(format: "%.2f", todayChange))%"
+private extension Array {
+    subscript(safe index: Index) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }
 

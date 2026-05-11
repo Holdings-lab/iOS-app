@@ -42,87 +42,115 @@ nonisolated enum BackendEndpoint {
     }
 
     static func me(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me", queryItems: userQuery(userId), authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)", authorizationRequirement: .bearerToken)
     }
 
-    static func notificationSettings(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/settings/notifications", queryItems: userQuery(userId), authorizationRequirement: .bearerToken)
+    static func meProfile(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/profile", authorizationRequirement: .bearerToken)
     }
 
-    static func updateNotificationSettings(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/settings/notifications", queryItems: userQuery(userId), method: .patch, body: body, authorizationRequirement: .bearerToken)
+    static func investmentProfile(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/investment-profile", authorizationRequirement: .bearerToken)
+    }
+
+    static func updateInvestmentProfile(userId: Int64, body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/investment-profile", method: .patch, body: body, authorizationRequirement: .bearerToken)
+    }
+
+    static func watchAssets(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/watch-assets", authorizationRequirement: .bearerToken)
+    }
+
+    static func meStudyStats(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/study-stats", authorizationRequirement: .bearerToken)
+    }
+
+    static func meSettings(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/settings", authorizationRequirement: .bearerToken)
+    }
+
+    static func updateMeSettings(userId: Int64, body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/settings", method: .patch, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func updateWatchAssets(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/watch-assets", queryItems: userQuery(userId), method: .post, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/watch-assets", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func watchAssetOptions() -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/me/watch-assets/options", authorizationRequirement: .bearerToken)
     }
 
-    static func meProfile() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/profile", authorizationRequirement: .bearerToken)
-    }
-
-    static func meSettingsMenu() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/settings-menu", authorizationRequirement: .bearerToken)
-    }
-
-    static func meStudyStats() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/study-stats", authorizationRequirement: .bearerToken)
-    }
-
     static func home(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/home", queryItems: userQuery(userId), authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/home/\(userId)", authorizationRequirement: .bearerToken)
     }
 
     static func todayDashboard(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/home", queryItems: userQuery(userId), authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/home/\(userId)", authorizationRequirement: .bearerToken)
     }
 
     static func homeBriefing(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/home/briefing", queryItems: userQuery(userId), authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/home/\(userId)/briefing", authorizationRequirement: .bearerToken)
     }
 
-    static func homeSection(_ sectionPath: HomeSectionPath) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/home/\(sectionPath.rawValue)", authorizationRequirement: .bearerToken)
+    static func homeSection(userId: Int64, _ sectionPath: HomeSectionPath) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/home/\(userId)/\(sectionPath.rawValue)", authorizationRequirement: .bearerToken)
     }
 
-    static func policyFeed(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/content/policy-feed", method: .post, body: body, authorizationRequirement: .bearerToken)
-    }
-
-    static func policyFeedSection(_ sectionPath: PolicyFeedSectionPath, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/content/policy-feed/\(sectionPath.rawValue)", method: .post, body: body, authorizationRequirement: .bearerToken)
-    }
-
-    static func events(userId: Int64, dateSegment: String = "today", category: String = "all") -> Endpoint {
+    static func policyFeed(
+        userId: Int64,
+        limit: Int? = nil,
+        category: String? = nil,
+        dateFrom: String? = nil,
+        dateTo: String? = nil
+    ) -> Endpoint {
         Endpoint(
             baseURL: baseURL,
-            path: "/api/events",
-            queryItems: eventQuery(userId: userId, dateSegment: dateSegment, category: category),
+            path: "/api/content/\(userId)/policy-feed",
+            queryItems: policyFeedQuery(limit: limit, category: category, dateFrom: dateFrom, dateTo: dateTo),
             authorizationRequirement: .bearerToken
         )
     }
 
-    static func refreshEvents(userId: Int64, dateSegment: String = "today", category: String = "all") -> Endpoint {
+    static func policyFeedSection(
+        userId: Int64,
+        _ sectionPath: PolicyFeedSectionPath,
+        limit: Int? = nil,
+        category: String? = nil,
+        dateFrom: String? = nil,
+        dateTo: String? = nil
+    ) -> Endpoint {
+        let queryItems = sectionPath == .cards
+            ? policyFeedQuery(limit: limit, category: category, dateFrom: dateFrom, dateTo: dateTo)
+            : []
+
+        return Endpoint(
+            baseURL: baseURL,
+            path: "/api/content/\(userId)/policy-feed/\(sectionPath.rawValue)",
+            queryItems: queryItems,
+            authorizationRequirement: .bearerToken
+        )
+    }
+
+    static func events(userId: Int64, dateSegment: String = "all", category: String = "all") -> Endpoint {
         Endpoint(
             baseURL: baseURL,
-            path: "/api/events/refresh",
-            queryItems: eventQuery(userId: userId, dateSegment: dateSegment, category: category),
-            method: .post,
-            body: NetworkJSONCoding.encodeEmptyJSONObject(),
+            path: "/api/events/\(userId)",
+            queryItems: eventQuery(dateSegment: dateSegment, category: category),
             authorizationRequirement: .bearerToken
         )
     }
 
     static func updateEventAlert(eventId: Int64, userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/events/\(eventId)/alerts", queryItems: userQuery(userId), method: .post, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/events/\(userId)/\(eventId)/alerts", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
-    static func eventSection(_ sectionPath: EventSectionPath) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/events/\(sectionPath.rawValue)", authorizationRequirement: .bearerToken)
+    static func eventSection(userId: Int64, _ sectionPath: EventSectionPath, dateSegment: String = "all", category: String = "all") -> Endpoint {
+        let queryItems = sectionPath == .items
+            ? eventQuery(dateSegment: dateSegment, category: category)
+            : []
+
+        return Endpoint(baseURL: baseURL, path: "/api/events/\(userId)/\(sectionPath.rawValue)", queryItems: queryItems, authorizationRequirement: .bearerToken)
     }
 
     static func signalDetail(id: String) -> Endpoint {
@@ -142,7 +170,15 @@ nonisolated enum BackendEndpoint {
     }
 
     static func portfolio(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/portfolio", queryItems: userQuery(userId), authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)", authorizationRequirement: .bearerToken)
+    }
+
+    static func portfolioRebalancing(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)/rebalancing", authorizationRequirement: .bearerToken)
+    }
+
+    static func portfolioRebalancingPreview(userId: Int64, body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)/rebalancing/preview", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func insightSection(_ sectionPath: InsightSectionPath) -> Endpoint {
@@ -214,12 +250,33 @@ nonisolated enum BackendEndpoint {
         [URLQueryItem(name: "userId", value: String(userId))]
     }
 
-    private static func eventQuery(userId: Int64, dateSegment: String, category: String) -> [URLQueryItem] {
+    private static func eventQuery(dateSegment: String, category: String) -> [URLQueryItem] {
         [
-            URLQueryItem(name: "userId", value: String(userId)),
             URLQueryItem(name: "dateSegment", value: dateSegment),
             URLQueryItem(name: "category", value: category),
         ]
+    }
+
+    private static func policyFeedQuery(
+        limit: Int?,
+        category: String?,
+        dateFrom: String?,
+        dateTo: String?
+    ) -> [URLQueryItem] {
+        [
+            limit.map { URLQueryItem(name: "limit", value: String($0)) },
+            queryItem(name: "category", value: category),
+            queryItem(name: "dateFrom", value: dateFrom),
+            queryItem(name: "dateTo", value: dateTo),
+        ].compactMap { $0 }
+    }
+
+    private static func queryItem(name: String, value: String?) -> URLQueryItem? {
+        guard let value else {
+            return nil
+        }
+
+        return URLQueryItem(name: name, value: value)
     }
 
     private static func escapedPathComponent(_ value: String) -> String {
@@ -240,7 +297,6 @@ nonisolated enum HomeSectionPath: String {
 
 nonisolated enum PolicyFeedSectionPath: String {
     case cards
-    case featuredCard = "featured-card"
     case filters
     case meta
     case model
@@ -256,7 +312,7 @@ nonisolated enum EventSectionPath: String {
 
 nonisolated enum InsightSectionPath: String {
     case columns
-    case countryFilters = "country-filters"
     case legend
     case rows
+    case viewTabs = "view-tabs"
 }

@@ -38,39 +38,39 @@ struct SignupTermsView: View {
             topPadding: 16,
             bottomPadding: 120
         ) {
-            FlowProgressHeader(currentStep: 1, totalSteps: 4, onBack: onBack)
+            FlowProgressHeader(currentStep: 1, totalSteps: 4, stepTitle: "계정 만들기 · 약관", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("필수 약관을 확인해주세요")
                     .font(.pretendard(28, weight: .bold))
-                    .foregroundStyle(Color.midnightTextPrimary)
+                    .foregroundStyle(Color.textPrimary)
 
                 Text("필수 항목 동의 후 계속할 수 있어요.")
                     .font(.pretendard(16, weight: .regular))
-                    .foregroundStyle(Color.midnightTextSecondary)
+                    .foregroundStyle(Color.textTertiary)
             }
 
             Button(action: onToggleAll) {
                 HStack(spacing: 12) {
-                    PFSelectionIndicator(isSelected: allSelected, tint: .midnightAccent, size: 24)
+                    PFSelectionIndicator(isSelected: allSelected, tint: .brand, size: 24)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("전체 동의 (선택 포함)")
                             .font(.pretendard(16, weight: .semibold))
-                            .foregroundStyle(Color.midnightTextPrimary)
+                            .foregroundStyle(Color.textPrimary)
 
                         Text("필수 약관과 선택 항목을 한 번에 설정할 수 있어요.")
                             .font(.pretendard(13, weight: .regular))
-                            .foregroundStyle(Color.midnightTextSecondary)
+                            .foregroundStyle(Color.textTertiary)
                     }
 
                     Spacer()
                 }
                 .padding(16)
-                .background(Color.midnightSurface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .background(Color.elevated, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.midnightBorder, lineWidth: 1)
+                        .stroke(Color.hairline, lineWidth: 1)
                 }
             }
             .buttonStyle(.plain)
@@ -113,11 +113,11 @@ private struct ConsentDetailSheet: View {
                 VStack(alignment: .leading, spacing: 18) {
                     Text(item.title)
                         .font(.pretendard(24, weight: .bold))
-                        .foregroundStyle(Color.midnightTextPrimary)
+                        .foregroundStyle(Color.textPrimary)
 
                     Text(item.detailBody)
                         .font(.pretendard(15, weight: .regular))
-                        .foregroundStyle(Color.midnightTextSecondary)
+                        .foregroundStyle(Color.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(24)
@@ -127,11 +127,11 @@ private struct ConsentDetailSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("닫기", action: { dismiss() })
                         .font(.pretendard(14, weight: .semibold))
-                        .foregroundStyle(Color.midnightTextSecondary)
+                        .foregroundStyle(Color.textTertiary)
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .presentationDetents([.medium])
     }
 }
@@ -148,5 +148,5 @@ private struct ConsentDetailSheet: View {
         onToggleItem: { _ in },
         onNext: {}
     )
-    .preferredColorScheme(.dark)
+    .preferredColorScheme(.light)
 }
