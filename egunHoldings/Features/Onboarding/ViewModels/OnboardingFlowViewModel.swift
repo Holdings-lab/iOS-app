@@ -1,12 +1,83 @@
 import Combine
 import Foundation
 
+enum RebalancingPreferenceStep: Int, CaseIterable, Identifiable {
+    case profile
+    case goalAndHorizon
+    case riskResponse
+    case allocation
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .profile: return "투자 성향"
+        case .goalAndHorizon: return "목표와 기간"
+        case .riskResponse: return "손실 대응"
+        case .allocation: return "현금과 방식"
+        }
+    }
+}
+
+nonisolated protocol InvestmentProfileRepositoryProtocol: Sendable {
+    func fetchInvestmentProfile(userId: Int64) async throws -> InvestmentProfileResponse
+    func updateInvestmentProfile(userId: Int64, profile: InvestmentProfile) async throws -> InvestmentProfileResponse
+}
+
+nonisolated struct InvestmentProfileResponse: Decodable, Sendable, Equatable {
+    let userId: Int64
+    let investmentProfile: InvestmentProfile
+    let displayName: String
+}
+
+nonisolated private struct InvestmentProfileRequestDTO: Encodable {
+    let investmentProfile: String
+}
+
+nonisolated struct LiveInvestmentProfileRepository: InvestmentProfileRepositoryProtocol {
+    private let apiClient: APIClient
+
+    init(apiClient: APIClient = APIClientFactory.makeDefault()) {
+        self.apiClient = apiClient
+    }
+
+    func fetchInvestmentProfile(userId: Int64) async throws -> InvestmentProfileResponse {
+        try await apiClient.requestResult(
+            BackendEndpoint.investmentProfile(userId: userId),
+            as: InvestmentProfileResponse.self
+        )
+    }
+
+    func updateInvestmentProfile(userId: Int64, profile: InvestmentProfile) async throws -> InvestmentProfileResponse {
+        let body = try NetworkJSONCoding.encodeJSON(
+            InvestmentProfileRequestDTO(investmentProfile: profile.rawValue)
+        )
+
+        return try await apiClient.requestResult(
+            BackendEndpoint.updateInvestmentProfile(userId: userId, body: body),
+            as: InvestmentProfileResponse.self
+        )
+    }
+}
+
 @MainActor
 final class OnboardingFlowViewModel: ObservableObject {
     @Published private(set) var selectedSectors: Set<InterestSector> = []
-    @Published private(set) var selectedStyle: InvestmentStyleOption?
+    @Published private(set) var selectedStyle: InvestmentStyleOption? = InvestmentProfile.balanced.legacyStyle
+    @Published private(set) var rebalancingPreference = OnboardingRebalancingPreference()
+    @Published private(set) var rebalancingStep: RebalancingPreferenceStep = .profile
     @Published private(set) var connectedInstitutionID: String?
+    @Published private(set) var isSavingInvestmentProfile = false
+    @Published private(set) var investmentProfileSaveError: String?
+    @Published private(set) var savedInvestmentProfile: InvestmentProfileResponse?
     @Published var isOtherBrokerExpanded = false
+
+    private let investmentProfileRepository: InvestmentProfileRepositoryProtocol
+    private var didLoadRemoteInvestmentProfile = false
+
+    init(investmentProfileRepository: InvestmentProfileRepositoryProtocol? = nil) {
+        self.investmentProfileRepository = investmentProfileRepository ?? LiveInvestmentProfileRepository()
+    }
 
     var allSectors: [InterestSector] {
         InterestSector.allCases
@@ -34,7 +105,7 @@ final class OnboardingFlowViewModel: ObservableObject {
     }
 
     var canAdvanceFromStyleStep: Bool {
-        selectedStyle != nil
+        true
     }
 
     var previewItems: [OnboardingNewsPreviewItem] {
@@ -69,7 +140,31 @@ final class OnboardingFlowViewModel: ObservableObject {
     }
 
     var selectedStyleSummary: String {
-        selectedStyle?.title ?? "미선택"
+        rebalancingPreference.investmentProfile.displayName
+    }
+
+    var selectedInvestmentGoalSummary: String {
+        rebalancingPreference.investmentGoal.title
+    }
+
+    var selectedInvestmentHorizonSummary: String {
+        rebalancingPreference.investmentHorizon.title
+    }
+
+    var selectedDrawdownSummary: String {
+        rebalancingPreference.maxDrawdownTolerance.title
+    }
+
+    var selectedDownturnBehaviorSummary: String {
+        rebalancingPreference.downturnBehavior.title
+    }
+
+    var selectedTargetCashWeightSummary: String {
+        rebalancingPreference.targetCashWeightOption.title
+    }
+
+    var selectedAssetPreferenceSummary: String {
+        rebalancingPreference.assetPreference.title
     }
 
     var connectedInstitutionSummary: String {
@@ -99,6 +194,71 @@ final class OnboardingFlowViewModel: ObservableObject {
 
     func selectStyle(_ style: InvestmentStyleOption) {
         selectedStyle = style
+
+        switch style {
+        case .stable:
+            selectInvestmentProfile(.conservative)
+        case .balanced, .growth:
+            selectInvestmentProfile(.balanced)
+        case .aggressive:
+            selectInvestmentProfile(.aggressive)
+        }
+    }
+
+    func selectInvestmentProfile(_ profile: InvestmentProfile) {
+        rebalancingPreference.investmentProfile = profile
+        selectedStyle = profile.legacyStyle
+        investmentProfileSaveError = nil
+    }
+
+    func selectInvestmentGoal(_ goal: InvestmentGoal) {
+        rebalancingPreference.investmentGoal = goal
+    }
+
+    func selectInvestmentHorizon(_ horizon: InvestmentHorizon) {
+        rebalancingPreference.investmentHorizon = horizon
+    }
+
+    func selectMaxDrawdownTolerance(_ tolerance: MaxDrawdownTolerance) {
+        rebalancingPreference.maxDrawdownTolerance = tolerance
+    }
+
+    func selectDownturnBehavior(_ behavior: DownturnBehavior) {
+        rebalancingPreference.downturnBehavior = behavior
+    }
+
+    func selectTargetCashWeight(_ targetCashWeight: TargetCashWeight) {
+        rebalancingPreference.targetCashWeight = targetCashWeight.rawValue
+    }
+
+    func selectAssetPreference(_ preference: AssetPreference) {
+        rebalancingPreference.assetPreference = preference
+    }
+
+    func moveToNextRebalancingStep() -> Bool {
+        let steps = RebalancingPreferenceStep.allCases
+        guard let currentIndex = steps.firstIndex(of: rebalancingStep) else {
+            return true
+        }
+
+        let nextIndex = steps.index(after: currentIndex)
+        guard nextIndex < steps.endIndex else {
+            return true
+        }
+
+        rebalancingStep = steps[nextIndex]
+        return false
+    }
+
+    func moveToPreviousRebalancingStep() -> Bool {
+        let steps = RebalancingPreferenceStep.allCases
+        guard let currentIndex = steps.firstIndex(of: rebalancingStep), currentIndex > steps.startIndex else {
+            return false
+        }
+
+        let previousIndex = steps.index(before: currentIndex)
+        rebalancingStep = steps[previousIndex]
+        return true
     }
 
     func connectRecommendedBroker() {
@@ -122,9 +282,68 @@ final class OnboardingFlowViewModel: ObservableObject {
         return OnboardingResult(
             connectedInstitutionIDs: connectedInstitutionID.map { [$0] } ?? [],
             selectedSectorIDs: orderedSectors,
-            investmentStyleID: selectedStyle?.rawValue ?? InvestmentStyleOption.balanced.rawValue,
+            investmentStyleID: rebalancingPreference.investmentProfile.legacyStyle.rawValue,
+            rebalancingPreference: rebalancingPreference,
             selectedAssetSymbols: [],
             primaryAssetSymbol: nil
         )
+    }
+
+    func loadInvestmentProfileIfAvailable(userId: Int64?) async {
+        guard let userId, !didLoadRemoteInvestmentProfile else { return }
+        didLoadRemoteInvestmentProfile = true
+
+        do {
+            let response = try await investmentProfileRepository.fetchInvestmentProfile(userId: userId)
+            savedInvestmentProfile = response
+            selectInvestmentProfile(response.investmentProfile)
+        } catch {
+            debugLog("투자성향 조회 실패: \(String(describing: error))")
+        }
+    }
+
+    func saveInvestmentProfile(userId: Int64?) async -> Bool {
+        guard !isSavingInvestmentProfile else { return false }
+
+        guard let userId else {
+            investmentProfileSaveError = "사용자 정보를 찾지 못했어요. 다시 로그인한 뒤 시도해주세요."
+            return false
+        }
+
+        isSavingInvestmentProfile = true
+        investmentProfileSaveError = nil
+
+        do {
+            let response = try await investmentProfileRepository.updateInvestmentProfile(
+                userId: userId,
+                profile: rebalancingPreference.investmentProfile
+            )
+            savedInvestmentProfile = response
+            isSavingInvestmentProfile = false
+            return true
+        } catch {
+            investmentProfileSaveError = Self.makeErrorMessage(
+                for: error,
+                fallback: "투자성향을 저장하지 못했어요. 잠시 후 다시 시도해주세요."
+            )
+            isSavingInvestmentProfile = false
+            return false
+        }
+    }
+
+    private static func makeErrorMessage(for error: Error, fallback: String) -> String {
+        if let localizedError = error as? LocalizedError,
+           let description = localizedError.errorDescription,
+           !description.isEmpty {
+            return description
+        }
+
+        return fallback
+    }
+
+    private func debugLog(_ message: String) {
+#if DEBUG
+        print("[Onboarding] \(message)")
+#endif
     }
 }

@@ -8,11 +8,22 @@ struct OnboardingFlowView: View {
         case completion
     }
 
+    let userId: Int64?
     let onLogout: () -> Void
     let onComplete: (OnboardingResult) -> Void
 
     @StateObject private var onboardingViewModel = OnboardingFlowViewModel()
     @State private var path: [OnboardingRoute] = []
+
+    init(
+        userId: Int64? = nil,
+        onLogout: @escaping () -> Void,
+        onComplete: @escaping (OnboardingResult) -> Void
+    ) {
+        self.userId = userId
+        self.onLogout = onLogout
+        self.onComplete = onComplete
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -48,6 +59,7 @@ struct OnboardingFlowView: View {
                     )
                 case .completion:
                     OnboardingPage4View(
+                        userId: userId,
                         viewModel: onboardingViewModel,
                         onStart: {
                             onComplete(onboardingViewModel.makeOnboardingResult())
@@ -55,6 +67,9 @@ struct OnboardingFlowView: View {
                     )
                 }
             }
+        }
+        .task(id: userId) {
+            await onboardingViewModel.loadInvestmentProfileIfAvailable(userId: userId)
         }
         .preferredColorScheme(.light)
     }

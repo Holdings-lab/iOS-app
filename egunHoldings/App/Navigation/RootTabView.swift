@@ -10,17 +10,19 @@ struct RootTabView: View {
     let userId: Int64?
     let userAssetProfile: UserAssetProfile
     let portfolioSnapshot: PortfolioSnapshot
+    let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     @State private var selectedTab: RootTab = .today
-    @StateObject private var signalViewModel = SignalViewModel()
 
     init(
         userId: Int64? = nil,
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
-        portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot
+        portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
+        brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil
     ) {
         self.userId = userId
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
+        self.brokerBalanceSnapshot = brokerBalanceSnapshot
         setupTabBarAppearance()
     }
 
@@ -41,8 +43,12 @@ struct RootTabView: View {
             }
 
             NavigationStack {
-                AssetView(signalViewModel: signalViewModel)
+                AssetView(
+                    userId: userId,
+                    brokerBalanceSnapshot: brokerBalanceSnapshot
+                )
             }
+            .id(brokerBalanceSnapshot?.fetchedAt)
             .tag(RootTab.asset)
             .tabItem {
                 Label("내자산", systemImage: "chart.pie.fill")

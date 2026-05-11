@@ -19,6 +19,7 @@ struct AppRootView: View {
                 AuthContainerView(onLoginSuccess: router.handleLoginSuccess)
             case .onboarding:
                 OnboardingFlowView(
+                    userId: router.session?.userId,
                     onLogout: router.logout,
                     onComplete: router.completeOnboarding
                 )
@@ -26,7 +27,8 @@ struct AppRootView: View {
                 RootTabView(
                     userId: router.session?.userId,
                     userAssetProfile: router.userAssetProfile,
-                    portfolioSnapshot: router.portfolioSnapshot
+                    portfolioSnapshot: router.portfolioSnapshot,
+                    brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot
                 )
             }
         }
