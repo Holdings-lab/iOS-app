@@ -38,7 +38,7 @@ struct SignupTermsView: View {
             topPadding: 16,
             bottomPadding: 120
         ) {
-            FlowProgressHeader(currentStep: 1, totalSteps: 4, onBack: onBack)
+            FlowProgressHeader(currentStep: 1, totalSteps: 4, stepTitle: "계정 만들기 · 약관", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("필수 약관을 확인해주세요")

@@ -49,7 +49,7 @@ struct SignupEmailAuthView: View {
             topPadding: isCompactOTPLayout ? 12 : 16,
             bottomPadding: isCompactOTPLayout ? 28 : 120
         ) {
-            FlowProgressHeader(currentStep: 2, totalSteps: 4, onBack: onBack)
+            FlowProgressHeader(currentStep: 2, totalSteps: 4, stepTitle: "계정 만들기 · 인증", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("이메일을 인증해주세요")
