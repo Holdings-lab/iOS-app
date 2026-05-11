@@ -45,6 +45,9 @@ final class ExchangeRateViewModel: ObservableObject {
     }
 
     var updatedText: String {
+        if isLoading {
+            return "업데이트 중"
+        }
         if let errorMessage {
             return errorMessage
         }
@@ -56,6 +59,13 @@ final class ExchangeRateViewModel: ObservableObject {
 
     var isShowingStaleValue: Bool {
         errorMessage != nil
+    }
+
+    var statusColor: Color {
+        if isLoading {
+            return .brand
+        }
+        return isShowingStaleValue ? .up : .textQuaternary
     }
 
     private static let rateFormatter: NumberFormatter = {
@@ -123,7 +133,7 @@ struct ExchangeRateSnapshotCard: View {
                 if displayMode == .full {
                     Text(viewModel.updatedText)
                         .font(.pretendard(11, weight: .semibold))
-                        .foregroundStyle(viewModel.isShowingStaleValue ? Color.up : Color.textQuaternary)
+                        .foregroundStyle(viewModel.statusColor)
                 }
             }
 
@@ -150,7 +160,7 @@ struct ExchangeRateSnapshotCard: View {
             } else {
                 Text(viewModel.updatedText)
                     .font(.pretendard(10, weight: .semibold))
-                    .foregroundStyle(viewModel.isShowingStaleValue ? Color.up : Color.textQuaternary)
+                    .foregroundStyle(viewModel.statusColor)
                     .lineLimit(1)
             }
         }
@@ -178,10 +188,16 @@ struct ExchangeRateSnapshotCard: View {
                 )
                 .background(Color.subtle, in: Circle())
                 .overlay { Circle().stroke(Color.hairline, lineWidth: 1) }
+                .overlay {
+                    if viewModel.isLoading {
+                        Circle()
+                            .stroke(Color.brand.opacity(0.2), lineWidth: 3)
+                    }
+                }
         }
         .buttonStyle(PSPressStyle())
         .disabled(viewModel.isLoading)
-        .accessibilityLabel("환율 새로고침")
+        .accessibilityLabel(viewModel.isLoading ? "환율 업데이트 중" : "환율 새로고침")
     }
 
     private var cardPadding: EdgeInsets {
