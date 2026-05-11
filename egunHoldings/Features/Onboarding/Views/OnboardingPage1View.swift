@@ -62,7 +62,7 @@ struct OnboardingPage1View: View {
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
                 ZStack {
-                    FloatingNewsPreviewSheet(items: viewModel.previewItems)
+                    CompactNewsPreviewStrip(items: viewModel.previewItems)
                         .id(previewKey)
                         .transition(.opacity)
                 }
@@ -161,71 +161,50 @@ private struct SectorSelectionCard: View {
     }
 }
 
-private struct SelectionNewsPreviewCard: View {
-    let items: [OnboardingNewsPreviewItem]
-    var embedded = false
-
-    var body: some View {
-        Group {
-            if embedded {
-                content
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
-            } else {
-                FlowSurfaceCard {
-                    content
-                }
-            }
-        }
-    }
-
-    private var content: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("선택 기반 뉴스 미리보기")
-                .font(.pretendard(12, weight: .semibold))
-                .foregroundStyle(Color.brandLight)
-
-            ForEach(items) { item in
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(item.title)
-                        .font(.pretendard(15, weight: .semibold))
-                        .foregroundStyle(Color.textPrimary)
-
-                    Text(item.summary)
-                        .font(.pretendard(13, weight: .regular))
-                        .foregroundStyle(Color.textTertiary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                if item.id != items.last?.id {
-                    Rectangle()
-                        .fill(Color.divider)
-                        .frame(height: 1)
-                }
-            }
-        }
-    }
-}
-
-private struct FloatingNewsPreviewSheet: View {
+private struct CompactNewsPreviewStrip: View {
     let items: [OnboardingNewsPreviewItem]
 
     var body: some View {
-        VStack(spacing: 0) {
-            Capsule(style: .continuous)
-                .fill(Color.divider)
-                .frame(width: 34, height: 4)
-                .padding(.top, 8)
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.brandTintBg)
+                    .frame(width: 34, height: 34)
 
-            SelectionNewsPreviewCard(items: items, embedded: true)
-                .padding(.top, 10)
+                Image(systemName: "newspaper")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.brand)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("선택 기반 미리보기")
+                    .font(.pretendard(11, weight: .semibold))
+                    .foregroundStyle(Color.textTertiary)
+
+                Text(items.first?.title ?? "관심 산업을 선택해주세요")
+                    .font(.pretendard(14, weight: .semibold))
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            if items.count > 1 {
+                Text("+\(items.count - 1)")
+                    .font(.pretendard(12, weight: .semibold))
+                    .foregroundStyle(Color.brand)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color.brandTintBg, in: Capsule(style: .continuous))
+            }
         }
+        .padding(.horizontal, 14)
+        .frame(height: 58)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .fill(Color.elevated)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(Color.hairline, lineWidth: 1)
                 }
         )
