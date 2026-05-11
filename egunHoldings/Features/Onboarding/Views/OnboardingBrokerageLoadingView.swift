@@ -22,7 +22,7 @@ struct OnboardingBrokerageLoadingView: View {
             topPadding: 16,
             bottomPadding: 120
         ) {
-            FlowProgressHeader(currentStep: 3, totalSteps: 4, showsBack: false, onBack: {})
+            FlowProgressHeader(currentStep: 4, totalSteps: 5, stepTitle: "맞춤 설정 · 계좌 동기화", showsBack: false, onBack: {})
 
             VStack(alignment: .leading, spacing: 10) {
                 Text(isCompleted ? "계좌 정보 준비가 끝났어요" : "계좌 정보를 불러오고 있어요")

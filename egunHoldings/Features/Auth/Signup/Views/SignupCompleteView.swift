@@ -10,7 +10,7 @@ struct SignupCompleteView: View {
             topPadding: 16,
             bottomPadding: 120
         ) {
-            FlowProgressHeader(currentStep: 4, totalSteps: 4, showsBack: false, onBack: {})
+            FlowProgressHeader(currentStep: 4, totalSteps: 4, stepTitle: "계정 만들기 · 완료", showsBack: false, onBack: {})
 
             Spacer(minLength: 48)
 

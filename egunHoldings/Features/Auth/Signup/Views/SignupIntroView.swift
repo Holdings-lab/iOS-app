@@ -44,7 +44,7 @@ struct SignupIntroView: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 12) {
-                FlowPrimaryButton(title: "1분 만에 가입하기 →", action: onStart)
+                FlowPrimaryButton(title: "맞춤 분석 시작하기", action: onStart)
 
                 Button("이미 계정이 있어요") {
                     onBack()

@@ -46,7 +46,7 @@ struct SignupPasswordView: View {
             topPadding: 16,
             bottomPadding: 120
         ) {
-            FlowProgressHeader(currentStep: 3, totalSteps: 4, onBack: onBack)
+            FlowProgressHeader(currentStep: 3, totalSteps: 4, stepTitle: "계정 만들기 · 비밀번호", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("비밀번호를 설정해주세요")

@@ -7,22 +7,12 @@ struct OnboardingPage3View: View {
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
     @State private var showsConnectionReviewSheet = false
 
-    private let categories = ["저축은행", "페이머니", "카드", "증권", "할부금융", "보험", "기타"]
-
     private var selectedInstitutionCount: Int {
         viewModel.connectedInstitutionID == nil ? 0 : 1
     }
 
-    private var selectedInstitutionCountText: String {
-        selectedInstitutionCount == 0 ? "선택 안 함" : "\(selectedInstitutionCount)개 선택"
-    }
-
-    private var accentGradient: LinearGradient {
-        LinearGradient(
-            colors: [Color.brand, Color.brandDark],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+    private var selectedInstitutionLabel: String {
+        viewModel.connectedInstitution?.name ?? "한국투자증권을 선택하면 연결할 수 있어요"
     }
 
     var body: some View {
@@ -33,20 +23,20 @@ struct OnboardingPage3View: View {
             topPadding: 16,
             bottomPadding: 168
         ) {
-            FlowProgressHeader(currentStep: 3, totalSteps: 4, onBack: onBack)
+            FlowProgressHeader(currentStep: 3, totalSteps: 5, stepTitle: "맞춤 설정 · 계좌 연결", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
-                Text("증권 계좌를 연결해주세요")
+                Text("조회 전용 계좌를 연결해주세요")
                     .font(.pretendard(26, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
 
-                Text("현재는 한국투자증권 계좌만 연결할 수 있고, 연결된 자산 기준으로 정책 민감도를 계산합니다.")
+                Text("보유 종목과 잔고만 불러와 정책 민감도를 계산합니다. 주문 권한은 요청하지 않아요.")
                     .font(.pretendard(15, weight: .regular))
                     .foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            categoryStrip
+            connectionTrustCard
 
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 8) {
@@ -54,7 +44,7 @@ struct OnboardingPage3View: View {
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(Color.brand)
 
-                    Text("증권")
+                    Text("지원 가능 증권사")
                         .font(.pretendard(18, weight: .semibold))
                         .foregroundStyle(Color.textPrimary)
 
@@ -111,66 +101,56 @@ struct OnboardingPage3View: View {
         .toolbar(.hidden, for: .navigationBar)
     }
 
-    private var categoryStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 18) {
-                ForEach(categories, id: \.self) { category in
-                    VStack(spacing: 8) {
-                        Text(category)
-                            .font(.pretendard(14, weight: category == "증권" ? .semibold : .medium))
-                            .foregroundStyle(category == "증권" ? Color.textPrimary : Color.textDisabled)
+    private var connectionTrustCard: some View {
+        FlowSurfaceCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("연결 전 확인")
+                    .font(.pretendard(13, weight: .semibold))
+                    .foregroundStyle(Color.textTertiary)
 
-                        Capsule()
-                            .fill(category == "증권" ? Color.textPrimary : .clear)
-                            .frame(height: 2)
-                    }
-                }
+                ConnectionTrustRow(
+                    icon: "eye",
+                    title: "조회 전용",
+                    description: "잔고와 보유 종목만 분석에 사용합니다."
+                )
+
+                ConnectionTrustRow(
+                    icon: "lock.shield",
+                    title: "주문 권한 없음",
+                    description: "매수와 매도는 실행할 수 없습니다."
+                )
+
+                ConnectionTrustRow(
+                    icon: "clock",
+                    title: "나중에 연결 가능",
+                    description: "건너뛰어도 홈에서 다시 설정할 수 있어요."
+                )
             }
-            .padding(.bottom, 4)
-        }
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(Color.subtle)
-                .frame(height: 1)
         }
     }
 
     private var bottomActionBar: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                Text(selectedInstitutionCountText)
-                    .font(.pretendard(18, weight: .semibold))
-                    .foregroundStyle(Color.textPrimary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 58)
-                    .background(Color.muted, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            Text(selectedInstitutionLabel)
+                .font(.pretendard(13, weight: .semibold))
+                .foregroundStyle(selectedInstitutionCount > 0 ? Color.textPrimary : Color.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                Button {
+            FlowPrimaryButton(
+                title: "조회 전용으로 연결하기",
+                isEnabled: selectedInstitutionCount > 0,
+                action: {
                     showsConnectionReviewSheet = true
-                } label: {
-                    Text("연결하기")
-                        .font(.pretendard(18, weight: .bold))
-                        .foregroundStyle(selectedInstitutionCount > 0 ? Color.textOnAccent : Color.textDisabled)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 58)
-                        .background(
-                            selectedInstitutionCount > 0
-                                ? AnyShapeStyle(accentGradient)
-                                : AnyShapeStyle(Color.muted),
-                            in: RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        )
                 }
-                .buttonStyle(.plain)
-                .allowsHitTesting(selectedInstitutionCount > 0)
-            }
+            )
 
-            Button("나중에 할게요") {
+            Button("나중에 설정하기") {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     viewModel.skipBrokerageConnection()
                 }
                 onNext()
             }
-            .font(.pretendard(14, weight: .medium))
+            .font(.pretendard(14, weight: .semibold))
             .foregroundStyle(Color.textTertiary)
             .buttonStyle(.plain)
         }
@@ -196,6 +176,36 @@ struct OnboardingPage3View: View {
                 viewModel.skipBrokerageConnection()
             } else {
                 viewModel.selectInstitution(institution)
+            }
+        }
+    }
+}
+
+private struct ConnectionTrustRow: View {
+    let icon: String
+    let title: String
+    let description: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Circle()
+                .fill(Color.brandTintBg)
+                .frame(width: 32, height: 32)
+                .overlay {
+                    Image(systemName: icon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.brand)
+                }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.pretendard(14, weight: .semibold))
+                    .foregroundStyle(Color.textPrimary)
+
+                Text(description)
+                    .font(.pretendard(13, weight: .medium))
+                    .foregroundStyle(Color.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

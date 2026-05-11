@@ -24,7 +24,14 @@ struct SignupEmailAuthView: View {
     @State private var keyboardHeight: CGFloat = 0
 
     private var canSend: Bool {
-        !emailAddress.isEmpty
+        let local = emailLocalPart.trimmingCharacters(in: .whitespacesAndNewlines)
+        let domainValue = selectedDomain == .direct ? customDomain : selectedDomain.rawValue
+        let domain = domainValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !local.isEmpty && domain.contains(".")
+    }
+
+    private var canVerifyOTP: Bool {
+        otpCode.count == 6 && !isVerified && secondsRemaining > 0
     }
 
     private var isKeyboardVisible: Bool {
@@ -47,9 +54,9 @@ struct SignupEmailAuthView: View {
             spacing: isCompactOTPLayout ? 16 : 24,
             horizontalPadding: MidnightLayout.horizontal,
             topPadding: isCompactOTPLayout ? 12 : 16,
-            bottomPadding: isCompactOTPLayout ? 28 : 120
+            bottomPadding: 120
         ) {
-            FlowProgressHeader(currentStep: 2, totalSteps: 4, onBack: onBack)
+            FlowProgressHeader(currentStep: 2, totalSteps: 4, stepTitle: "계정 만들기 · 인증", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("이메일을 인증해주세요")
@@ -78,17 +85,14 @@ struct SignupEmailAuthView: View {
             }
         }
         .safeAreaInset(edge: .bottom) {
-            if !(hasSentCode && isKeyboardVisible) {
-                FlowPrimaryButton(
-                    title: hasSentCode ? "다음" : "인증번호 보내기",
-                    isEnabled: hasSentCode ? isVerified : canSend,
-                    action: hasSentCode ? onNext : onSendCode
-                )
-                .padding(.horizontal, MidnightLayout.horizontal)
-                .padding(.top, 12)
-                .padding(.bottom, 12)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
+            FlowPrimaryButton(
+                title: bottomButtonTitle,
+                isEnabled: hasSentCode ? isVerified : canSend,
+                action: hasSentCode ? onNext : onSendCode
+            )
+            .padding(.horizontal, MidnightLayout.horizontal)
+            .padding(.top, 12)
+            .padding(.bottom, 12)
         }
         .background(PFGradientBackground())
         .toolbar(.hidden, for: .navigationBar)
@@ -115,6 +119,14 @@ struct SignupEmailAuthView: View {
                 domainInput
             }
         }
+    }
+
+    private var bottomButtonTitle: String {
+        if !hasSentCode {
+            return "인증번호 보내기"
+        }
+
+        return isVerified ? "비밀번호 설정하기" : "인증 후 계속"
     }
 
     private var verifiedEmailCard: some View {
@@ -145,18 +157,32 @@ struct SignupEmailAuthView: View {
     private var otpCard: some View {
         FlowSurfaceCard {
             VStack(alignment: .leading, spacing: isCompactOTPLayout ? 10 : 14) {
-                Text("인증번호 6자리를 입력해주세요")
-                    .font(.pretendard(15, weight: .semibold))
-                    .foregroundStyle(Color.textPrimary)
+                HStack(spacing: 10) {
+                    Text("인증번호 6자리")
+                        .font(.pretendard(15, weight: .semibold))
+                        .foregroundStyle(Color.textPrimary)
+
+                    Spacer()
+
+                    otpStatusBadge
+                }
 
                 OTPCodeFieldView(code: $otpCode, shakeTrigger: shakeTrigger, onCompleted: onVerifyCode)
 
-                HStack {
+                HStack(spacing: 12) {
                     Text(timeText)
                         .font(.pretendard(13, weight: .semibold))
-                        .foregroundStyle(Color.textTertiary)
+                        .foregroundStyle(secondsRemaining == 0 ? Color.up : Color.textTertiary)
 
                     Spacer()
+
+                    Button("확인") {
+                        onVerifyCode(otpCode)
+                    }
+                    .font(.pretendard(13, weight: .semibold))
+                    .foregroundStyle(canVerifyOTP ? Color.brand : Color.textDisabled)
+                    .buttonStyle(.plain)
+                    .disabled(!canVerifyOTP)
 
                     Button("재전송") {
                         onResendCode()
@@ -172,6 +198,29 @@ struct SignupEmailAuthView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    private var otpStatusBadge: some View {
+        let status = otpStatus
+
+        return Text(status.title)
+            .font(.pretendard(12, weight: .semibold))
+            .foregroundStyle(status.foreground)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(status.background, in: Capsule(style: .continuous))
+    }
+
+    private var otpStatus: (title: String, foreground: Color, background: Color) {
+        if isVerified {
+            return ("인증 완료", Color.success, Color.successBg)
+        }
+
+        if secondsRemaining == 0 {
+            return ("시간 만료", Color.up, Color.upBg)
+        }
+
+        return ("\(otpCode.count)/6 입력", Color.brand, Color.brandTintBg)
     }
 
     private var tipCard: some View {

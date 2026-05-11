@@ -73,6 +73,16 @@ struct LoginView: View {
 
     @State private var email: String = ""
     @State private var password: String = ""
+    @FocusState private var focusedField: LoginField?
+
+    private enum LoginField {
+        case email
+        case password
+    }
+
+    private var canSubmit: Bool {
+        !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !password.isEmpty
+    }
 
     var body: some View {
         PFContentScrollView(spacing: PFSpacing.section, topPadding: 16, bottomPadding: 16) {
@@ -95,18 +105,32 @@ struct LoginView: View {
                     placeholder: "이메일 주소",
                     icon: "envelope",
                     text: $email,
-                    keyboardType: .emailAddress
+                    keyboardType: .emailAddress,
+                    textContentType: .username,
+                    submitLabel: .next,
+                    onSubmit: {
+                        focusedField = .password
+                    }
                 )
-                AuthInputField(placeholder: "비밀번호", icon: "lock", text: $password, secure: true)
+                .focused($focusedField, equals: .email)
+
+                AuthInputField(
+                    placeholder: "비밀번호",
+                    icon: "lock",
+                    text: $password,
+                    secure: true,
+                    textContentType: .password,
+                    submitLabel: .go,
+                    onSubmit: submitLogin
+                )
+                .focused($focusedField, equals: .password)
             }
 
             if let errorMessage {
                 PFInlineErrorText(message: errorMessage)
             }
 
-            PrimaryGradientButton(title: "로그인") {
-                onLogin(email, password)
-            }
+            PrimaryGradientButton(title: "로그인", isEnabled: canSubmit, action: submitLogin)
 
             socialDivider
 
@@ -128,15 +152,14 @@ struct LoginView: View {
                 .buttonStyle(.plain)
             }
             .font(.pretendard(15, weight: .medium))
-
-            VStack(spacing: 4) {
-                Text("데모 기존 계정: investor@policyfinance.app / demo1234")
-                Text("온보딩 테스트 계정: eom175@naver.com / 11111111")
-            }
-            .font(.pretendard(12, weight: .medium))
-            .foregroundStyle(Color.textTertiary.opacity(0.8))
         }
         .background(PFGradientBackground())
+    }
+
+    private func submitLogin() {
+        guard canSubmit else { return }
+        focusedField = nil
+        onLogin(email.trimmingCharacters(in: .whitespacesAndNewlines), password)
     }
 
     private var appIcon: some View {

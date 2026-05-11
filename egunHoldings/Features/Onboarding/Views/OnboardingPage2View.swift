@@ -13,7 +13,7 @@ struct OnboardingPage2View: View {
             topPadding: 16,
             bottomPadding: 120
         ) {
-            FlowProgressHeader(currentStep: 2, totalSteps: 4, onBack: onBack)
+            FlowProgressHeader(currentStep: 2, totalSteps: 5, stepTitle: "맞춤 설정 · 투자 성향", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("투자 성향을 알려주세요")
