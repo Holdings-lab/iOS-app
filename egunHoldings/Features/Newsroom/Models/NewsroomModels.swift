@@ -20,6 +20,40 @@ enum NewsroomDigestMode: String, CaseIterable, Identifiable, Equatable {
     }
 }
 
+enum NewsroomInsightMode: Equatable {
+    case quick
+    case detail
+
+    var title: String {
+        switch self {
+        case .quick:
+            return "1분 요약"
+        case .detail:
+            return "자세히 분석"
+        }
+    }
+
+    var loadingMessage: String {
+        switch self {
+        case .quick:
+            return "빠른 판단에 필요한 내용만 정리하고 있어요"
+        case .detail:
+            return "정책 배경과 자산별 영향을 분석하고 있어요"
+        }
+    }
+}
+
+extension NewsroomDigestMode {
+    var insightMode: NewsroomInsightMode {
+        switch self {
+        case .oneMinute:
+            return .quick
+        case .detail, .saved:
+            return .detail
+        }
+    }
+}
+
 struct NewsroomPolicySummaryRequest: Identifiable, Equatable {
     let id = UUID()
     let policyTitle: String

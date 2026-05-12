@@ -58,7 +58,7 @@ struct NewsroomView: View {
                     viewModel.dismissLowRelevanceReason()
                     Task { @MainActor in
                         try? await Task.sleep(nanoseconds: 220_000_000)
-                        viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
+                        present(item)
                     }
                 }
             )
@@ -81,7 +81,7 @@ struct NewsroomView: View {
             NewsroomSavedSection(
                 items: viewModel.savedNews,
                 onSelect: { item in
-                    viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
+                    present(item)
                 }
             )
         } else {
@@ -93,7 +93,7 @@ struct NewsroomView: View {
                     presentation: digestMode == .oneMinute ? .skim : .detail,
                     isSaved: viewModel.isSaved,
                     onSelect: { item in
-                        viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
+                        present(item)
                     },
                     onToggleSave: viewModel.toggleSaved,
                     onShowLowReason: viewModel.presentLowRelevanceReason
@@ -108,7 +108,7 @@ struct NewsroomView: View {
                     presentation: .skim,
                     isSaved: viewModel.isSaved,
                     onSelect: { item in
-                        viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
+                        present(item)
                     },
                     onToggleSave: viewModel.toggleSaved,
                     onShowLowReason: viewModel.presentLowRelevanceReason
@@ -123,7 +123,7 @@ struct NewsroomView: View {
                     presentation: .ignore,
                     isSaved: viewModel.isSaved,
                     onSelect: { item in
-                        viewModel.presentInsight(for: item, userAssetProfile: userAssetProfile)
+                        present(item)
                     },
                     onToggleSave: viewModel.toggleSaved,
                     onShowLowReason: viewModel.presentLowRelevanceReason
@@ -142,6 +142,14 @@ struct NewsroomView: View {
         handledSummaryRequestID = summaryRequest.id
         digestMode = .oneMinute
         viewModel.presentSummary(for: summaryRequest, userAssetProfile: userAssetProfile)
+    }
+
+    private func present(_ item: PolicyNewsItem) {
+        viewModel.presentInsight(
+            for: item,
+            userAssetProfile: userAssetProfile,
+            mode: digestMode.insightMode
+        )
     }
 }
 

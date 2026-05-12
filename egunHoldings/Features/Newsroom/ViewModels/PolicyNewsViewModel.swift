@@ -8,6 +8,7 @@ final class PolicyNewsViewModel: ObservableObject {
     @Published private(set) var feedErrorMessage: String?
 
     @Published var presentedItem: PolicyNewsItem?
+    @Published private(set) var presentedInsightMode: NewsroomInsightMode = .quick
     @Published private(set) var presentedInsight: PolicyNewsInsight?
     @Published private(set) var isInsightLoading = false
     @Published private(set) var insightErrorMessage: String?
@@ -102,11 +103,20 @@ final class PolicyNewsViewModel: ObservableObject {
         presentPendingSummaryIfNeeded()
     }
 
-    func presentInsight(for item: PolicyNewsItem, userAssetProfile: UserAssetProfile) {
+    func presentInsight(
+        for item: PolicyNewsItem,
+        userAssetProfile: UserAssetProfile,
+        mode: NewsroomInsightMode = .quick
+    ) {
+        presentedInsightMode = mode
         presentedItem = item
         presentedInsight = nil
         insightErrorMessage = nil
         loadInsight(for: item, userAssetProfile: userAssetProfile)
+    }
+
+    func switchPresentedInsightMode(_ mode: NewsroomInsightMode) {
+        presentedInsightMode = mode
     }
 
     func reloadPresentedInsight(userAssetProfile: UserAssetProfile) {
@@ -162,7 +172,7 @@ final class PolicyNewsViewModel: ObservableObject {
 
         pendingSummaryRequest = nil
         pendingSummaryUserAssetProfile = nil
-        presentInsight(for: item, userAssetProfile: userAssetProfile)
+        presentInsight(for: item, userAssetProfile: userAssetProfile, mode: .quick)
     }
 
     private func bestNewsItem(matching request: NewsroomPolicySummaryRequest) -> PolicyNewsItem? {
