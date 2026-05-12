@@ -5,12 +5,9 @@ struct NewsroomView: View {
     let userAssetProfile: UserAssetProfile
 
     @StateObject private var viewModel: PolicyNewsViewModel
-    @AppStorage("newsroom.selected.categories") private var selectedCategoryStorage = ""
-    @State private var selectedCategories: Set<PolicyNewsCategory> = Self.defaultCategories
-    @State private var didHydrateSelectedCategories = false
-    @State private var isShowingCategoryEditor = false
     @State private var feedMode: NewsroomFeedMode = .news
-    @State private var newsFilter: NewsroomNewsFilter = .all
+    @State private var newsFilter: NewsroomNewsFilter = .breaking
+    @State private var selectedMarketTicker: NewsroomMarketTicker?
 
     init(
         userId: Int64? = nil,
@@ -23,29 +20,24 @@ struct NewsroomView: View {
 
     private var displayedItems: [PolicyNewsItem] {
         switch newsFilter {
-        case .all:
-            return viewModel.visibleNews
-        case .following:
-            return viewModel.news(matching: selectedCategories)
         case .breaking:
             return viewModel.visibleNews.filter { $0.newsroomRelevanceLevel == .high || $0.sentiment == .caution }
+        case .holdings:
+            return viewModel.visibleNews.filter(isHoldingRelated)
         }
     }
 
     private var displayedTickers: [NewsroomMarketTicker] {
-        let tickers = NewsroomMarketData.tickers
-        guard !selectedCategories.isEmpty else { return tickers }
-        return tickers.filter { selectedCategories.contains($0.category) }
+        NewsroomMarketData.tickers
     }
 
     private var learningContents: [NewsroomLearningContent] {
-        let items = NewsroomLearningContentData.items
-        guard !selectedCategories.isEmpty else { return items }
+        let categories = assetRelatedCategories
+        guard !categories.isEmpty else { return NewsroomLearningContentData.items }
 
-        return items.sorted { lhs, rhs in
-            let lhsMatches = selectedCategories.contains(lhs.category)
-            let rhsMatches = selectedCategories.contains(rhs.category)
-
+        return NewsroomLearningContentData.items.sorted { lhs, rhs in
+            let lhsMatches = categories.contains(lhs.category)
+            let rhsMatches = categories.contains(rhs.category)
             if lhsMatches != rhsMatches {
                 return lhsMatches
             }
@@ -61,10 +53,9 @@ struct NewsroomView: View {
             locksHorizontalOverflow: true
         ) {
             NewsroomHeaderView(
-                latestUpdateText: displayedItems.first?.relativePublishedText ?? "방금",
-                selectedCategoryCount: selectedCategories.isEmpty ? PolicyNewsCategory.allCases.count : selectedCategories.count,
                 tickers: displayedTickers,
-                feedMode: feedMode
+                feedMode: feedMode,
+                onTickerTap: { selectedMarketTicker = $0 }
             )
 
             NewsroomFeedModePicker(selectedMode: $feedMode)
@@ -86,30 +77,16 @@ struct NewsroomView: View {
                 viewModel: viewModel
             )
         }
-        .sheet(isPresented: $isShowingCategoryEditor) {
-            NewsroomCategoryEditorSheet(selectedCategories: $selectedCategories)
-            .presentationDetents([.medium])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Color.elevated)
-            .presentationCornerRadius(KDXRadius.bottomSheet)
-        }
-        .onAppear {
-            hydrateSelectedCategoriesIfNeeded()
-        }
-        .onChange(of: selectedCategories) { _, newValue in
-            persist(newValue)
+        .navigationDestination(item: $selectedMarketTicker) { ticker in
+            NewsroomMarketDetailView(
+                selectedTicker: ticker,
+                quotes: NewsroomMarketData.quotes
+            )
         }
     }
 
     @ViewBuilder
     private var newsContent: some View {
-        NewsroomMarketTickerTape(tickers: displayedTickers)
-
-        NewsroomCategorySelector(
-            selectedCategories: $selectedCategories,
-            onEdit: { isShowingCategoryEditor = true }
-        )
-
         NewsroomNewsFilterBar(selectedFilter: $newsFilter)
 
         if viewModel.isFeedLoading && viewModel.news.isEmpty {
@@ -133,7 +110,7 @@ struct NewsroomView: View {
 
     private var newsroomContent: some View {
         NewsroomIndustrySummarySection(
-            title: newsFilter == .breaking ? "실시간 주요 뉴스" : (selectedCategories.isEmpty ? "전체 뉴스" : "팔로잉 뉴스"),
+            title: newsFilter.title,
             subtitle: "\(displayedItems.count)건",
             items: displayedItems,
             isSaved: viewModel.isSaved,
@@ -152,29 +129,49 @@ struct NewsroomView: View {
         )
     }
 
-    private func hydrateSelectedCategoriesIfNeeded() {
-        guard !didHydrateSelectedCategories else { return }
-        didHydrateSelectedCategories = true
+    private var assetRelatedCategories: Set<PolicyNewsCategory> {
+        userAssetProfile.holdings.reduce(into: Set<PolicyNewsCategory>()) { categories, holding in
+            let text = normalized(holding.name)
 
-        let hydrated = Self.decodeCategories(from: selectedCategoryStorage)
-        selectedCategories = hydrated.isEmpty ? Self.defaultCategories : hydrated
+            if holding.category == .depositSavings || holding.category == .loan {
+                categories.insert(.interestRate)
+                categories.insert(.finance)
+            }
+
+            if text.contains("soxx") || text.contains("smh") || text.contains("반도체") || text.contains("삼성") || text.contains("sk") {
+                categories.insert(.semiconductor)
+            }
+
+            if text.contains("icln") || text.contains("에너지") || text.contains("재생") {
+                categories.insert(.energy)
+            }
+
+            if text.contains("은행") || text.contains("예금") || text.contains("대출") || text.contains("채권") {
+                categories.insert(.interestRate)
+                categories.insert(.finance)
+            }
+        }
     }
 
-    private func persist(_ categories: Set<PolicyNewsCategory>) {
-        selectedCategoryStorage = categories
-            .sorted { $0.title < $1.title }
-            .map(\.rawValue)
-            .joined(separator: ",")
+    private func isHoldingRelated(_ item: PolicyNewsItem) -> Bool {
+        let holdingNames = userAssetProfile.holdings.map { normalized($0.name) }
+        let tickerMatches = item.relatedTickers
+            .map(normalized)
+            .contains { ticker in
+                holdingNames.contains { holdingName in
+                    !ticker.isEmpty && (holdingName.contains(ticker) || ticker.contains(holdingName))
+                }
+            }
+
+        return tickerMatches || assetRelatedCategories.contains(item.category)
     }
 
-    private static let defaultCategories: Set<PolicyNewsCategory> = [.semiconductor, .ai, .energy]
-
-    private static func decodeCategories(from storage: String) -> Set<PolicyNewsCategory> {
-        Set(
-            storage
-                .split(separator: ",")
-                .compactMap { PolicyNewsCategory(rawValue: String($0)) }
-        )
+    private func normalized(_ text: String) -> String {
+        text
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "·", with: "")
+            .replacingOccurrences(of: "-", with: "")
     }
 }
 

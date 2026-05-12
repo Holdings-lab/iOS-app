@@ -133,6 +133,8 @@ struct PolicyNewsInsightDetailView: View {
 
     private func quickContent(_ insight: PolicyNewsInsight) -> some View {
         VStack(alignment: .leading, spacing: 14) {
+            summaryHeader
+
             quickLeadCard
 
             InsightVisualCard(
@@ -370,7 +372,7 @@ struct PolicyNewsInsightDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             InsightSectionHeader(
                 title: "1분 요약",
-                subtitle: "관심 산업 뉴스",
+                subtitle: "보유 자산 뉴스",
                 iconName: item.sentiment.iconName,
                 tint: item.newsroomDirectionColor
             )
@@ -381,7 +383,7 @@ struct PolicyNewsInsightDetailView: View {
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text("선택한 관심 산업 기준으로 기사 흐름만 빠르게 정리했어요.")
+            Text("연결된 보유 자산과 실시간 속보 흐름을 기준으로 빠르게 정리했어요.")
                 .font(.pretendard(13, weight: .semibold))
                 .foregroundStyle(Color.textSecondary)
                 .lineSpacing(3)
@@ -399,7 +401,7 @@ struct PolicyNewsInsightDetailView: View {
     private var industrySnapshotCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             InsightSectionHeader(
-                title: "산업 흐름",
+                title: "뉴스 흐름",
                 subtitle: item.category.title,
                 iconName: item.category.newsroomIconName,
                 tint: item.newsroomAccentColor

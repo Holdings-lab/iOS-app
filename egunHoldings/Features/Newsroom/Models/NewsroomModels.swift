@@ -60,7 +60,7 @@ enum NewsroomFeedMode: String, CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .news:
-            return "실시간 주요 뉴스와 팔로잉 산업 흐름"
+            return "실시간 속보와 보유 종목 관련 기사"
         case .content:
             return "투자를 이해하기 위한 학습 피드"
         }
@@ -68,20 +68,17 @@ enum NewsroomFeedMode: String, CaseIterable, Identifiable {
 }
 
 enum NewsroomNewsFilter: String, CaseIterable, Identifiable {
-    case all
-    case following
     case breaking
+    case holdings
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .all:
-            return "전체"
-        case .following:
-            return "팔로잉"
         case .breaking:
-            return "속보"
+            return "실시간 속보"
+        case .holdings:
+            return "보유 종목 뉴스"
         }
     }
 }
@@ -92,13 +89,65 @@ struct NewsroomPolicySummaryRequest: Identifiable, Equatable {
     let relatedAssets: [String]
 }
 
-struct NewsroomMarketTicker: Identifiable, Equatable {
+struct NewsroomMarketTicker: Identifiable, Equatable, Hashable {
     let id: String
     let title: String
     let price: String
     let changeText: String
     let isPositive: Bool
     let category: PolicyNewsCategory
+    let sparkline: [CGFloat]
+}
+
+enum NewsroomMarketQuoteGroup: String, CaseIterable, Identifiable {
+    case indexCurrency
+    case bond
+    case commodity
+    case crypto
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .indexCurrency:
+            return "지수·환율"
+        case .bond:
+            return "채권"
+        case .commodity:
+            return "원자재"
+        case .crypto:
+            return "가상자산"
+        }
+    }
+}
+
+enum NewsroomMarketQuoteRegion: String, CaseIterable, Identifiable {
+    case all
+    case domestic
+    case overseas
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all:
+            return "전체"
+        case .domestic:
+            return "국내"
+        case .overseas:
+            return "해외"
+        }
+    }
+}
+
+struct NewsroomMarketQuote: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let valueText: String
+    let changeText: String
+    let isPositive: Bool
+    let group: NewsroomMarketQuoteGroup
+    let region: NewsroomMarketQuoteRegion
     let sparkline: [CGFloat]
 }
 
@@ -209,6 +258,15 @@ enum NewsroomLearningContentData {
 enum NewsroomMarketData {
     static let tickers: [NewsroomMarketTicker] = [
         NewsroomMarketTicker(
+            id: "usdkrw",
+            title: "환율",
+            price: "1,493.16",
+            changeText: "+1.3%",
+            isPositive: true,
+            category: .macro,
+            sparkline: [0.44, 0.48, 0.46, 0.52, 0.57, 0.55, 0.61, 0.66]
+        ),
+        NewsroomMarketTicker(
             id: "nasdaq",
             title: "Nasdaq Futures",
             price: "29,154.50",
@@ -270,6 +328,99 @@ enum NewsroomMarketData {
             isPositive: true,
             category: .ai,
             sparkline: [0.40, 0.45, 0.49, 0.46, 0.52, 0.59, 0.61, 0.68]
+        )
+    ]
+
+    static let quotes: [NewsroomMarketQuote] = [
+        NewsroomMarketQuote(
+            id: "usdkrw",
+            name: "원/달러 환율",
+            valueText: "1,493.16",
+            changeText: "+19.21 (1.3%)",
+            isPositive: true,
+            group: .indexCurrency,
+            region: .domestic,
+            sparkline: [0.44, 0.48, 0.46, 0.52, 0.57, 0.55, 0.61, 0.66]
+        ),
+        NewsroomMarketQuote(
+            id: "nasdaq",
+            name: "나스닥",
+            valueText: "26,274.12",
+            changeText: "+27.05 (0.1%)",
+            isPositive: true,
+            group: .indexCurrency,
+            region: .overseas,
+            sparkline: [0.42, 0.55, 0.62, 0.58, 0.67, 0.61, 0.52, 0.57]
+        ),
+        NewsroomMarketQuote(
+            id: "nasdaq-futures",
+            name: "나스닥 100 선물",
+            valueText: "29,203",
+            changeText: "-221 (0.7%)",
+            isPositive: false,
+            group: .indexCurrency,
+            region: .overseas,
+            sparkline: [0.72, 0.64, 0.59, 0.50, 0.45, 0.38, 0.34, 0.40]
+        ),
+        NewsroomMarketQuote(
+            id: "sp500",
+            name: "S&P 500",
+            valueText: "7,412.84",
+            changeText: "+13.91 (0.1%)",
+            isPositive: true,
+            group: .indexCurrency,
+            region: .overseas,
+            sparkline: [0.44, 0.52, 0.61, 0.58, 0.66, 0.63, 0.49, 0.55]
+        ),
+        NewsroomMarketQuote(
+            id: "sox",
+            name: "필라델피아 반도체",
+            valueText: "12,081.04",
+            changeText: "+305.54 (2.5%)",
+            isPositive: true,
+            group: .indexCurrency,
+            region: .overseas,
+            sparkline: [0.36, 0.44, 0.41, 0.55, 0.63, 0.68, 0.66, 0.72]
+        ),
+        NewsroomMarketQuote(
+            id: "vix",
+            name: "VIX",
+            valueText: "18.69",
+            changeText: "+0.31 (1.6%)",
+            isPositive: true,
+            group: .indexCurrency,
+            region: .overseas,
+            sparkline: [0.48, 0.58, 0.62, 0.54, 0.43, 0.40, 0.38, 0.45]
+        ),
+        NewsroomMarketQuote(
+            id: "us10y",
+            name: "미국 10년물",
+            valueText: "4.18",
+            changeText: "-0.04",
+            isPositive: false,
+            group: .bond,
+            region: .overseas,
+            sparkline: [0.66, 0.64, 0.61, 0.59, 0.55, 0.57, 0.51, 0.48]
+        ),
+        NewsroomMarketQuote(
+            id: "gold",
+            name: "금",
+            valueText: "4,712.00",
+            changeText: "-0.35%",
+            isPositive: false,
+            group: .commodity,
+            region: .overseas,
+            sparkline: [0.58, 0.55, 0.60, 0.51, 0.49, 0.43, 0.45, 0.40]
+        ),
+        NewsroomMarketQuote(
+            id: "bitcoin",
+            name: "비트코인",
+            valueText: "80,793.90",
+            changeText: "-0.30%",
+            isPositive: false,
+            group: .crypto,
+            region: .overseas,
+            sparkline: [0.62, 0.61, 0.58, 0.52, 0.49, 0.51, 0.47, 0.45]
         )
     ]
 }

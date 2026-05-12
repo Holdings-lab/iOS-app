@@ -2,10 +2,9 @@ import SwiftUI
 import Combine
 
 struct NewsroomHeaderView: View {
-    let latestUpdateText: String
-    let selectedCategoryCount: Int
     let tickers: [NewsroomMarketTicker]
     let feedMode: NewsroomFeedMode
+    let onTickerTap: (NewsroomMarketTicker) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -23,7 +22,10 @@ struct NewsroomHeaderView: View {
                                 .foregroundStyle(Color.textPrimary)
                                 .tracking(-0.5)
 
-                            NewsroomRollingTickerView(tickers: tickers)
+                            NewsroomRollingTickerView(
+                                tickers: tickers,
+                                onTickerTap: onTickerTap
+                            )
                         }
 
                         Text(feedMode.subtitle)
@@ -34,15 +36,6 @@ struct NewsroomHeaderView: View {
                 }
 
                 Spacer()
-
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text("\(latestUpdateText) 업데이트")
-                        .font(.pretendard(11, weight: .semibold))
-                        .foregroundStyle(Color.brand)
-                    Text("관심 산업 \(selectedCategoryCount)개")
-                        .font(.pretendard(11, weight: .medium))
-                        .foregroundStyle(Color.textQuaternary)
-                }
             }
         }
     }
@@ -50,6 +43,7 @@ struct NewsroomHeaderView: View {
 
 private struct NewsroomRollingTickerView: View {
     let tickers: [NewsroomMarketTicker]
+    let onTickerTap: (NewsroomMarketTicker) -> Void
     @State private var activeIndex = 0
 
     private var activeTicker: NewsroomMarketTicker? {
@@ -60,24 +54,29 @@ private struct NewsroomRollingTickerView: View {
     var body: some View {
         Group {
             if let activeTicker {
-                HStack(spacing: 5) {
-                    Text(activeTicker.title)
-                        .font(.pretendard(12, weight: .bold))
-                        .foregroundStyle(Color.textTertiary)
-                        .lineLimit(1)
+                Button {
+                    onTickerTap(activeTicker)
+                } label: {
+                    HStack(spacing: 5) {
+                        Text(activeTicker.title)
+                            .font(.pretendard(12, weight: .bold))
+                            .foregroundStyle(Color.textTertiary)
+                            .lineLimit(1)
 
-                    Text(activeTicker.price)
-                        .font(.pretendard(13, weight: .bold))
-                        .foregroundStyle(Color.brand)
-                        .monospacedDigit()
-                        .lineLimit(1)
+                        Text(activeTicker.price)
+                            .font(.pretendard(13, weight: .bold))
+                            .foregroundStyle(Color.brand)
+                            .monospacedDigit()
+                            .lineLimit(1)
 
-                    Text(activeTicker.changeText)
-                        .font(.pretendard(12, weight: .bold))
-                        .foregroundStyle(activeTicker.isPositive ? Color.emerald : Color.policyCoral)
-                        .monospacedDigit()
-                        .lineLimit(1)
+                        Text(activeTicker.changeText)
+                            .font(.pretendard(12, weight: .bold))
+                            .foregroundStyle(activeTicker.isPositive ? Color.emerald : Color.policyCoral)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                    }
                 }
+                .buttonStyle(.plain)
                 .id(activeTicker.id)
                 .transition(.asymmetric(
                     insertion: .move(edge: .bottom).combined(with: .opacity),
