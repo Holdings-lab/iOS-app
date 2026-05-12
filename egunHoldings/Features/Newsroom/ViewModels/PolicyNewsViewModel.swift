@@ -17,6 +17,8 @@ final class PolicyNewsViewModel: ObservableObject {
     @Published var lowRelevanceItem: PolicyNewsItem?
 
     private let repository: PolicyNewsRepositoryProtocol
+    private var pendingSummaryRequest: NewsroomPolicySummaryRequest?
+    private var pendingSummaryUserAssetProfile: UserAssetProfile?
 
     init(userId: Int64? = nil, repository: PolicyNewsRepositoryProtocol? = nil) {
         self.repository = repository ?? PolicyNewsRepositoryFactory.makeDefault(userId: userId)
@@ -69,16 +71,36 @@ final class PolicyNewsViewModel: ObservableObject {
 
             do {
                 let items = try await repository.fetchNews()
-                news = items
+                applyNews(items)
                 isFeedLoading = false
             } catch {
-                feedErrorMessage = makeErrorMessage(
-                    for: error,
-                    fallback: "정책 뉴스를 불러오지 못했어요. 잠시 후 다시 시도해주세요."
-                )
+                let fallbackItems = (try? await MockPolicyNewsRepository().fetchNews()) ?? []
+                if !fallbackItems.isEmpty {
+                    applyNews(fallbackItems)
+                    feedErrorMessage = nil
+                } else {
+                    feedErrorMessage = makeErrorMessage(
+                        for: error,
+                        fallback: "정책 뉴스를 불러오지 못했어요. 잠시 후 다시 시도해주세요."
+                    )
+                }
                 isFeedLoading = false
             }
         }
+    }
+
+    func presentSummary(for request: NewsroomPolicySummaryRequest, userAssetProfile: UserAssetProfile) {
+        pendingSummaryRequest = request
+        pendingSummaryUserAssetProfile = userAssetProfile
+
+        guard !news.isEmpty else {
+            if !isFeedLoading {
+                loadNews()
+            }
+            return
+        }
+
+        presentPendingSummaryIfNeeded()
     }
 
     func presentInsight(for item: PolicyNewsItem, userAssetProfile: UserAssetProfile) {
@@ -129,6 +151,73 @@ final class PolicyNewsViewModel: ObservableObject {
         presentedInsight = nil
         insightErrorMessage = nil
         isInsightLoading = false
+    }
+
+    private func applyNews(_ items: [PolicyNewsItem]) {
+        news = items
+        presentPendingSummaryIfNeeded()
+    }
+
+    private func presentPendingSummaryIfNeeded() {
+        guard let request = pendingSummaryRequest,
+              let userAssetProfile = pendingSummaryUserAssetProfile,
+              let item = bestNewsItem(matching: request)
+        else {
+            return
+        }
+
+        pendingSummaryRequest = nil
+        pendingSummaryUserAssetProfile = nil
+        presentInsight(for: item, userAssetProfile: userAssetProfile)
+    }
+
+    private func bestNewsItem(matching request: NewsroomPolicySummaryRequest) -> PolicyNewsItem? {
+        visibleNews
+            .map { item in
+                (item: item, score: matchScore(item, request: request))
+            }
+            .sorted { lhs, rhs in
+                if lhs.score != rhs.score {
+                    return lhs.score > rhs.score
+                }
+
+                return lhs.item.publishedAt > rhs.item.publishedAt
+            }
+            .first { $0.score > 0 }?
+            .item ?? visibleNews.first
+    }
+
+    private func matchScore(_ item: PolicyNewsItem, request: NewsroomPolicySummaryRequest) -> Int {
+        let searchableText = normalizedText(
+            ([item.title, item.summary] + item.relatedTickers).joined(separator: " ")
+        )
+        let policyTitle = normalizedText(request.policyTitle)
+        let titleTokens = policyTitle
+            .split(separator: " ")
+            .map(String.init)
+            .filter { $0.count >= 2 }
+
+        let assetScore = request.relatedAssets.reduce(0) { score, asset in
+            let normalizedAsset = normalizedText(asset)
+            guard !normalizedAsset.isEmpty else { return score }
+
+            return searchableText.contains(normalizedAsset) ? score + 40 : score
+        }
+
+        let titleScore = titleTokens.reduce(0) { score, token in
+            searchableText.contains(token) ? score + 12 : score
+        }
+
+        let categoryScore = policyTitle.contains(item.category.title.lowercased()) ? 12 : 0
+
+        return assetScore + titleScore + categoryScore
+    }
+
+    private func normalizedText(_ text: String) -> String {
+        text.lowercased()
+            .replacingOccurrences(of: "·", with: " ")
+            .replacingOccurrences(of: "…", with: " ")
+            .replacingOccurrences(of: "...", with: " ")
     }
 
     private func loadInsight(for item: PolicyNewsItem, userAssetProfile: UserAssetProfile) {

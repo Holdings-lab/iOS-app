@@ -9,6 +9,7 @@ struct TodayView: View {
     @State private var navigationPath: [TodayRoute] = []
     private let userId: Int64?
     private let onAssetTabRequested: () -> Void
+    private let onPolicySummaryRequested: (TodayPolicyEvent) -> Void
 
     init(
         userId: Int64? = nil,
@@ -16,10 +17,12 @@ struct TodayView: View {
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         viewModel: TodayViewModel? = nil,
         exchangeRateViewModel: ExchangeRateViewModel? = nil,
-        onAssetTabRequested: @escaping () -> Void = {}
+        onAssetTabRequested: @escaping () -> Void = {},
+        onPolicySummaryRequested: @escaping (TodayPolicyEvent) -> Void = { _ in }
     ) {
         self.userId = userId
         self.onAssetTabRequested = onAssetTabRequested
+        self.onPolicySummaryRequested = onPolicySummaryRequested
         _viewModel = StateObject(
             wrappedValue: viewModel ?? TodayViewModel(
                 userId: userId,
@@ -64,7 +67,7 @@ struct TodayView: View {
                         TodayPolicyImpactCard(
                             policies: Array(viewModel.policyEvents.prefix(3)),
                             totalPolicyCount: viewModel.policyEvents.count,
-                            onPolicyTap: { viewModel.present(.policyDetail($0)) },
+                            onPolicyTap: onPolicySummaryRequested,
                             onShowAll: { viewModel.present(.policyList) }
                         )
 

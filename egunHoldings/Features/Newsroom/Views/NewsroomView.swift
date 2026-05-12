@@ -3,16 +3,20 @@ import SwiftUI
 @MainActor
 struct NewsroomView: View {
     let userAssetProfile: UserAssetProfile
+    let summaryRequest: NewsroomPolicySummaryRequest?
 
     @StateObject private var viewModel: PolicyNewsViewModel
     @State private var digestMode: NewsroomDigestMode = .oneMinute
+    @State private var handledSummaryRequestID: UUID?
 
     init(
         userId: Int64? = nil,
         userAssetProfile: UserAssetProfile,
+        summaryRequest: NewsroomPolicySummaryRequest? = nil,
         viewModel: PolicyNewsViewModel? = nil
     ) {
         self.userAssetProfile = userAssetProfile
+        self.summaryRequest = summaryRequest
         _viewModel = StateObject(wrappedValue: viewModel ?? PolicyNewsViewModel(userId: userId))
     }
 
@@ -82,6 +86,12 @@ struct NewsroomView: View {
             .presentationBackground(Color.elevated)
             .presentationCornerRadius(KDXRadius.bottomSheet)
         }
+        .onAppear {
+            handleSummaryRequestIfNeeded()
+        }
+        .onChange(of: summaryRequest?.id) { _, _ in
+            handleSummaryRequestIfNeeded()
+        }
     }
 
     @ViewBuilder
@@ -139,6 +149,18 @@ struct NewsroomView: View {
                 )
             }
         }
+    }
+
+    private func handleSummaryRequestIfNeeded() {
+        guard let summaryRequest,
+              handledSummaryRequestID != summaryRequest.id
+        else {
+            return
+        }
+
+        handledSummaryRequestID = summaryRequest.id
+        digestMode = .oneMinute
+        viewModel.presentSummary(for: summaryRequest, userAssetProfile: userAssetProfile)
     }
 }
 
