@@ -31,6 +31,76 @@ struct NewsroomMarketTickerTape: View {
     }
 }
 
+struct NewsroomFeedModePicker: View {
+    @Binding var selectedMode: NewsroomFeedMode
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(NewsroomFeedMode.allCases) { mode in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        selectedMode = mode
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        Text(mode.title)
+                            .font(.pretendard(15, weight: .bold))
+                            .foregroundStyle(selectedMode == mode ? Color.textOnAccent : Color.textSecondary)
+
+                        Text(mode == .news ? "시장 흐름" : "학습 피드")
+                            .font(.pretendard(10, weight: .semibold))
+                            .foregroundStyle(selectedMode == mode ? Color.textOnAccent.opacity(0.86) : Color.textTertiary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 58)
+                    .background(
+                        selectedMode == mode ? Color.brand : Color.elevated,
+                        in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(selectedMode == mode ? Color.clear : Color.hairline, lineWidth: 1)
+                    }
+                }
+                .buttonStyle(PressScaleButtonStyle())
+            }
+        }
+        .padding(4)
+        .background(Color.subtle, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+struct NewsroomNewsFilterBar: View {
+    @Binding var selectedFilter: NewsroomNewsFilter
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(NewsroomNewsFilter.allCases) { filter in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.16)) {
+                        selectedFilter = filter
+                    }
+                } label: {
+                    Text(filter.title)
+                        .font(.pretendard(12, weight: .bold))
+                        .foregroundStyle(selectedFilter == filter ? Color.textOnAccent : Color.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 38)
+                        .background(
+                            selectedFilter == filter ? Color.textPrimary : Color.elevated,
+                            in: Capsule(style: .continuous)
+                        )
+                        .overlay {
+                            Capsule(style: .continuous)
+                                .stroke(selectedFilter == filter ? Color.clear : Color.hairline, lineWidth: 1)
+                        }
+                }
+                .buttonStyle(PressScaleButtonStyle())
+            }
+        }
+    }
+}
+
 struct NewsroomCategorySelector: View {
     @Binding var selectedCategories: Set<PolicyNewsCategory>
     let onEdit: () -> Void
@@ -194,7 +264,39 @@ struct NewsroomIndustrySummarySection: View {
     }
 }
 
+struct NewsroomLearningContentSection: View {
+    let title: String
+    let subtitle: String
+    let items: [NewsroomLearningContent]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .lastTextBaseline, spacing: 8) {
+                Text(title)
+                    .font(.pretendard(16, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+
+                Text(subtitle)
+                    .font(.pretendard(11, weight: .semibold))
+                    .foregroundStyle(Color.textQuaternary)
+
+                Spacer()
+            }
+
+            if items.isEmpty {
+                NewsroomNoIndustryNewsCard()
+            } else {
+                ForEach(items) { item in
+                    NewsroomLearningContentCard(item: item)
+                }
+            }
+        }
+    }
+}
+
 struct NewsroomInfoBox: View {
+    let mode: NewsroomFeedMode
+
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "info.circle.fill")
@@ -202,7 +304,7 @@ struct NewsroomInfoBox: View {
                 .foregroundStyle(Color.mutedForeground.opacity(0.25))
                 .padding(.top, 2)
 
-            Text("뉴스 탭은 선택한 관심 산업의 시장 흐름과 기사 요약을 보여줍니다. 내 자산 기준 분석은 오늘 탭의 정책 리포트에서 확인할 수 있습니다.")
+            Text(infoText)
                 .font(.pretendard(11, weight: .medium))
                 .foregroundStyle(Color.mutedForeground.opacity(0.3))
                 .lineSpacing(3)
@@ -211,6 +313,15 @@ struct NewsroomInfoBox: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
         .softGlassCard()
+    }
+
+    private var infoText: String {
+        switch mode {
+        case .news:
+            return "뉴스 탭은 선택한 관심 산업의 실시간 흐름과 기사 요약을 보여줍니다. 내 자산 기준 분석은 오늘 탭의 정책 리포트에서 확인할 수 있습니다."
+        case .content:
+            return "콘텐츠 탭은 뉴스 해석에 필요한 투자 개념과 산업 맥락을 학습용 피드로 정리합니다."
+        }
     }
 }
 
@@ -441,6 +552,100 @@ private struct IndustryNewsSummaryCard: View {
         .overlay {
             RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
                 .stroke(Color.hairline, lineWidth: 1)
+        }
+    }
+}
+
+private struct NewsroomLearningContentCard: View {
+    let item: NewsroomLearningContent
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: item.heroSystemImage)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(item.category.color)
+                    .frame(width: 46, height: 46)
+                    .background(item.category.color.opacity(0.12), in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(item.author)
+                        .font(.pretendard(13, weight: .bold))
+                        .foregroundStyle(Color.textSecondary)
+
+                    Text(item.publishedText)
+                        .font(.pretendard(11, weight: .semibold))
+                        .foregroundStyle(Color.textQuaternary)
+                }
+
+                Spacer()
+
+                NewsCategoryBadge(category: item.category)
+            }
+
+            Text(item.title)
+                .font(.pretendard(20, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(item.summary)
+                .font(.pretendard(15, weight: .medium))
+                .foregroundStyle(Color.textSecondary)
+                .lineSpacing(5)
+                .fixedSize(horizontal: false, vertical: true)
+
+            learningHero
+
+            HStack(spacing: 14) {
+                Label("\(item.commentCount)", systemImage: "message.fill")
+                    .font(.pretendard(12, weight: .bold))
+                    .foregroundStyle(Color.textTertiary)
+
+                Label(item.readTimeText, systemImage: "clock.fill")
+                    .font(.pretendard(12, weight: .bold))
+                    .foregroundStyle(Color.textTertiary)
+
+                Spacer()
+
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color.textTertiary)
+            }
+        }
+        .padding(16)
+        .background(Color.elevated, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
+                .stroke(Color.hairline, lineWidth: 1)
+        }
+    }
+
+    private var learningHero: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            item.category.color.opacity(0.20),
+                            Color.textPrimary.opacity(0.06)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+
+            Image(systemName: item.heroSystemImage)
+                .font(.system(size: 44, weight: .bold))
+                .foregroundStyle(item.category.color)
+                .frame(width: 86, height: 86)
+                .background(Color.elevated.opacity(0.64), in: Circle())
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 156)
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(item.category.color.opacity(0.16), lineWidth: 1)
         }
     }
 }

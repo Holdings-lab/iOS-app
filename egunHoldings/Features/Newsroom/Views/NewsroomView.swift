@@ -9,6 +9,8 @@ struct NewsroomView: View {
     @State private var selectedCategories: Set<PolicyNewsCategory> = Self.defaultCategories
     @State private var didHydrateSelectedCategories = false
     @State private var isShowingCategoryEditor = false
+    @State private var feedMode: NewsroomFeedMode = .news
+    @State private var newsFilter: NewsroomNewsFilter = .all
 
     init(
         userId: Int64? = nil,
@@ -20,13 +22,36 @@ struct NewsroomView: View {
     }
 
     private var displayedItems: [PolicyNewsItem] {
-        viewModel.news(matching: selectedCategories)
+        switch newsFilter {
+        case .all:
+            return viewModel.visibleNews
+        case .following:
+            return viewModel.news(matching: selectedCategories)
+        case .breaking:
+            return viewModel.visibleNews.filter { $0.newsroomRelevanceLevel == .high || $0.sentiment == .caution }
+        }
     }
 
     private var displayedTickers: [NewsroomMarketTicker] {
         let tickers = NewsroomMarketData.tickers
         guard !selectedCategories.isEmpty else { return tickers }
         return tickers.filter { selectedCategories.contains($0.category) }
+    }
+
+    private var learningContents: [NewsroomLearningContent] {
+        let items = NewsroomLearningContentData.items
+        guard !selectedCategories.isEmpty else { return items }
+
+        return items.sorted { lhs, rhs in
+            let lhsMatches = selectedCategories.contains(lhs.category)
+            let rhsMatches = selectedCategories.contains(rhs.category)
+
+            if lhsMatches != rhsMatches {
+                return lhsMatches
+            }
+
+            return lhs.title < rhs.title
+        }
     }
 
     var body: some View {
@@ -37,27 +62,21 @@ struct NewsroomView: View {
         ) {
             NewsroomHeaderView(
                 latestUpdateText: displayedItems.first?.relativePublishedText ?? "방금",
-                selectedCategoryCount: selectedCategories.isEmpty ? PolicyNewsCategory.allCases.count : selectedCategories.count
+                selectedCategoryCount: selectedCategories.isEmpty ? PolicyNewsCategory.allCases.count : selectedCategories.count,
+                tickers: displayedTickers,
+                feedMode: feedMode
             )
 
-            NewsroomMarketTickerTape(tickers: displayedTickers)
+            NewsroomFeedModePicker(selectedMode: $feedMode)
 
-            NewsroomCategorySelector(
-                selectedCategories: $selectedCategories,
-                onEdit: { isShowingCategoryEditor = true }
-            )
-
-            if viewModel.isFeedLoading && viewModel.news.isEmpty {
-                NewsroomLoadingCard()
-            } else if let errorMessage = viewModel.feedErrorMessage, viewModel.news.isEmpty {
-                NewsroomErrorCard(message: errorMessage, onRetry: viewModel.loadNews)
-            } else if displayedItems.isEmpty {
-                NewsroomEmptyCard()
-            } else {
-                newsroomContent
+            switch feedMode {
+            case .news:
+                newsContent
+            case .content:
+                learningContent
             }
 
-            NewsroomInfoBox()
+            NewsroomInfoBox(mode: feedMode)
         }
         .policyFinanceLightTabChrome()
         .navigationDestination(item: $viewModel.presentedItem) { item in
@@ -83,9 +102,38 @@ struct NewsroomView: View {
     }
 
     @ViewBuilder
+    private var newsContent: some View {
+        NewsroomMarketTickerTape(tickers: displayedTickers)
+
+        NewsroomCategorySelector(
+            selectedCategories: $selectedCategories,
+            onEdit: { isShowingCategoryEditor = true }
+        )
+
+        NewsroomNewsFilterBar(selectedFilter: $newsFilter)
+
+        if viewModel.isFeedLoading && viewModel.news.isEmpty {
+            NewsroomLoadingCard()
+        } else if let errorMessage = viewModel.feedErrorMessage, viewModel.news.isEmpty {
+            NewsroomErrorCard(message: errorMessage, onRetry: viewModel.loadNews)
+        } else if displayedItems.isEmpty {
+            NewsroomEmptyCard()
+        } else {
+            newsroomContent
+        }
+    }
+
+    private var learningContent: some View {
+        NewsroomLearningContentSection(
+            title: "투자 학습 콘텐츠",
+            subtitle: "\(learningContents.count)개",
+            items: learningContents
+        )
+    }
+
     private var newsroomContent: some View {
         NewsroomIndustrySummarySection(
-            title: selectedCategories.isEmpty ? "전체 산업 요약" : "관심 산업 요약",
+            title: newsFilter == .breaking ? "실시간 주요 뉴스" : (selectedCategories.isEmpty ? "전체 뉴스" : "팔로잉 뉴스"),
             subtitle: "\(displayedItems.count)건",
             items: displayedItems,
             isSaved: viewModel.isSaved,

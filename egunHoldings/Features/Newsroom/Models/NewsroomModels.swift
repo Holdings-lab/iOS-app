@@ -42,6 +42,50 @@ enum NewsroomInsightMode: Equatable {
     }
 }
 
+enum NewsroomFeedMode: String, CaseIterable, Identifiable {
+    case news
+    case content
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .news:
+            return "뉴스"
+        case .content:
+            return "콘텐츠"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .news:
+            return "실시간 주요 뉴스와 팔로잉 산업 흐름"
+        case .content:
+            return "투자를 이해하기 위한 학습 피드"
+        }
+    }
+}
+
+enum NewsroomNewsFilter: String, CaseIterable, Identifiable {
+    case all
+    case following
+    case breaking
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all:
+            return "전체"
+        case .following:
+            return "팔로잉"
+        case .breaking:
+            return "속보"
+        }
+    }
+}
+
 struct NewsroomPolicySummaryRequest: Identifiable, Equatable {
     let id = UUID()
     let policyTitle: String
@@ -82,6 +126,18 @@ struct NewsroomAssetTag: Identifiable {
     var id: String { title }
 }
 
+struct NewsroomLearningContent: Identifiable, Equatable {
+    let id: String
+    let author: String
+    let publishedText: String
+    let title: String
+    let summary: String
+    let category: PolicyNewsCategory
+    let readTimeText: String
+    let commentCount: Int
+    let heroSystemImage: String
+}
+
 extension PolicyNewsCategory {
     var newsroomIconName: String {
         switch self {
@@ -99,6 +155,55 @@ extension PolicyNewsCategory {
             return "sparkles"
         }
     }
+}
+
+enum NewsroomLearningContentData {
+    static let items: [NewsroomLearningContent] = [
+        NewsroomLearningContent(
+            id: "weekly-investment-points",
+            author: "이번 주 투자 포인트",
+            publishedText: "1일 전",
+            title: "5월 둘째 주, 투자할 때 고려할 점은?",
+            summary: "이번 주에는 물가 지표, 금리 발언, 반도체 보조금 일정이 함께 움직입니다.",
+            category: .macro,
+            readTimeText: "3분",
+            commentCount: 11,
+            heroSystemImage: "calendar.badge.clock"
+        ),
+        NewsroomLearningContent(
+            id: "semiconductor-cycle",
+            author: "지금 뜨는 주식이슈",
+            publishedText: "1일 전",
+            title: "삼성전자 투자할 때 알아야 하는 반도체 사이클",
+            summary: "메모리 반도체 산업은 호황과 불황이 반복되는 사이클 산업입니다.",
+            category: .semiconductor,
+            readTimeText: "5분",
+            commentCount: 8,
+            heroSystemImage: "memorychip.fill"
+        ),
+        NewsroomLearningContent(
+            id: "rate-growth-stock",
+            author: "투자 기초 노트",
+            publishedText: "2일 전",
+            title: "금리 인하는 왜 성장주에 영향을 줄까?",
+            summary: "할인율, 미래 현금흐름, 달러 흐름을 알면 금리 뉴스의 의미가 보입니다.",
+            category: .interestRate,
+            readTimeText: "4분",
+            commentCount: 5,
+            heroSystemImage: "chart.line.uptrend.xyaxis"
+        ),
+        NewsroomLearningContent(
+            id: "etf-rebalance-guide",
+            author: "ETF 리밸런싱 가이드",
+            publishedText: "3일 전",
+            title: "ETF 비중은 언제 다시 맞춰야 할까?",
+            summary: "목표 비중과 실제 비중의 차이를 기준으로 과도한 매매를 줄이는 방법입니다.",
+            category: .finance,
+            readTimeText: "4분",
+            commentCount: 4,
+            heroSystemImage: "chart.pie.fill"
+        )
+    ]
 }
 
 enum NewsroomMarketData {
