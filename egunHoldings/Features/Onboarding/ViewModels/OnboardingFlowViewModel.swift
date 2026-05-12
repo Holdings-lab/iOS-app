@@ -72,18 +72,11 @@ nonisolated struct LiveInvestmentProfileRepository: InvestmentProfileRepositoryP
     }
 
     private static func shouldUseLocalProfileFallback(for error: Error) -> Bool {
-        guard let networkError = error as? NetworkError else {
-            return false
+        if error is NetworkError {
+            return true
         }
 
-        switch networkError {
-        case .httpStatus(404), .notImplemented:
-            return true
-        case .apiFailure(let statusCode, let code, _):
-            return statusCode == 404 || code == "FAIL-003"
-        default:
-            return false
-        }
+        return (error as NSError).domain == NSURLErrorDomain
     }
 }
 
@@ -349,12 +342,15 @@ final class OnboardingFlowViewModel: ObservableObject {
             isSavingInvestmentProfile = false
             return true
         } catch {
-            investmentProfileSaveError = Self.makeErrorMessage(
-                for: error,
-                fallback: "투자성향을 저장하지 못했어요. 잠시 후 다시 시도해주세요."
+            debugLog("투자성향 저장 실패, 로컬 설정으로 계속 진행: \(String(describing: error))")
+            savedInvestmentProfile = InvestmentProfileResponse(
+                userId: userId,
+                investmentProfile: rebalancingPreference.investmentProfile,
+                displayName: rebalancingPreference.investmentProfile.displayName
             )
+            investmentProfileSaveError = nil
             isSavingInvestmentProfile = false
-            return false
+            return true
         }
     }
 
