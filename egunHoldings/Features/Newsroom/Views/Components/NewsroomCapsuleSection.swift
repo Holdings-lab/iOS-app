@@ -255,7 +255,7 @@ private struct IndustryNewsSummaryCard: View {
 
             HStack(spacing: 8) {
                 Button(action: onSelect) {
-                    Label("1분 요약 보기", systemImage: "doc.text")
+                    Label("요약·전문 보기", systemImage: "doc.text")
                         .font(.pretendard(12, weight: .bold))
                         .foregroundStyle(Color.brand)
                         .frame(maxWidth: .infinity)

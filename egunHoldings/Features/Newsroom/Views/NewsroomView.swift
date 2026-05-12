@@ -8,6 +8,7 @@ struct NewsroomView: View {
     @State private var feedMode: NewsroomFeedMode = .news
     @State private var newsFilter: NewsroomNewsFilter = .breaking
     @State private var selectedMarketTicker: NewsroomMarketTicker?
+    @State private var selectedArticleItem: PolicyNewsItem?
 
     init(
         userId: Int64? = nil,
@@ -70,18 +71,14 @@ struct NewsroomView: View {
             NewsroomInfoBox(mode: feedMode)
         }
         .policyFinanceLightTabChrome()
-        .navigationDestination(item: $viewModel.presentedItem) { item in
-            PolicyNewsInsightDetailView(
-                item: item,
-                userAssetProfile: userAssetProfile,
-                viewModel: viewModel
-            )
-        }
         .navigationDestination(item: $selectedMarketTicker) { ticker in
             NewsroomMarketDetailView(
                 selectedTicker: ticker,
                 quotes: NewsroomMarketData.quotes
             )
+        }
+        .navigationDestination(item: $selectedArticleItem) { item in
+            PolicyNewsArticleDetailView(item: item)
         }
     }
 
@@ -122,11 +119,7 @@ struct NewsroomView: View {
     }
 
     private func present(_ item: PolicyNewsItem) {
-        viewModel.presentInsight(
-            for: item,
-            userAssetProfile: userAssetProfile,
-            mode: .quick
-        )
+        selectedArticleItem = item
     }
 
     private var assetRelatedCategories: Set<PolicyNewsCategory> {
