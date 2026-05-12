@@ -53,10 +53,30 @@ nonisolated struct LiveInvestmentProfileRepository: InvestmentProfileRepositoryP
             InvestmentProfileRequestDTO(investmentProfile: profile.rawValue)
         )
 
-        return try await apiClient.requestResult(
-            BackendEndpoint.updateInvestmentProfile(userId: userId, body: body),
-            as: InvestmentProfileResponse.self
-        )
+        do {
+            return try await apiClient.requestResult(
+                BackendEndpoint.updateInvestmentProfile(userId: userId, body: body),
+                as: InvestmentProfileResponse.self
+            )
+        } catch {
+            guard Self.shouldUseLocalProfileFallback(for: error) else {
+                throw error
+            }
+
+            return InvestmentProfileResponse(
+                userId: userId,
+                investmentProfile: profile,
+                displayName: profile.displayName
+            )
+        }
+    }
+
+    private static func shouldUseLocalProfileFallback(for error: Error) -> Bool {
+        if error is NetworkError {
+            return true
+        }
+
+        return (error as NSError).domain == NSURLErrorDomain
     }
 }
 
@@ -322,12 +342,15 @@ final class OnboardingFlowViewModel: ObservableObject {
             isSavingInvestmentProfile = false
             return true
         } catch {
-            investmentProfileSaveError = Self.makeErrorMessage(
-                for: error,
-                fallback: "투자성향을 저장하지 못했어요. 잠시 후 다시 시도해주세요."
+            debugLog("투자성향 저장 실패, 로컬 설정으로 계속 진행: \(String(describing: error))")
+            savedInvestmentProfile = InvestmentProfileResponse(
+                userId: userId,
+                investmentProfile: rebalancingPreference.investmentProfile,
+                displayName: rebalancingPreference.investmentProfile.displayName
             )
+            investmentProfileSaveError = nil
             isSavingInvestmentProfile = false
-            return false
+            return true
         }
     }
 
