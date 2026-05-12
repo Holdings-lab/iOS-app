@@ -20,7 +20,7 @@ struct OnboardingPage1View: View {
             spacing: 24,
             horizontalPadding: MidnightLayout.horizontal,
             topPadding: 16,
-            bottomPadding: 32
+            bottomPadding: 160
         ) {
             FlowProgressHeader(currentStep: 1, totalSteps: 5, stepTitle: "맞춤 설정 · 관심 산업", onBack: onBack)
 
@@ -100,8 +100,6 @@ private struct SectorSelectionCard: View {
     let isSelected: Bool
     let onTap: () -> Void
 
-    @GestureState private var isPressed = false
-
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 12) {
@@ -148,16 +146,16 @@ private struct SectorSelectionCard: View {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(isSelected ? Color.brand.opacity(0.45) : Color.hairline, lineWidth: 1)
             }
-            .scaleEffect(isPressed ? 0.96 : 1)
-            .animation(.easeInOut(duration: 0.15), value: isPressed)
         }
-        .buttonStyle(.plain)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .updating($isPressed) { _, state, _ in
-                    state = true
-                }
-        )
+        .buttonStyle(ScalingSelectionButtonStyle())
+    }
+}
+
+private struct ScalingSelectionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.96 : 1)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 

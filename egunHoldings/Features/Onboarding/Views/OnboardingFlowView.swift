@@ -55,12 +55,14 @@ struct OnboardingFlowView: View {
                 case .brokerageSync:
                     OnboardingBrokerageLoadingView(
                         viewModel: onboardingViewModel,
+                        onBack: navigateBack,
                         onNext: { path.append(.completion) }
                     )
                 case .completion:
                     OnboardingPage4View(
                         userId: userId,
                         viewModel: onboardingViewModel,
+                        onBack: navigateBack,
                         onStart: {
                             onComplete(onboardingViewModel.makeOnboardingResult())
                         }

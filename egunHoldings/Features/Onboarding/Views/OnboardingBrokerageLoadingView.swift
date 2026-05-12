@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingBrokerageLoadingView: View {
     @ObservedObject var viewModel: OnboardingFlowViewModel
+    let onBack: () -> Void
     let onNext: () -> Void
 
     @State private var activeStageIndex = 0
@@ -22,7 +23,7 @@ struct OnboardingBrokerageLoadingView: View {
             topPadding: 16,
             bottomPadding: 120
         ) {
-            FlowProgressHeader(currentStep: 4, totalSteps: 5, stepTitle: "맞춤 설정 · 계좌 동기화", showsBack: false, onBack: {})
+            FlowProgressHeader(currentStep: 4, totalSteps: 5, stepTitle: "맞춤 설정 · 계좌 동기화", onBack: onBack)
 
             VStack(alignment: .leading, spacing: 10) {
                 Text(isCompleted ? "계좌 정보 준비가 끝났어요" : "계좌 정보를 불러오고 있어요")
@@ -259,6 +260,7 @@ private struct BrokerageSyncStageRow: View {
 #Preview {
     OnboardingBrokerageLoadingView(
         viewModel: OnboardingFlowViewModel(),
+        onBack: {},
         onNext: {}
     )
     .preferredColorScheme(.light)
