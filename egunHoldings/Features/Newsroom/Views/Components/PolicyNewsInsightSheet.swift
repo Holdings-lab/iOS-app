@@ -23,11 +23,14 @@ struct PolicyNewsInsightDetailView: View {
             VStack(spacing: 0) {
                 topBar
 
-                ScrollView(.vertical, showsIndicators: false) {
-                    content
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 24)
+                GeometryReader { geometry in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        content
+                            .frame(width: max(0, geometry.size.width - 32), alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+                            .padding(.bottom, 24)
+                    }
                 }
             }
         }

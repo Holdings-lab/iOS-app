@@ -85,6 +85,7 @@ struct PFContentScrollView<Content: View>: View {
     private let topPadding: CGFloat
     private let bottomPadding: CGFloat
     private let scrollsToTopOnAppear: Bool
+    private let locksHorizontalOverflow: Bool
     private let content: Content
 
     init(
@@ -94,6 +95,7 @@ struct PFContentScrollView<Content: View>: View {
         topPadding: CGFloat = 8,
         bottomPadding: CGFloat = 0,
         scrollsToTopOnAppear: Bool = false,
+        locksHorizontalOverflow: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.alignment = alignment
@@ -102,16 +104,28 @@ struct PFContentScrollView<Content: View>: View {
         self.topPadding = topPadding
         self.bottomPadding = bottomPadding
         self.scrollsToTopOnAppear = scrollsToTopOnAppear
+        self.locksHorizontalOverflow = locksHorizontalOverflow
         self.content = content()
     }
 
     var body: some View {
+        if locksHorizontalOverflow {
+            GeometryReader { geometry in
+                scrollContent(width: max(0, geometry.size.width - horizontalPadding * 2))
+            }
+        } else {
+            scrollContent(width: nil)
+        }
+    }
+
+    private func scrollContent(width: CGFloat?) -> some View {
         ScrollViewReader { proxy in
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: alignment, spacing: spacing) {
                     Color.clear.frame(height: 0).id("pfScrollTop")
                     content
                 }
+                .frame(width: width, alignment: Alignment(horizontal: alignment, vertical: .center))
                 .padding(.horizontal, horizontalPadding)
                 .padding(.top, topPadding)
                 .padding(.bottom, bottomPadding)

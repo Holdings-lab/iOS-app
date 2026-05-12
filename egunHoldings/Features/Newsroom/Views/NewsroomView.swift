@@ -25,7 +25,11 @@ struct NewsroomView: View {
     }
 
     var body: some View {
-        PFContentScrollView(spacing: 20, scrollsToTopOnAppear: true) {
+        PFContentScrollView(
+            spacing: 20,
+            scrollsToTopOnAppear: true,
+            locksHorizontalOverflow: true
+        ) {
             NewsroomHeaderView(
                 latestUpdateText: displayedItems.first?.relativePublishedText ?? "방금",
                 digestMode: $digestMode
