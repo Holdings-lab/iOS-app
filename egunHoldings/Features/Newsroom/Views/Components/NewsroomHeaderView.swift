@@ -19,7 +19,7 @@ struct NewsroomHeaderView: View {
                             .foregroundStyle(Color.textPrimary)
                             .tracking(-0.5)
 
-                        Text("내 자산과 가까운 기사부터 압축해서 봐요")
+                        Text(headerSubtitle)
                             .font(.pretendard(13, weight: .medium))
                             .foregroundStyle(Color.textTertiary)
                     }
@@ -31,7 +31,7 @@ struct NewsroomHeaderView: View {
                     Text("\(latestUpdateText) 업데이트")
                         .font(.pretendard(11, weight: .semibold))
                         .foregroundStyle(Color.brand)
-                    Text("압축 브리핑")
+                    Text(statusText)
                         .font(.pretendard(11, weight: .medium))
                         .foregroundStyle(Color.textQuaternary)
                 }
@@ -45,7 +45,7 @@ struct NewsroomHeaderView: View {
                         }
                     } label: {
                         VStack(spacing: 2) {
-                            Text(mode.rawValue)
+                            Text(mode.badgeText)
                                 .font(.pretendard(12, weight: .bold))
                             Text(mode.subtitle)
                                 .font(.pretendard(10, weight: .medium))
@@ -67,6 +67,28 @@ struct NewsroomHeaderView: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(Color.hairline, lineWidth: 1)
             }
+        }
+    }
+
+    private var headerSubtitle: String {
+        switch digestMode {
+        case .oneMinute:
+            return "결론과 행동만 먼저 압축해서 봐요"
+        case .detail:
+            return "배경, 근거, 시나리오까지 확인해요"
+        case .saved:
+            return "나중에 다시 볼 뉴스를 모았어요"
+        }
+    }
+
+    private var statusText: String {
+        switch digestMode {
+        case .oneMinute:
+            return "요약 브리핑"
+        case .detail:
+            return "분석 리포트"
+        case .saved:
+            return "관심 뉴스"
         }
     }
 }

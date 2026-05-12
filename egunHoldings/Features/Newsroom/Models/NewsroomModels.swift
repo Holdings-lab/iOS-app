@@ -11,11 +11,22 @@ enum NewsroomDigestMode: String, CaseIterable, Identifiable, Equatable {
     var subtitle: String {
         switch self {
         case .oneMinute:
-            return "skim"
+            return "1분 안에 읽기"
         case .detail:
-            return "detail"
+            return "근거와 시나리오"
         case .saved:
-            return "saved"
+            return "나중에 보기"
+        }
+    }
+
+    var badgeText: String {
+        switch self {
+        case .oneMinute:
+            return "요약"
+        case .detail:
+            return "분석"
+        case .saved:
+            return "보관"
         }
     }
 }
@@ -39,6 +50,24 @@ enum NewsroomInsightMode: Equatable {
             return "빠른 판단에 필요한 내용만 정리하고 있어요"
         case .detail:
             return "정책 배경과 자산별 영향을 분석하고 있어요"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .quick:
+            return "결론과 행동만 먼저"
+        case .detail:
+            return "근거와 시나리오까지"
+        }
+    }
+
+    var readingTimeText: String {
+        switch self {
+        case .quick:
+            return "1분 안에 읽기"
+        case .detail:
+            return "3분 분석"
         }
     }
 }
@@ -130,6 +159,61 @@ extension PolicyNewsItem {
         }
     }
 
+    var newsroomDecisionTitle: String {
+        switch sentiment {
+        case .positive:
+            return "분할 매수 고려"
+        case .neutral:
+            return "확인 후 유지"
+        case .caution:
+            return "추격 매수 보류"
+        }
+    }
+
+    var newsroomDecisionDescription: String {
+        switch sentiment {
+        case .positive:
+            return "수혜 가능성은 있지만 원문 숫자와 집행 시점을 확인한 뒤 나눠서 접근하는 편이 적절해요."
+        case .neutral:
+            return "즉시 비중을 바꿀 근거는 약해요. 발표 문구와 시장 반응을 확인해도 늦지 않아요."
+        case .caution:
+            return "가격 변동이 먼저 커질 수 있어요. 확정 숫자 전까지는 점검이 우선이에요."
+        }
+    }
+
+    var newsroomDecisionSummary: String {
+        switch sentiment {
+        case .positive:
+            return "\(category.title) 이슈는 내 관련 자산에 우호적이지만, 바로 크게 늘리기보다 분할 접근이 적절해요."
+        case .neutral:
+            return "\(category.title) 이슈는 이미 일부 반영된 재료라 지금은 유지하면서 확인할 숫자를 보는 편이 좋아요."
+        case .caution:
+            return "\(category.title) 이슈는 변동성을 키울 수 있어 추격 매수보다 원문과 후속 숫자 확인이 먼저예요."
+        }
+    }
+
+    var newsroomDecisionIconName: String {
+        switch sentiment {
+        case .positive:
+            return "cart.badge.plus"
+        case .neutral:
+            return "pause.circle.fill"
+        case .caution:
+            return "hand.raised.fill"
+        }
+    }
+
+    var newsroomDecisionColor: Color {
+        switch sentiment {
+        case .positive:
+            return Color.emerald
+        case .neutral:
+            return Color.electricBlue
+        case .caution:
+            return Color.policyCoral
+        }
+    }
+
     var newsroomSourceTimeText: String {
         "\(sourceName) · \(relativePublishedText)"
     }
@@ -159,6 +243,14 @@ extension PolicyNewsItem {
 
     var newsroomCapsuleText: String {
         summary
+    }
+
+    var newsroomQuickPoints: [String] {
+        [
+            newsroomAssetImpactText,
+            "확인 기준: \(newsroomCheckConditionText)",
+            newsroomRelevanceLevel == .high ? "내 보유자산과 직접 연결된 기사예요." : "시장 맥락용으로 짧게만 확인하면 돼요."
+        ]
     }
 
     var newsroomAssetImpactText: String {

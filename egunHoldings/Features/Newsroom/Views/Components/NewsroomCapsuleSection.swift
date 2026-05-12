@@ -147,28 +147,28 @@ private struct NewsDetailCard: View {
     var body: some View {
         Button(action: onSelect) {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 8) {
-                    PulseDirectionDot(color: item.newsroomDirectionColor)
-                        .padding(.top, 6)
+                HStack(alignment: .center, spacing: 8) {
+                    NewsModeBadge(text: "분석 · 3분", tint: item.newsroomAccentColor)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(item.title)
-                            .font(.pretendard(13, weight: .bold))
-                            .foregroundStyle(Color.textPrimary)
-                            .lineLimit(3)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
                         Text(item.newsroomSourceTimeText)
                             .font(.pretendard(10, weight: .medium))
                             .foregroundStyle(Color.mutedForeground.opacity(0.4))
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(Color.mutedForeground.opacity(0.35))
                         .padding(.top, 4)
                 }
+
+                Text(item.title)
+                    .font(.pretendard(16, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 Text(item.summary)
                     .font(.pretendard(12, weight: .medium))
@@ -179,7 +179,7 @@ private struct NewsDetailCard: View {
                 NewsAssetTagFlow(tags: item.newsroomAssetTags)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("내 자산 해석")
+                    Text("내 자산 기준 분석")
                         .font(.pretendard(11, weight: .bold))
                         .foregroundStyle(Color.electricBlue)
 
@@ -188,6 +188,14 @@ private struct NewsDetailCard: View {
                         .foregroundStyle(Color.textSecondary)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 5) {
+                        Text("근거와 시나리오 보기")
+                            .font(.pretendard(11, weight: .bold))
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundStyle(Color.electricBlue)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
@@ -211,43 +219,121 @@ private struct NewsSkimCard: View {
     let onToggleSave: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 14) {
             Button(action: onSelect) {
-                HStack(alignment: .top, spacing: 8) {
-                    PulseDirectionDot(color: item.newsroomDirectionColor)
-                        .padding(.top, 5)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(item.title)
-                            .font(.pretendard(12, weight: .semibold))
-                            .foregroundStyle(Color.textPrimary.opacity(0.8))
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .center, spacing: 8) {
+                        NewsModeBadge(text: "요약 · 1분", tint: item.newsroomDecisionColor)
 
                         Text(item.newsroomSourceTimeText)
-                            .font(.pretendard(10, weight: .medium))
-                            .foregroundStyle(Color.mutedForeground.opacity(0.3))
+                            .font(.pretendard(10, weight: .semibold))
+                            .foregroundStyle(Color.textTertiary)
+                            .lineLimit(1)
+
+                        Spacer(minLength: 4)
+
+                        Image(systemName: item.newsroomDecisionIconName)
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(item.newsroomDecisionColor)
+                            .frame(width: 30, height: 30)
+                            .background(item.newsroomDecisionColor.opacity(0.12), in: Circle())
+                    }
+
+                    Text(item.newsroomDecisionTitle)
+                        .font(.pretendard(20, weight: .bold))
+                        .foregroundStyle(Color.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Text(item.newsroomDecisionSummary)
+                        .font(.pretendard(13, weight: .semibold))
+                        .foregroundStyle(Color.textSecondary)
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    VStack(spacing: 7) {
+                        ForEach(Array(item.newsroomQuickPoints.prefix(3).enumerated()), id: \.offset) { index, point in
+                            QuickNewsPointRow(
+                                index: index + 1,
+                                text: point,
+                                tint: index == 0 ? item.newsroomDecisionColor : item.newsroomAccentColor
+                            )
+                        }
                     }
                 }
             }
             .buttonStyle(.plain)
 
-            Button(action: onToggleSave) {
-                Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(isSaved ? Color.electricBlue : Color.mutedForeground.opacity(0.45))
-                    .frame(width: 36, height: 36)
-                    .background(Color.elevated.opacity(0.7), in: Circle())
-                    .overlay {
-                        Circle()
-                            .stroke(Color.hairline, lineWidth: 1)
-                    }
+            HStack(spacing: 8) {
+                Button(action: onSelect) {
+                    Label(item.newsroomDecisionTitle, systemImage: item.newsroomDecisionIconName)
+                        .font(.pretendard(12, weight: .bold))
+                        .foregroundStyle(Color.textOnAccent)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(item.newsroomDecisionColor, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(PressScaleButtonStyle())
+
+                Button(action: onToggleSave) {
+                    Label(isSaved ? "추가됨" : "나중에 보기", systemImage: isSaved ? "bookmark.fill" : "bookmark")
+                        .font(.pretendard(12, weight: .bold))
+                        .foregroundStyle(isSaved ? Color.electricBlue : Color.textTertiary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                        .frame(width: 118, height: 40)
+                        .background(Color.elevated.opacity(0.85), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color.hairline, lineWidth: 1)
+                        }
+                }
+                .buttonStyle(PressScaleButtonStyle())
             }
-            .buttonStyle(PressScaleButtonStyle())
         }
-        .padding(12)
+        .padding(14)
         .softGlassCard()
+    }
+}
+
+private struct NewsModeBadge: View {
+    let text: String
+    let tint: Color
+
+    var body: some View {
+        Text(text)
+            .font(.pretendard(10, weight: .bold))
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .padding(.horizontal, 9)
+            .frame(height: 25)
+            .background(tint.opacity(0.12), in: Capsule(style: .continuous))
+    }
+}
+
+private struct QuickNewsPointRow: View {
+    let index: Int
+    let text: String
+    let tint: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("\(index)")
+                .font(.pretendard(10, weight: .bold))
+                .foregroundStyle(tint)
+                .frame(width: 22, height: 22)
+                .background(tint.opacity(0.12), in: Circle())
+                .padding(.top, 1)
+
+            Text(text)
+                .font(.pretendard(12, weight: .medium))
+                .foregroundStyle(Color.textSecondary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
