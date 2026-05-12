@@ -46,8 +46,9 @@ final class TodayViewModel: ObservableObject {
         self.portfolioSnapshot = dashboard.portfolioSnapshot
         self.judgment = dashboard.judgment
         self.portfolio = dashboard.portfolio
-        self.topPolicy = dashboard.topPolicy
-        self.policyEvents = dashboard.policyEvents
+        let rankedPolicyEvents = Self.rankByImpact(dashboard.policyEvents)
+        self.topPolicy = rankedPolicyEvents.first ?? dashboard.topPolicy
+        self.policyEvents = rankedPolicyEvents
         self.holdings = dashboard.holdings
         self.noActionReasons = dashboard.noActionReasons
         self.noActionWatchCondition = dashboard.noActionWatchCondition
@@ -129,12 +130,13 @@ final class TodayViewModel: ObservableObject {
     }
 
     func relatedPolicies(for item: TodayExposureItem) -> [TodayPolicyEvent] {
-        policyEvents
-            .filter { policy in
+        Self.rankByImpact(
+            policyEvents.filter { policy in
                 policy.myExposure > 20 || policy.relatedAssets.contains { asset in
                     asset.localizedCaseInsensitiveContains(item.theme)
                 }
             }
+        )
     }
 
     private func apply(_ dashboard: TodayDashboard) {
@@ -142,8 +144,9 @@ final class TodayViewModel: ObservableObject {
         portfolioSnapshot = dashboard.portfolioSnapshot
         judgment = dashboard.judgment
         portfolio = dashboard.portfolio
-        topPolicy = dashboard.topPolicy
-        policyEvents = dashboard.policyEvents
+        let rankedPolicyEvents = Self.rankByImpact(dashboard.policyEvents)
+        topPolicy = rankedPolicyEvents.first ?? dashboard.topPolicy
+        policyEvents = rankedPolicyEvents
         holdings = dashboard.holdings
         noActionReasons = dashboard.noActionReasons
         noActionWatchCondition = dashboard.noActionWatchCondition
@@ -159,5 +162,19 @@ final class TodayViewModel: ObservableObject {
         }
 
         return error.localizedDescription
+    }
+
+    private static func rankByImpact(_ policies: [TodayPolicyEvent]) -> [TodayPolicyEvent] {
+        policies.sorted { lhs, rhs in
+            if lhs.myExposure != rhs.myExposure {
+                return lhs.myExposure > rhs.myExposure
+            }
+
+            if lhs.confidence != rhs.confidence {
+                return lhs.confidence > rhs.confidence
+            }
+
+            return lhs.id < rhs.id
+        }
     }
 }

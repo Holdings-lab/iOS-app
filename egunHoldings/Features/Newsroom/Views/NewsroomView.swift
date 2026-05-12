@@ -3,16 +3,20 @@ import SwiftUI
 @MainActor
 struct NewsroomView: View {
     let userAssetProfile: UserAssetProfile
+    let summaryRequest: NewsroomPolicySummaryRequest?
 
     @StateObject private var viewModel: PolicyNewsViewModel
     @State private var digestMode: NewsroomDigestMode = .oneMinute
+    @State private var handledSummaryRequestID: UUID?
 
     init(
         userId: Int64? = nil,
         userAssetProfile: UserAssetProfile,
+        summaryRequest: NewsroomPolicySummaryRequest? = nil,
         viewModel: PolicyNewsViewModel? = nil
     ) {
         self.userAssetProfile = userAssetProfile
+        self.summaryRequest = summaryRequest
         _viewModel = StateObject(wrappedValue: viewModel ?? PolicyNewsViewModel(userId: userId))
     }
 
@@ -40,31 +44,12 @@ struct NewsroomView: View {
             NewsroomInfoBox()
         }
         .policyFinanceLightTabChrome()
-        .sheet(item: $viewModel.presentedItem, onDismiss: viewModel.dismissPresentedInsight) { item in
-            PolicyNewsInsightSheet(
+        .navigationDestination(item: $viewModel.presentedItem) { item in
+            PolicyNewsInsightDetailView(
                 item: item,
-                insight: viewModel.presentedInsight,
-                isLoading: viewModel.isInsightLoading,
-                errorMessage: viewModel.insightErrorMessage,
-                onRetry: {
-                    viewModel.reloadPresentedInsight(userAssetProfile: userAssetProfile)
-                },
-                isSaved: viewModel.isSaved(item),
-                onToggleSave: {
-                    viewModel.toggleSaved(item)
-                },
-                onHide: {
-                    viewModel.hide(item)
-                    viewModel.dismissPresentedInsight()
-                },
-                onSaveCheckpoint: {
-                    viewModel.saveCheckpoint(for: item)
-                }
+                userAssetProfile: userAssetProfile,
+                viewModel: viewModel
             )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Color.elevated)
-            .presentationCornerRadius(KDXRadius.bottomSheet)
         }
         .sheet(item: $viewModel.lowRelevanceItem, onDismiss: viewModel.dismissLowRelevanceReason) { item in
             LowRelevanceSheet(
@@ -81,6 +66,12 @@ struct NewsroomView: View {
             .presentationDragIndicator(.visible)
             .presentationBackground(Color.elevated)
             .presentationCornerRadius(KDXRadius.bottomSheet)
+        }
+        .onAppear {
+            handleSummaryRequestIfNeeded()
+        }
+        .onChange(of: summaryRequest?.id) { _, _ in
+            handleSummaryRequestIfNeeded()
         }
     }
 
@@ -139,6 +130,18 @@ struct NewsroomView: View {
                 )
             }
         }
+    }
+
+    private func handleSummaryRequestIfNeeded() {
+        guard let summaryRequest,
+              handledSummaryRequestID != summaryRequest.id
+        else {
+            return
+        }
+
+        handledSummaryRequestID = summaryRequest.id
+        digestMode = .oneMinute
+        viewModel.presentSummary(for: summaryRequest, userAssetProfile: userAssetProfile)
     }
 }
 

@@ -20,6 +20,12 @@ enum NewsroomDigestMode: String, CaseIterable, Identifiable, Equatable {
     }
 }
 
+struct NewsroomPolicySummaryRequest: Identifiable, Equatable {
+    let id = UUID()
+    let policyTitle: String
+    let relatedAssets: [String]
+}
+
 enum NewsroomRelevanceLevel: Equatable {
     case high
     case medium

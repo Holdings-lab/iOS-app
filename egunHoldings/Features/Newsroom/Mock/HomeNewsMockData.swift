@@ -47,6 +47,17 @@ enum HomeNewsMockData {
             sentiment: .neutral
         ),
         PolicyNewsItem(
+            id: "fomc-may-result",
+            category: .macro,
+            publishedAt: Date().addingTimeInterval(-9 * 60 * 60),
+            title: "미 FOMC 5월 회의 결과 대기... 달러·성장주 변동성 확대",
+            summary: "파월 발언이 매파적으로 나오면 달러와 성장주 ETF가 동시에 흔들릴 수 있어요.",
+            sourceName: "Bloomberg",
+            sourceURL: URL(string: "https://www.bloomberg.com"),
+            relatedTickers: ["달러 예금", "SOXX", "KODEX 200"],
+            sentiment: .caution
+        ),
+        PolicyNewsItem(
             id: "bank-deposit-rate-cut",
             category: .finance,
             publishedAt: Date().addingTimeInterval(-10 * 60 * 60),
@@ -134,6 +145,33 @@ enum HomeNewsMockData {
             ],
             riskNotes: [
                 "시장 예상과 크게 다르지 않으면 오히려 단기 재료 소멸로 변동성이 줄 수 있어요."
+            ],
+            disclaimer: "이 시트는 기사 해설을 돕기 위한 참고 정보이며 투자 자문이 아니에요."
+        ),
+        "fomc-may-result": PolicyNewsInsight(
+            articleID: "fomc-may-result",
+            headline: "FOMC 결과는 금리 방향보다 파월 발언 톤이 달러와 성장주 변동성을 키울 수 있는 이벤트예요.",
+            generatedAt: Date(),
+            sourceName: "Bloomberg",
+            sourceURL: URL(string: "https://www.bloomberg.com"),
+            articleSummary: [
+                "5월 FOMC는 기준금리 동결 가능성이 높지만, 시장은 향후 인하 시점 힌트에 더 민감하게 반응하고 있어요.",
+                "파월 의장이 인플레이션 경계를 강하게 말하면 달러 강세와 성장주 약세가 동시에 나타날 수 있어요.",
+                "반대로 6월 이후 인하 가능성을 열어두면 위험자산 선호가 단기적으로 회복될 수 있어요."
+            ],
+            portfolioHeadline: "달러 예금과 SOXX를 함께 보유한 사용자라면 발표 직후 한쪽 방향으로 급하게 움직이기보다 환율과 ETF 반응을 같이 봐야 해요.",
+            portfolioBullets: [
+                "달러 예금은 매파 발언 시 방어 역할을 할 수 있지만, 성장주 ETF는 같은 이벤트에 반대로 움직일 수 있어요.",
+                "SOXX 비중이 크다면 발표 직후 가격보다 거래대금과 환율 방향을 함께 확인하는 편이 좋아요.",
+                "KODEX 200 같은 국내 시장 노출은 다음 거래일 환율 반응까지 이어질 수 있어요."
+            ],
+            actionChecklist: [
+                "성명서보다 파월 기자회견의 인하 시점 표현 확인하기",
+                "원달러 환율과 SOXX 장중 변동 폭을 같이 보기",
+                "성장주 ETF가 -2% 이상 밀리면 비중 조정 기준 재확인하기"
+            ],
+            riskNotes: [
+                "FOMC 직후 첫 반응은 되돌림이 잦아 단일 캔들만 보고 판단하면 오판 가능성이 커요."
             ],
             disclaimer: "이 시트는 기사 해설을 돕기 위한 참고 정보이며 투자 자문이 아니에요."
         ),

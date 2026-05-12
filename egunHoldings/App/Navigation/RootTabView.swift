@@ -12,6 +12,7 @@ struct RootTabView: View {
     let portfolioSnapshot: PortfolioSnapshot
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     @State private var selectedTab: RootTab = .today
+    @State private var pendingNewsSummaryRequest: NewsroomPolicySummaryRequest?
     @StateObject private var exchangeRateViewModel = ExchangeRateViewModel()
 
     init(
@@ -36,6 +37,13 @@ struct RootTabView: View {
                 exchangeRateViewModel: exchangeRateViewModel,
                 onAssetTabRequested: {
                     selectedTab = .asset
+                },
+                onPolicySummaryRequested: { policy in
+                    pendingNewsSummaryRequest = NewsroomPolicySummaryRequest(
+                        policyTitle: policy.title,
+                        relatedAssets: policy.relatedAssets
+                    )
+                    selectedTab = .news
                 }
             )
             .id(portfolioSnapshot)
@@ -60,7 +68,8 @@ struct RootTabView: View {
             NavigationStack {
                 NewsroomView(
                     userId: userId,
-                    userAssetProfile: userAssetProfile
+                    userAssetProfile: userAssetProfile,
+                    summaryRequest: pendingNewsSummaryRequest
                 )
             }
             .tag(RootTab.news)

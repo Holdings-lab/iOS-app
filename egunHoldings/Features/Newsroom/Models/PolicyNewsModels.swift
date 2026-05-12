@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-enum PolicyNewsCategory: String, CaseIterable, Sendable {
+enum PolicyNewsCategory: String, CaseIterable, Hashable, Sendable {
     case semiconductor
     case interestRate
     case energy
@@ -44,7 +44,7 @@ enum PolicyNewsCategory: String, CaseIterable, Sendable {
     }
 }
 
-enum PolicyNewsSentiment: String, Sendable {
+enum PolicyNewsSentiment: String, Hashable, Sendable {
     case positive
     case neutral
     case caution
@@ -72,7 +72,7 @@ enum PolicyNewsSentiment: String, Sendable {
     }
 }
 
-struct PolicyNewsItem: Identifiable, Equatable, Sendable {
+struct PolicyNewsItem: Identifiable, Equatable, Hashable, Sendable {
     let id: String
     let category: PolicyNewsCategory
     let publishedAt: Date

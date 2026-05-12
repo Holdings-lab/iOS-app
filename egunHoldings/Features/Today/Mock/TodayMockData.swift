@@ -279,19 +279,20 @@ struct TodayMockData {
     ]
 
     nonisolated static let judgment = TodayJudgment(
-        title: "오늘은 특별히 행동할 필요가 없습니다",
-        type: .simulate,
-        myExposure: 61,
+        title: "반도체 ETF 비중을 오늘 점검해야 합니다",
+        type: .defend,
+        myExposure: 72,
         validUntil: "장 마감 전 (오후 3:30)",
-        invalidationCondition: "예상 외 동결 또는 총재 추가 인하 부정 발언 시",
+        invalidationCondition: "SOXX가 -2% 이상 밀리거나 보조금 발표가 지연되면 1차 매도 확인",
         forEvidence: [
-            "보유 ETF의 80%가 이번 정책 영향권 밖입니다",
-            "현금 비중 18%로 단기 변동에 충분히 대응 가능합니다"
+            "반도체 ETF와 성장주 합산 비중이 단일 섹터 한도를 넘었습니다",
+            "오늘 보조금 발표 전 변동성 위험이 높아졌습니다",
+            "현금 비중을 10% 이상으로 회복하는 방어 조정이 필요합니다"
         ],
         againstEvidence: [
-            "총재가 '추가 인하 신중' 발언 시 채권 시장 되돌림 가능"
+            "발표가 예상보다 우호적이면 일부 상승 기회를 놓칠 수 있습니다"
         ],
-        deliveryPath: "금통위 결정 → 시장 금리 반응 → 채권 ETF → 내 포트폴리오"
+        deliveryPath: "보조금 발표 지연 → 반도체 섹터 변동성 확대 → SOXX·성장주 ETF → 내 포트폴리오"
     )
 
     nonisolated static let portfolio = TodayPortfolioSummary(
