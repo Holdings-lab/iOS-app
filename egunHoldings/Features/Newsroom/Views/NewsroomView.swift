@@ -44,31 +44,12 @@ struct NewsroomView: View {
             NewsroomInfoBox()
         }
         .policyFinanceLightTabChrome()
-        .sheet(item: $viewModel.presentedItem, onDismiss: viewModel.dismissPresentedInsight) { item in
-            PolicyNewsInsightSheet(
+        .navigationDestination(item: $viewModel.presentedItem) { item in
+            PolicyNewsInsightDetailView(
                 item: item,
-                insight: viewModel.presentedInsight,
-                isLoading: viewModel.isInsightLoading,
-                errorMessage: viewModel.insightErrorMessage,
-                onRetry: {
-                    viewModel.reloadPresentedInsight(userAssetProfile: userAssetProfile)
-                },
-                isSaved: viewModel.isSaved(item),
-                onToggleSave: {
-                    viewModel.toggleSaved(item)
-                },
-                onHide: {
-                    viewModel.hide(item)
-                    viewModel.dismissPresentedInsight()
-                },
-                onSaveCheckpoint: {
-                    viewModel.saveCheckpoint(for: item)
-                }
+                userAssetProfile: userAssetProfile,
+                viewModel: viewModel
             )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(Color.elevated)
-            .presentationCornerRadius(KDXRadius.bottomSheet)
         }
         .sheet(item: $viewModel.lowRelevanceItem, onDismiss: viewModel.dismissLowRelevanceReason) { item in
             LowRelevanceSheet(

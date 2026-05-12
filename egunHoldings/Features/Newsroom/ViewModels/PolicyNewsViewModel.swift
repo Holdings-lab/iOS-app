@@ -12,7 +12,6 @@ final class PolicyNewsViewModel: ObservableObject {
     @Published private(set) var isInsightLoading = false
     @Published private(set) var insightErrorMessage: String?
     @Published private(set) var savedItemIDs: Set<String> = []
-    @Published private(set) var checkpointItemIDs: Set<String> = []
     @Published private(set) var hiddenItemIDs: Set<String> = []
     @Published var lowRelevanceItem: PolicyNewsItem?
 
@@ -127,11 +126,6 @@ final class PolicyNewsViewModel: ObservableObject {
 
     func isSaved(_ item: PolicyNewsItem) -> Bool {
         savedItemIDs.contains(item.id)
-    }
-
-    func saveCheckpoint(for item: PolicyNewsItem) {
-        checkpointItemIDs.insert(item.id)
-        savedItemIDs.insert(item.id)
     }
 
     func hide(_ item: PolicyNewsItem) {
