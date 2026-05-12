@@ -11,18 +11,10 @@ struct FlowProgressHeader: View {
         VStack(spacing: 14) {
             HStack {
                 if showsBack {
-                    Button(action: onBack) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "chevron.left")
-                            Text("이전")
-                        }
-                        .font(.pretendard(14, weight: .semibold))
-                        .foregroundStyle(Color.textTertiary)
-                    }
-                    .buttonStyle(.plain)
+                    LiquidGlassBackButton(action: onBack)
                 } else {
                     Color.clear
-                        .frame(width: 42, height: 20)
+                        .frame(width: 44, height: 44)
                 }
 
                 Spacer()
@@ -42,6 +34,31 @@ struct FlowProgressHeader: View {
 
             FlowProgressBar(progress: Double(currentStep) / Double(totalSteps))
         }
+    }
+}
+
+struct LiquidGlassBackButton: View {
+    let accessibilityLabel: LocalizedStringKey
+    let action: () -> Void
+
+    init(
+        accessibilityLabel: LocalizedStringKey = "뒤로가기",
+        action: @escaping () -> Void
+    ) {
+        self.accessibilityLabel = accessibilityLabel
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "chevron.left")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Color.textPrimary)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.glass)
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 

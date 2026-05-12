@@ -43,19 +43,7 @@ struct PolicyNewsInsightDetailView: View {
 
     private var topBar: some View {
         HStack {
-            Button {
-                close()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .bold))
-                    Text("이전")
-                        .font(.pretendard(14, weight: .bold))
-                }
-                .foregroundStyle(Color.textSecondary)
-                .frame(height: 40)
-            }
-            .buttonStyle(.plain)
+            LiquidGlassBackButton(action: close)
 
             Spacer()
 
