@@ -4,7 +4,10 @@ import SwiftUI
 
 struct TodayView: View {
     @StateObject private var viewModel: TodayViewModel
+    @StateObject private var notificationCenter = AppNotificationCenter.shared
     @ObservedObject private var exchangeRateViewModel: ExchangeRateViewModel
+    @State private var navigationPath: [TodayRoute] = []
+    private let userId: Int64?
     private let onAssetTabRequested: () -> Void
 
     init(
@@ -15,6 +18,7 @@ struct TodayView: View {
         exchangeRateViewModel: ExchangeRateViewModel? = nil,
         onAssetTabRequested: @escaping () -> Void = {}
     ) {
+        self.userId = userId
         self.onAssetTabRequested = onAssetTabRequested
         _viewModel = StateObject(
             wrappedValue: viewModel ?? TodayViewModel(
@@ -27,65 +31,82 @@ struct TodayView: View {
     }
 
     var body: some View {
-        ZStack {
-            Color.canvas.ignoresSafeArea()
+        NavigationStack(path: $navigationPath) {
+            ZStack {
+                Color.canvas.ignoresSafeArea()
 
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(alignment: .leading, spacing: 24) {
-                    TodayHeaderSection(
-                        name: "투자자",
-                        hasUnreadNotifications: true,
-                        onNotifications: { viewModel.present(.dataStatus) }
-                    )
+                ScrollView(.vertical, showsIndicators: false) {
+                    LazyVStack(alignment: .leading, spacing: 24) {
+                        TodayHeaderSection(
+                            name: "투자자",
+                            hasUnreadNotifications: notificationCenter.hasUnreadNotifications,
+                            onNotifications: { navigationPath.append(.notifications) },
+                            onSettings: { navigationPath.append(.settings) }
+                        )
 
-                    ExchangeRateSnapshotCard(
-                        viewModel: exchangeRateViewModel,
-                        displayMode: .compact
-                    )
+                        ExchangeRateSnapshotCard(
+                            viewModel: exchangeRateViewModel,
+                            displayMode: .compact
+                        )
 
-                    TodayJudgmentHeroCard(
-                        judgment: viewModel.judgment,
-                        state: judgmentState,
-                        onDetail: { viewModel.present(.quickReason) }
-                    )
+                        TodayJudgmentHeroCard(
+                            judgment: viewModel.judgment,
+                            state: judgmentState,
+                            onDetail: { viewModel.present(.quickReason) }
+                        )
 
-                    TodayAssetSummaryCard(
-                        portfolio: viewModel.portfolio,
-                        holdings: viewModel.userAssetProfile.holdings,
-                        onAssetTabRequested: onAssetTabRequested
-                    )
+                        TodayAssetSummaryCard(
+                            portfolio: viewModel.portfolio,
+                            holdings: viewModel.userAssetProfile.holdings,
+                            onAssetTabRequested: onAssetTabRequested
+                        )
 
-                    TodayPolicyImpactCard(
-                        policies: Array(viewModel.policyEvents.prefix(3)),
-                        totalPolicyCount: viewModel.policyEvents.count,
-                        onPolicyTap: { viewModel.present(.policyDetail($0)) },
-                        onShowAll: { viewModel.present(.policyList) }
-                    )
+                        TodayPolicyImpactCard(
+                            policies: Array(viewModel.policyEvents.prefix(3)),
+                            totalPolicyCount: viewModel.policyEvents.count,
+                            onPolicyTap: { viewModel.present(.policyDetail($0)) },
+                            onShowAll: { viewModel.present(.policyList) }
+                        )
 
-                    TodayDecisionSupportCard(
-                        state: judgmentState,
-                        noActionReasons: viewModel.noActionReasons,
-                        actionEvidence: viewModel.judgment.forEvidence,
-                        watchCondition: viewModel.noActionWatchCondition,
-                        invalidationCondition: viewModel.judgment.invalidationCondition
+                        TodayDecisionSupportCard(
+                            state: judgmentState,
+                            noActionReasons: viewModel.noActionReasons,
+                            actionEvidence: viewModel.judgment.forEvidence,
+                            watchCondition: viewModel.noActionWatchCondition,
+                            invalidationCondition: viewModel.judgment.invalidationCondition
+                        )
+                    }
+                    .padding(.horizontal, KDXSpacing.screenHorizontal)
+                    .padding(.top, 12)
+                    .padding(.bottom, 112)
+                }
+                .refreshable {
+                    await viewModel.refresh()
+                }
+            }
+            .navigationDestination(for: TodayRoute.self) { route in
+                switch route {
+                case .notifications:
+                    NotificationInboxView(notificationCenter: notificationCenter)
+                case .settings:
+                    UserSettingsView(
+                        userId: userId,
+                        notificationCenter: notificationCenter,
+                        connectedBrokerText: viewModel.connectedBrokerStatusText
                     )
                 }
-                .padding(.horizontal, KDXSpacing.screenHorizontal)
-                .padding(.top, 12)
-                .padding(.bottom, 112)
             }
-            .refreshable {
-                await viewModel.refresh()
+            .toolbar(.hidden, for: .navigationBar)
+            .preferredColorScheme(.light)
+            .task {
+                await viewModel.load()
+                await notificationCenter.refreshAuthorizationStatus()
             }
-        }
-        .preferredColorScheme(.light)
-        .task {
-            await viewModel.load()
-        }
-        .sheet(item: $viewModel.activeSheet) { sheet in
-            sheetContent(for: sheet)
-                .presentationBackground(.clear)
-                .presentationCornerRadius(KDXRadius.bottomSheet)
+            .sheet(item: $viewModel.activeSheet) { sheet in
+                sheetContent(for: sheet)
+                    .presentationBackground(.clear)
+                    .presentationCornerRadius(KDXRadius.bottomSheet)
+            }
         }
     }
 
@@ -149,6 +170,7 @@ private struct TodayHeaderSection: View {
     let name: String
     let hasUnreadNotifications: Bool
     let onNotifications: () -> Void
+    let onSettings: () -> Void
 
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
@@ -163,24 +185,21 @@ private struct TodayHeaderSection: View {
 
             Spacer()
 
-            Button(action: onNotifications) {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: "bell")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(Color.textSecondary)
-                        .frame(width: 40, height: 40)
+            HStack(spacing: 10) {
+                HeaderIconButton(
+                    iconName: "gearshape",
+                    accessibilityLabel: "설정",
+                    showsUnreadDot: false,
+                    action: onSettings
+                )
 
-                    if hasUnreadNotifications {
-                        Circle()
-                            .fill(Color.up)
-                            .frame(width: 7, height: 7)
-                            .offset(x: -7, y: 8)
-                    }
-                }
-                .background(Color.elevated, in: Circle())
-                .overlay { Circle().stroke(Color.hairline, lineWidth: 1) }
+                HeaderIconButton(
+                    iconName: "bell",
+                    accessibilityLabel: "알림",
+                    showsUnreadDot: hasUnreadNotifications,
+                    action: onNotifications
+                )
             }
-            .buttonStyle(PSPressStyle())
         }
     }
 
@@ -193,6 +212,35 @@ private struct TodayHeaderSection: View {
         let day = components.day ?? 1
         let weekday = weekdays[safe: components.weekday ?? 0] ?? ""
         return "\(month)월 \(day)일 \(weekday)"
+    }
+}
+
+private struct HeaderIconButton: View {
+    let iconName: String
+    let accessibilityLabel: String
+    let showsUnreadDot: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: iconName)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(Color.textSecondary)
+                    .frame(width: 40, height: 40)
+
+                if showsUnreadDot {
+                    Circle()
+                        .fill(Color.up)
+                        .frame(width: 7, height: 7)
+                        .offset(x: -7, y: 8)
+                }
+            }
+            .background(Color.elevated, in: Circle())
+            .overlay { Circle().stroke(Color.hairline, lineWidth: 1) }
+        }
+        .buttonStyle(PSPressStyle())
+        .accessibilityLabel(accessibilityLabel)
     }
 }
 
