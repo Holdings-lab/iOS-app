@@ -55,20 +55,16 @@ struct NewsroomCategorySelector: View {
                 .buttonStyle(PressScaleButtonStyle())
             }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(PolicyNewsCategory.allCases, id: \.self) { category in
-                        NewsroomCategoryChip(
-                            category: category,
-                            isSelected: selectedCategories.contains(category)
-                        ) {
-                            toggle(category)
-                        }
+            NewsTagFlowLayout {
+                ForEach(PolicyNewsCategory.allCases, id: \.self) { category in
+                    NewsroomCategoryChip(
+                        category: category,
+                        isSelected: selectedCategories.contains(category)
+                    ) {
+                        toggle(category)
                     }
                 }
-                .padding(.horizontal, 2)
             }
-            .scrollClipDisabled()
         }
         .padding(14)
         .background(Color.elevated, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
