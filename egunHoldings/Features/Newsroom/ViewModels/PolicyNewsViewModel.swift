@@ -13,12 +13,11 @@ final class PolicyNewsViewModel: ObservableObject {
     @Published private(set) var isInsightLoading = false
     @Published private(set) var insightErrorMessage: String?
     @Published private(set) var savedItemIDs: Set<String> = []
-    @Published private(set) var hiddenItemIDs: Set<String> = []
-    @Published var lowRelevanceItem: PolicyNewsItem?
 
     private let repository: PolicyNewsRepositoryProtocol
     private var pendingSummaryRequest: NewsroomPolicySummaryRequest?
     private var pendingSummaryUserAssetProfile: UserAssetProfile?
+    private var pendingSummaryMode: NewsroomInsightMode = .quick
 
     init(userId: Int64? = nil, repository: PolicyNewsRepositoryProtocol? = nil) {
         self.repository = repository ?? PolicyNewsRepositoryFactory.makeDefault(userId: userId)
@@ -26,39 +25,12 @@ final class PolicyNewsViewModel: ObservableObject {
     }
 
     var visibleNews: [PolicyNewsItem] {
-        news.filter { !hiddenItemIDs.contains($0.id) }
+        news.sorted { $0.publishedAt > $1.publishedAt }
     }
 
-    var highRelevanceNews: [PolicyNewsItem] {
-        Array(
-            visibleNews
-                .filter { $0.newsroomRelevanceLevel == .high }
-                .prefix(2)
-        )
-    }
-
-    var mediumRelevanceNews: [PolicyNewsItem] {
-        let highIDs = Set(highRelevanceNews.map(\.id))
-
-        return Array(
-            visibleNews
-                .filter { !highIDs.contains($0.id) && $0.newsroomRelevanceLevel == .medium }
-                .prefix(3)
-        )
-    }
-
-    var lowRelevanceNews: [PolicyNewsItem] {
-        let surfacedIDs = Set((highRelevanceNews + mediumRelevanceNews).map(\.id))
-
-        return Array(
-            visibleNews
-                .filter { !surfacedIDs.contains($0.id) && $0.newsroomRelevanceLevel == .low }
-                .prefix(2)
-        )
-    }
-
-    var savedNews: [PolicyNewsItem] {
-        visibleNews.filter { savedItemIDs.contains($0.id) }
+    func news(matching categories: Set<PolicyNewsCategory>) -> [PolicyNewsItem] {
+        guard !categories.isEmpty else { return visibleNews }
+        return visibleNews.filter { categories.contains($0.category) }
     }
 
     func loadNews() {
@@ -89,9 +61,14 @@ final class PolicyNewsViewModel: ObservableObject {
         }
     }
 
-    func presentSummary(for request: NewsroomPolicySummaryRequest, userAssetProfile: UserAssetProfile) {
+    func presentSummary(
+        for request: NewsroomPolicySummaryRequest,
+        userAssetProfile: UserAssetProfile,
+        mode: NewsroomInsightMode = .quick
+    ) {
         pendingSummaryRequest = request
         pendingSummaryUserAssetProfile = userAssetProfile
+        pendingSummaryMode = mode
 
         guard !news.isEmpty else {
             if !isFeedLoading {
@@ -115,10 +92,6 @@ final class PolicyNewsViewModel: ObservableObject {
         loadInsight(for: item, userAssetProfile: userAssetProfile)
     }
 
-    func switchPresentedInsightMode(_ mode: NewsroomInsightMode) {
-        presentedInsightMode = mode
-    }
-
     func reloadPresentedInsight(userAssetProfile: UserAssetProfile) {
         guard let presentedItem else { return }
         presentedInsight = nil
@@ -136,18 +109,6 @@ final class PolicyNewsViewModel: ObservableObject {
 
     func isSaved(_ item: PolicyNewsItem) -> Bool {
         savedItemIDs.contains(item.id)
-    }
-
-    func hide(_ item: PolicyNewsItem) {
-        hiddenItemIDs.insert(item.id)
-    }
-
-    func presentLowRelevanceReason(for item: PolicyNewsItem) {
-        lowRelevanceItem = item
-    }
-
-    func dismissLowRelevanceReason() {
-        lowRelevanceItem = nil
     }
 
     func dismissPresentedInsight() {
@@ -172,7 +133,9 @@ final class PolicyNewsViewModel: ObservableObject {
 
         pendingSummaryRequest = nil
         pendingSummaryUserAssetProfile = nil
-        presentInsight(for: item, userAssetProfile: userAssetProfile, mode: .quick)
+        let mode = pendingSummaryMode
+        pendingSummaryMode = .quick
+        presentInsight(for: item, userAssetProfile: userAssetProfile, mode: mode)
     }
 
     private func bestNewsItem(matching request: NewsroomPolicySummaryRequest) -> PolicyNewsItem? {

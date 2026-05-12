@@ -1,36 +1,6 @@
 import Foundation
 import SwiftUI
 
-enum NewsroomDigestMode: String, CaseIterable, Identifiable, Equatable {
-    case oneMinute = "1분 요약"
-    case detail = "자세히"
-    case saved = "저장됨"
-
-    var id: String { rawValue }
-
-    var subtitle: String {
-        switch self {
-        case .oneMinute:
-            return "1분 안에 읽기"
-        case .detail:
-            return "근거와 시나리오"
-        case .saved:
-            return "나중에 보기"
-        }
-    }
-
-    var badgeText: String {
-        switch self {
-        case .oneMinute:
-            return "요약"
-        case .detail:
-            return "분석"
-        case .saved:
-            return "보관"
-        }
-    }
-}
-
 enum NewsroomInsightMode: Equatable {
     case quick
     case detail
@@ -72,21 +42,20 @@ enum NewsroomInsightMode: Equatable {
     }
 }
 
-extension NewsroomDigestMode {
-    var insightMode: NewsroomInsightMode {
-        switch self {
-        case .oneMinute:
-            return .quick
-        case .detail, .saved:
-            return .detail
-        }
-    }
-}
-
 struct NewsroomPolicySummaryRequest: Identifiable, Equatable {
     let id = UUID()
     let policyTitle: String
     let relatedAssets: [String]
+}
+
+struct NewsroomMarketTicker: Identifiable, Equatable {
+    let id: String
+    let title: String
+    let price: String
+    let changeText: String
+    let isPositive: Bool
+    let category: PolicyNewsCategory
+    let sparkline: [CGFloat]
 }
 
 enum NewsroomRelevanceLevel: Equatable {
@@ -111,6 +80,93 @@ struct NewsroomAssetTag: Identifiable {
     let color: Color
 
     var id: String { title }
+}
+
+extension PolicyNewsCategory {
+    var newsroomIconName: String {
+        switch self {
+        case .semiconductor:
+            return "cpu.fill"
+        case .interestRate:
+            return "building.columns.fill"
+        case .energy:
+            return "bolt.fill"
+        case .macro:
+            return "globe.asia.australia.fill"
+        case .finance:
+            return "creditcard.fill"
+        case .ai:
+            return "sparkles"
+        }
+    }
+}
+
+enum NewsroomMarketData {
+    static let tickers: [NewsroomMarketTicker] = [
+        NewsroomMarketTicker(
+            id: "nasdaq",
+            title: "Nasdaq Futures",
+            price: "29,154.50",
+            changeText: "-0.92%",
+            isPositive: false,
+            category: .semiconductor,
+            sparkline: [0.72, 0.70, 0.62, 0.58, 0.64, 0.51, 0.47, 0.45]
+        ),
+        NewsroomMarketTicker(
+            id: "soxx",
+            title: "SOXX",
+            price: "241.80",
+            changeText: "+1.18%",
+            isPositive: true,
+            category: .semiconductor,
+            sparkline: [0.42, 0.48, 0.47, 0.58, 0.63, 0.61, 0.70, 0.76]
+        ),
+        NewsroomMarketTicker(
+            id: "us10y",
+            title: "US 10Y",
+            price: "4.18",
+            changeText: "-0.04",
+            isPositive: false,
+            category: .interestRate,
+            sparkline: [0.66, 0.64, 0.61, 0.59, 0.55, 0.57, 0.51, 0.48]
+        ),
+        NewsroomMarketTicker(
+            id: "oil",
+            title: "Crude Oil",
+            price: "74.92",
+            changeText: "+0.83%",
+            isPositive: true,
+            category: .energy,
+            sparkline: [0.48, 0.52, 0.51, 0.58, 0.63, 0.60, 0.67, 0.72]
+        ),
+        NewsroomMarketTicker(
+            id: "vix",
+            title: "VIX",
+            price: "18.85",
+            changeText: "+2.56%",
+            isPositive: true,
+            category: .macro,
+            sparkline: [0.34, 0.40, 0.36, 0.42, 0.51, 0.57, 0.55, 0.62]
+        ),
+        NewsroomMarketTicker(
+            id: "xlf",
+            title: "XLF",
+            price: "52.31",
+            changeText: "-0.21%",
+            isPositive: false,
+            category: .finance,
+            sparkline: [0.60, 0.62, 0.58, 0.54, 0.57, 0.51, 0.48, 0.46]
+        ),
+        NewsroomMarketTicker(
+            id: "aiq",
+            title: "AIQ",
+            price: "42.08",
+            changeText: "+0.64%",
+            isPositive: true,
+            category: .ai,
+            sparkline: [0.40, 0.45, 0.49, 0.46, 0.52, 0.59, 0.61, 0.68]
+        )
+    ]
 }
 
 extension PolicyNewsItem {
@@ -181,14 +237,14 @@ extension PolicyNewsItem {
         }
     }
 
-    var newsroomDecisionSummary: String {
+    var newsroomIndustryLeadText: String {
         switch sentiment {
         case .positive:
-            return "\(category.title) 이슈는 내 관련 자산에 우호적이지만, 바로 크게 늘리기보다 분할 접근이 적절해요."
+            return "\(category.title) 업종에 긍정적인 재료입니다. 원문 숫자와 발표 시점을 확인하면 됩니다."
         case .neutral:
-            return "\(category.title) 이슈는 이미 일부 반영된 재료라 지금은 유지하면서 확인할 숫자를 보는 편이 좋아요."
+            return "\(category.title) 업종은 이미 일부 반영된 흐름입니다. 후속 수치 확인이 우선입니다."
         case .caution:
-            return "\(category.title) 이슈는 변동성을 키울 수 있어 추격 매수보다 원문과 후속 숫자 확인이 먼저예요."
+            return "\(category.title) 업종 변동성이 커질 수 있습니다. 확정 전 추격은 보류하는 편이 좋습니다."
         }
     }
 
@@ -233,45 +289,6 @@ extension PolicyNewsItem {
         ]
     }
 
-    var newsroomRelationText: String {
-        if !relatedTickers.isEmpty {
-            return "\(relatedTickers.joined(separator: " · ")) 노출이 있어 먼저 볼 가치가 있어요."
-        }
-
-        return "내 자산 직접 관련도는 낮지만 오늘 시장 맥락을 이해하는 데 필요해요."
-    }
-
-    var newsroomCapsuleText: String {
-        summary
-    }
-
-    var newsroomQuickPoints: [String] {
-        [
-            newsroomAssetImpactText,
-            "확인 기준: \(newsroomCheckConditionText)",
-            newsroomRelevanceLevel == .high ? "내 보유자산과 직접 연결된 기사예요." : "시장 맥락용으로 짧게만 확인하면 돼요."
-        ]
-    }
-
-    var newsroomAssetImpactText: String {
-        switch id {
-        case "semiconductor-subsidy-round2":
-            return "SOXX 비중이 높다면 보조금 집행 속도에 따라 반도체 노출이 먼저 움직일 수 있어요."
-        case "bok-rate-hold-preview":
-            return "KODEX 은행과 국채 ETF가 금리 문구에 서로 다른 방향으로 반응할 수 있어요."
-        case "energy-transition-roadmap":
-            return "ICLN 보유분은 수혜 기대가 있지만 실제 예산 배정 산업을 확인해야 해요."
-        case "pce-cooling-watch":
-            return "성장주 추격보다 발표 숫자 확인이 먼저라 보유 비중 조정은 서두르지 않아도 돼요."
-        case "bank-deposit-rate-cut":
-            return "금융주보다 예금 금리와 대출 조건 변화가 체감 자산에 더 직접적으로 닿을 수 있어요."
-        default:
-            return relatedTickers.isEmpty
-                ? "현재 포트폴리오와 직접 연결되는 보유자산은 적어 우선순위가 낮아요."
-                : newsroomRelationText
-        }
-    }
-
     var newsroomCheckConditionText: String {
         switch category {
         case .semiconductor:
@@ -286,17 +303,6 @@ extension PolicyNewsItem {
             return "예금 금리 변경일, 은행 순이자마진, 대출 금리 고시"
         case .ai:
             return "규제 적용 국가, 시행 시점, 대형 플랫폼 영향 범위"
-        }
-    }
-
-    var newsroomWhyIgnoreText: String {
-        switch id {
-        case "ai-export-guidance":
-            return "현재 보유자산 중 AI 소프트웨어나 클라우드 플랫폼 직접 비중이 낮아 당장 포트폴리오 영향은 제한적이에요."
-        case "shipping-carbon-levy":
-            return "해운, 물류, 원자재 운송 관련 ETF를 직접 보유하지 않아 우선 확인 대상에서는 뒤로 밀려요."
-        default:
-            return "현재 보유종목과 직접 연결되는 티커가 적고, 가격에 반영되기까지 확인해야 할 중간 변수가 많아요."
         }
     }
 }

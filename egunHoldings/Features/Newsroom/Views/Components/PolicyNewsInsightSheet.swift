@@ -133,29 +133,29 @@ struct PolicyNewsInsightDetailView: View {
 
     private func quickContent(_ insight: PolicyNewsInsight) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            decisionCard
+            quickLeadCard
 
             InsightVisualCard(
-                title: "핵심 포인트",
+                title: "핵심 요약",
                 subtitle: "3개만 빠르게",
-                iconName: "bolt.fill",
+                iconName: "text.alignleft",
                 tint: Color.electricBlue,
-                rows: quickPointRows(from: insight),
+                rows: quickSummaryRows(from: insight),
                 style: .numbered
             )
 
-            quickPortfolioCard(insight)
+            industrySnapshotCard
 
             InsightVisualCard(
-                title: "오늘 확인할 것",
-                subtitle: "행동 전 체크",
+                title: "확인 포인트",
+                subtitle: "기사에서 볼 숫자",
                 iconName: "checklist",
                 tint: Color.policyAmber,
                 rows: quickChecklist(from: insight),
                 style: .check
             )
 
-            quickArticleReferenceCard
+            sourceInfoCard(insight)
 
             NewsInvestmentDisclaimer()
                 .padding(.top, 2)
@@ -366,189 +366,52 @@ struct PolicyNewsInsightDetailView: View {
         }
     }
 
-    private var quickArticleReferenceCard: some View {
+    private var quickLeadCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             InsightSectionHeader(
-                title: "원문 기준",
-                subtitle: "자세한 배경은 분석에서",
-                iconName: "newspaper.fill",
-                tint: item.newsroomAccentColor
+                title: "1분 요약",
+                subtitle: "관심 산업 뉴스",
+                iconName: item.sentiment.iconName,
+                tint: item.newsroomDirectionColor
             )
 
-            Text(item.title)
-                .font(.pretendard(14, weight: .bold))
+            Text(item.newsroomIndustryLeadText)
+                .font(.pretendard(20, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text(item.summary)
-                .font(.pretendard(12, weight: .medium))
-                .foregroundStyle(Color.textTertiary)
+            Text("선택한 관심 산업 기준으로 기사 흐름만 빠르게 정리했어요.")
+                .font(.pretendard(13, weight: .semibold))
+                .foregroundStyle(Color.textSecondary)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .background(item.newsroomDirectionColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
+                .stroke(item.newsroomDirectionColor.opacity(0.16), lineWidth: 1)
         }
     }
 
-    private var decisionCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private var industrySnapshotCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
             InsightSectionHeader(
-                title: "지금 판단",
-                subtitle: "빠른 의사결정",
-                iconName: decisionIconName,
-                tint: decisionTint
+                title: "산업 흐름",
+                subtitle: item.category.title,
+                iconName: item.category.newsroomIconName,
+                tint: item.newsroomAccentColor
             )
 
-            Text(decisionTitle)
-                .font(.pretendard(22, weight: .bold))
+            Text(item.summary)
+                .font(.pretendard(14, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text(decisionDescription)
-                .font(.pretendard(13, weight: .semibold))
-                .foregroundStyle(Color.textSecondary)
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 8) {
-                quickBadge("원문 확인")
-                quickBadge(item.newsroomRelevanceLevel == .high ? "내 자산 관련" : "시장 맥락")
-                quickBadge(item.sentiment == .caution ? "변동성 주의" : "분할 접근")
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(decisionTint.opacity(0.08), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(decisionTint.opacity(0.16), lineWidth: 1)
-        }
-    }
-
-    private func quickPortfolioCard(_ insight: PolicyNewsInsight) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            InsightSectionHeader(
-                title: "내 자산 영향",
-                subtitle: "핵심만 보기",
-                iconName: "chart.pie.fill",
-                tint: Color.emerald
-            )
-
-            InsightRow(
-                index: 1,
-                text: insight.portfolioHeadline,
-                tint: Color.emerald,
-                style: .numbered
-            )
-
-            ForEach(Array(insight.portfolioBullets.prefix(1).enumerated()), id: \.offset) { index, bullet in
-                InsightRow(
-                    index: index + 2,
-                    text: bullet,
-                    tint: Color.emerald,
-                    style: .numbered
-                )
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
-        }
-    }
-
-    private func portfolioImpactCard(_ insight: PolicyNewsInsight) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            InsightSectionHeader(
-                title: "내 자산 기준",
-                subtitle: "보유자산 영향",
-                iconName: "chart.pie.fill",
-                tint: Color.emerald
-            )
-
-            Text(insight.portfolioHeadline)
-                .font(.pretendard(15, weight: .bold))
-                .foregroundStyle(Color.textPrimary)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
-
-            LazyVGrid(
-                columns: [GridItem(.flexible()), GridItem(.flexible())],
-                alignment: .leading,
-                spacing: 8
-            ) {
-                ForEach(Array(insight.portfolioBullets.enumerated()), id: \.offset) { index, bullet in
-                    MiniInsightTile(
-                        index: index + 1,
-                        text: bullet,
-                        tint: Color.emerald
-                    )
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
-        }
-    }
-
-    private var relatedHoldingsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            InsightSectionHeader(
-                title: "관련 보유자산",
-                subtitle: "\(item.newsroomAssetTags.count)개 연결",
-                iconName: "tag.fill",
-                tint: item.newsroomAccentColor
-            )
-
             NewsAssetTagFlow(tags: item.newsroomAssetTags)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
-        }
-    }
-
-    private var scenarioComparisonCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            InsightSectionHeader(
-                title: "긍정/부정 시나리오",
-                subtitle: "어느 쪽으로 확인할지",
-                iconName: "arrow.left.arrow.right",
-                tint: item.newsroomAccentColor
-            )
-
-            LazyVGrid(
-                columns: [GridItem(.flexible()), GridItem(.flexible())],
-                alignment: .leading,
-                spacing: 8
-            ) {
-                ScenarioTile(
-                    title: "긍정",
-                    text: positiveScenarioText,
-                    tint: Color.emerald
-                )
-
-                ScenarioTile(
-                    title: "부정",
-                    text: negativeScenarioText,
-                    tint: Color.policyCoral
-                )
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -671,11 +534,11 @@ struct PolicyNewsInsightDetailView: View {
 
             if mode == .quick {
                 Button {
-                    viewModel.switchPresentedInsightMode(.detail)
+                    viewModel.toggleSaved(item)
                 } label: {
-                    Label("자세한 분석 보기", systemImage: "doc.text.magnifyingglass")
+                    Label(viewModel.isSaved(item) ? "나중에 보기 추가됨" : "나중에 보기", systemImage: viewModel.isSaved(item) ? "bookmark.fill" : "bookmark")
                         .font(.pretendard(13, weight: .bold))
-                        .foregroundStyle(Color.electricBlue)
+                        .foregroundStyle(viewModel.isSaved(item) ? Color.electricBlue : Color.textTertiary)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
                         .background(Color.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -727,9 +590,9 @@ struct PolicyNewsInsightDetailView: View {
         return Array(checklist.prefix(3))
     }
 
-    private func quickPointRows(from insight: PolicyNewsInsight) -> [String] {
-        let mergedRows = item.newsroomQuickPoints + insight.articleSummary
-        return Array(mergedRows.prefix(3))
+    private func quickSummaryRows(from insight: PolicyNewsInsight) -> [String] {
+        let summaryRows = insight.articleSummary.isEmpty ? [item.summary] : insight.articleSummary
+        return Array(summaryRows.prefix(3))
     }
 
     private func insightRows(_ rows: [String], tint: Color, style: InsightRowStyle) -> some View {
@@ -780,17 +643,6 @@ struct PolicyNewsInsightDetailView: View {
         default:
             return "정책 발표와 실제 집행 사이의 간극이 크면 단기 가격 반응은 다시 되돌려질 수 있어요."
         }
-    }
-
-    private func quickBadge(_ title: String) -> some View {
-        Text(title)
-            .font(.pretendard(10, weight: .bold))
-            .foregroundStyle(decisionTint)
-            .lineLimit(1)
-            .minimumScaleFactor(0.82)
-            .padding(.horizontal, 8)
-            .frame(height: 24)
-            .background(decisionTint.opacity(0.12), in: Capsule(style: .continuous))
     }
 
     private func sourceInfoTile(title: String, value: String) -> some View {
@@ -1060,33 +912,6 @@ private struct InsightRow: View {
                 .fill(tint.opacity(0.7))
                 .frame(width: 8, height: 8)
                 .frame(width: 24, height: 24)
-        }
-    }
-}
-
-private struct MiniInsightTile: View {
-    let index: Int
-    let text: String
-    let tint: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("포인트 \(index)")
-                .font(.pretendard(9, weight: .bold))
-                .foregroundStyle(tint)
-
-            Text(text)
-                .font(.pretendard(12, weight: .semibold))
-                .foregroundStyle(Color.textSecondary)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
-        .padding(12)
-        .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(tint.opacity(0.12), lineWidth: 1)
         }
     }
 }
