@@ -53,10 +53,37 @@ nonisolated struct LiveInvestmentProfileRepository: InvestmentProfileRepositoryP
             InvestmentProfileRequestDTO(investmentProfile: profile.rawValue)
         )
 
-        return try await apiClient.requestResult(
-            BackendEndpoint.updateInvestmentProfile(userId: userId, body: body),
-            as: InvestmentProfileResponse.self
-        )
+        do {
+            return try await apiClient.requestResult(
+                BackendEndpoint.updateInvestmentProfile(userId: userId, body: body),
+                as: InvestmentProfileResponse.self
+            )
+        } catch {
+            guard Self.shouldUseLocalProfileFallback(for: error) else {
+                throw error
+            }
+
+            return InvestmentProfileResponse(
+                userId: userId,
+                investmentProfile: profile,
+                displayName: profile.displayName
+            )
+        }
+    }
+
+    private static func shouldUseLocalProfileFallback(for error: Error) -> Bool {
+        guard let networkError = error as? NetworkError else {
+            return false
+        }
+
+        switch networkError {
+        case .httpStatus(404), .notImplemented:
+            return true
+        case .apiFailure(let statusCode, let code, _):
+            return statusCode == 404 || code == "FAIL-003"
+        default:
+            return false
+        }
     }
 }
 
