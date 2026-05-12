@@ -337,7 +337,11 @@ private struct TodayAssetSummaryCard: View {
                     .monospacedDigit()
                 }
 
-                AssetDistributionBar(segments: AssetDistributionSegment.make(from: holdings))
+                let distributionSegments = AssetDistributionSegment.make(from: holdings)
+                VStack(alignment: .leading, spacing: 10) {
+                    AssetDistributionBar(segments: distributionSegments)
+                    AssetDistributionLegend(segments: distributionSegments)
+                }
             }
         }
     }
@@ -390,6 +394,40 @@ private struct AssetDistributionSegment: Identifiable {
     }
 }
 
+private struct AssetDistributionLegend: View {
+    let segments: [AssetDistributionSegment]
+
+    var body: some View {
+        LazyVGrid(
+            columns: [
+                GridItem(.flexible(), spacing: 8),
+                GridItem(.flexible(), spacing: 8)
+            ],
+            alignment: .leading,
+            spacing: 8
+        ) {
+            ForEach(segments) { segment in
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(segment.color)
+                        .frame(width: 7, height: 7)
+
+                    Text(segment.id.displayName)
+                        .font(.pretendard(11, weight: .semibold))
+                        .foregroundStyle(Color.textTertiary)
+
+                    Text("\(segment.weight)%")
+                        .font(.pretendard(11, weight: .bold))
+                        .foregroundStyle(Color.textSecondary)
+                        .monospacedDigit()
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+            }
+        }
+    }
+}
+
 // MARK: - Policy Impact
 
 private struct TodayPolicyImpactCard: View {
@@ -406,7 +444,7 @@ private struct TodayPolicyImpactCard: View {
                         .font(.pretendard(16, weight: .bold))
                         .foregroundStyle(Color.textPrimary)
                     Spacer()
-                    Text("오늘 정책 \(min(totalPolicyCount, 3))건")
+                    Text("영향도 상위 \(min(totalPolicyCount, policies.count))건")
                         .font(.pretendard(11, weight: .semibold))
                         .foregroundStyle(Color.textQuaternary)
                 }
