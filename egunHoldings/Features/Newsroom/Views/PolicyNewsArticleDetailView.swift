@@ -17,16 +17,19 @@ struct PolicyNewsArticleDetailView: View {
             VStack(spacing: 0) {
                 topBar
 
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 16) {
-                        articleHeader
-                        summarySection
-                        fullArticleSection
-                        sourceSection
+                GeometryReader { geometry in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(alignment: .leading, spacing: 16) {
+                            articleHeader
+                            summarySection
+                            fullArticleSection
+                            sourceSection
+                        }
+                        .frame(width: max(0, geometry.size.width - 32), alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 34)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 34)
                 }
             }
         }
@@ -121,7 +124,7 @@ struct PolicyNewsArticleDetailView: View {
                 .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
 
-            VStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(article.summaryBullets.enumerated()), id: \.offset) { index, bullet in
                     NewsArticleBulletRow(
                         index: index + 1,
@@ -271,13 +274,16 @@ private struct NewsArticleBulletRow: View {
                 .foregroundStyle(Color.textOnAccent)
                 .frame(width: 22, height: 22)
                 .background(tint, in: Circle())
+                .padding(.top, 1)
 
             Text(text)
                 .font(.pretendard(13, weight: .semibold))
                 .foregroundStyle(Color.textSecondary)
                 .lineSpacing(4)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
