@@ -14,7 +14,7 @@ struct FlowProgressHeader: View {
                     LiquidGlassBackButton(action: onBack)
                 } else {
                     Color.clear
-                        .frame(width: 44, height: 44)
+                        .frame(width: 34, height: 34)
                 }
 
                 Spacer()
@@ -52,12 +52,14 @@ struct LiquidGlassBackButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "chevron.left")
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Color.textPrimary)
-                .frame(width: 44, height: 44)
+                .frame(width: 34, height: 34)
                 .contentShape(Circle())
         }
         .buttonStyle(.glass)
+        .buttonBorderShape(.circle)
+        .controlSize(.small)
         .accessibilityLabel(accessibilityLabel)
     }
 }
