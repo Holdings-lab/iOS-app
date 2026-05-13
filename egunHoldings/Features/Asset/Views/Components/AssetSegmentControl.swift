@@ -10,7 +10,7 @@ struct AssetSegmentControl: View {
                 Button {
                     onSelect(segment)
                 } label: {
-                    Text(segment.rawValue)
+                    Text(segment.displayTitle)
                         .font(.pretendard(12, weight: .semibold))
                         .foregroundStyle(selectedSegment == segment ? Color.electricBlue : Color.mutedForeground)
                         .frame(maxWidth: .infinity)

@@ -1,10 +1,19 @@
 import SwiftUI
 
 enum AssetSegment: String, CaseIterable, Identifiable {
-    case overview = "정책 노출도"
-    case rebalance = "시나리오 리밸런싱"
+    case overview
+    case rebalance
 
     var id: String { rawValue }
+
+    var displayTitle: String {
+        switch self {
+        case .overview:
+            return AppVocabulary.Asset.policyExposureTab
+        case .rebalance:
+            return AppVocabulary.Asset.rebalancingTab
+        }
+    }
 }
 
 struct AssetDashboard {

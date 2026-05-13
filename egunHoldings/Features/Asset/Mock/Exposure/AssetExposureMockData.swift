@@ -45,7 +45,7 @@ struct AssetExposureMockData {
                 holdingWeightPercent: 34,
                 exposures: [
                     PolicyExposureChip(id: 7, title: "금리 인하", exposureText: "높음", color: .brand),
-                    PolicyExposureChip(id: 8, title: "방어력", exposureText: "높음", color: .success)
+                    PolicyExposureChip(id: 8, title: "방어자산 영향", exposureText: "강함", color: .success)
                 ],
                 note: "정책 충격을 흡수하는 핵심 버퍼예요."
             ),
@@ -61,13 +61,13 @@ struct AssetExposureMockData {
             )
         ],
         hiddenBets: [
-            HiddenPolicyBet(id: 1, title: "반도체 정책 중복 베팅", overlapPercent: 31, summary: "SOXX와 빅테크 간접 노출을 합치면 단일 ETF보다 정책 집중도가 더 높아요.", color: .brand),
+            HiddenPolicyBet(id: 1, title: "반도체 정책 함께 흔들림", overlapPercent: 31, summary: "SOXX와 빅테크 간접 노출을 합치면 한 정책에 쏠림이 더 커져요.", color: .brand),
             HiddenPolicyBet(id: 2, title: "금리 경로 과민 구간", overlapPercent: 70, summary: "예금·대출·은행 ETF가 같은 금리 해석에 동시에 반응해요.", color: .brand)
         ],
         defenseReadiness: [
-            DefenseReadinessItem(id: 1, title: "현금/달러 방어력", value: "양호", summary: "정책 충격이 와도 2주 방어 버퍼는 있어요.", color: .success),
-            DefenseReadinessItem(id: 2, title: "정책 집중도", value: "주의", summary: "반도체와 금리 경로에 노출이 몰려 있어요.", color: .warning),
-            DefenseReadinessItem(id: 3, title: "과매매 위험", value: "낮음", summary: "지금은 리밸런싱보다 체크포인트 관리가 먼저예요.", color: .brand)
+            DefenseReadinessItem(id: 1, title: "현금·달러 자산 비중", value: "양호", summary: "정책 충격이 와도 2주 동안 활용할 수 있는 버퍼가 있어요.", color: .success),
+            DefenseReadinessItem(id: 2, title: "한 정책에 쏠림", value: "주의", summary: "반도체와 금리 경로에 노출이 몰려 있어요.", color: .warning),
+            DefenseReadinessItem(id: 3, title: "잦은 거래 위험", value: "낮음", summary: "지금은 리밸런싱보다 체크포인트 관리가 먼저예요.", color: .brand)
         ],
         noTradeZone: NoTradeZoneNote(
             title: "노트레이드 존",

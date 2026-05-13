@@ -164,14 +164,14 @@ final class AuthViewModel: ObservableObject {
                 case "AUTH_EMAIL_VERIFICATION_REQUIRED", "AUTH_EMAIL_NOT_VERIFIED":
                     return "이메일 인증을 완료한 뒤 다시 시도해주세요."
                 default:
-                    return message
+                    return AppVocabulary.ErrorMessage.userFacing(for: networkError, fallback: fallback)
                 }
-            case .httpStatus(let statusCode):
-                return "서버 응답이 올바르지 않았어요. 상태 코드: \(statusCode)"
+            case .httpStatus:
+                return AppVocabulary.ErrorMessage.userFacing(for: networkError, fallback: fallback)
             case .invalidURL:
-                return "백엔드 주소 설정이 올바르지 않아요."
+                return AppVocabulary.ErrorMessage.unknown
             default:
-                return fallback
+                return AppVocabulary.ErrorMessage.userFacing(for: networkError, fallback: fallback)
             }
         }
 

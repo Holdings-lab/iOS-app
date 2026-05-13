@@ -1,11 +1,13 @@
 import SwiftUI
+import Combine
 
 struct NewsroomHeaderView: View {
-    let latestUpdateText: String
-    @Binding var digestMode: NewsroomDigestMode
+    let tickers: [NewsroomMarketTicker]
+    let feedMode: NewsroomFeedMode
+    let onTickerTap: (NewsroomMarketTicker) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top) {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "newspaper.fill")
@@ -14,58 +16,86 @@ struct NewsroomHeaderView: View {
                         .frame(width: 30, height: 30)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("뉴스")
-                            .font(.pretendard(26, weight: .bold))
-                            .foregroundStyle(Color.textPrimary)
-                            .tracking(-0.5)
+                        HStack(alignment: .lastTextBaseline, spacing: 9) {
+                            Text("피드")
+                                .font(.pretendard(28, weight: .bold))
+                                .foregroundStyle(Color.textPrimary)
+                                .tracking(-0.5)
 
-                        Text("내 자산과 가까운 기사부터 압축해서 봐요")
+                            NewsroomRollingTickerView(
+                                tickers: tickers,
+                                onTickerTap: onTickerTap
+                            )
+                        }
+
+                        Text(feedMode.subtitle)
                             .font(.pretendard(13, weight: .medium))
                             .foregroundStyle(Color.textTertiary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 
                 Spacer()
-
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text("\(latestUpdateText) 업데이트")
-                        .font(.pretendard(11, weight: .semibold))
-                        .foregroundStyle(Color.brand)
-                    Text("압축 브리핑")
-                        .font(.pretendard(11, weight: .medium))
-                        .foregroundStyle(Color.textQuaternary)
-                }
             }
+        }
+    }
+}
 
-            HStack(spacing: 4) {
-                ForEach(NewsroomDigestMode.allCases) { mode in
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.18)) {
-                            digestMode = mode
-                        }
-                    } label: {
-                        VStack(spacing: 2) {
-                            Text(mode.rawValue)
-                                .font(.pretendard(12, weight: .bold))
-                            Text(mode.subtitle)
-                                .font(.pretendard(10, weight: .medium))
-                        }
-                        .foregroundStyle(digestMode == mode ? Color.electricBlue : Color.textTertiary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
-                        .background(
-                            digestMode == mode ? Color.electricBlue.opacity(0.15) : Color.clear,
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        )
+private struct NewsroomRollingTickerView: View {
+    let tickers: [NewsroomMarketTicker]
+    let onTickerTap: (NewsroomMarketTicker) -> Void
+    @State private var activeIndex = 0
+
+    private var activeTicker: NewsroomMarketTicker? {
+        guard !tickers.isEmpty else { return nil }
+        return tickers[activeIndex % tickers.count]
+    }
+
+    var body: some View {
+        Group {
+            if let activeTicker {
+                Button {
+                    onTickerTap(activeTicker)
+                } label: {
+                    HStack(spacing: 5) {
+                        Text(activeTicker.title)
+                            .font(.pretendard(12, weight: .bold))
+                            .foregroundStyle(Color.textTertiary)
+                            .lineLimit(1)
+
+                        Text(activeTicker.price)
+                            .font(.pretendard(13, weight: .bold))
+                            .foregroundStyle(Color.brand)
+                            .monospacedDigit()
+                            .lineLimit(1)
+
+                        Text(activeTicker.changeText)
+                            .font(.pretendard(12, weight: .bold))
+                            .foregroundStyle(activeTicker.isPositive ? Color.emerald : Color.policyCoral)
+                            .monospacedDigit()
+                            .lineLimit(1)
                     }
-                    .buttonStyle(.plain)
                 }
+                .buttonStyle(.plain)
+                .id(activeTicker.id)
+                .transition(.asymmetric(
+                    insertion: .move(edge: .bottom).combined(with: .opacity),
+                    removal: .move(edge: .top).combined(with: .opacity)
+                ))
+                .frame(height: 24, alignment: .leading)
+                .clipped()
             }
-            .padding(4)
-            .background(Color.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.hairline, lineWidth: 1)
+        }
+        .animation(.easeInOut(duration: 0.34), value: activeIndex)
+        .onReceive(Timer.publish(every: 2.8, on: .main, in: .common).autoconnect()) { _ in
+            guard tickers.count > 1 else { return }
+            activeIndex = (activeIndex + 1) % tickers.count
+        }
+        .onChange(of: tickers) { _, newValue in
+            if newValue.isEmpty {
+                activeIndex = 0
+            } else if activeIndex >= newValue.count {
+                activeIndex = 0
             }
         }
     }

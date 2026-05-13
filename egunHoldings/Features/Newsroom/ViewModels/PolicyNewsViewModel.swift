@@ -8,16 +8,16 @@ final class PolicyNewsViewModel: ObservableObject {
     @Published private(set) var feedErrorMessage: String?
 
     @Published var presentedItem: PolicyNewsItem?
+    @Published private(set) var presentedInsightMode: NewsroomInsightMode = .quick
     @Published private(set) var presentedInsight: PolicyNewsInsight?
     @Published private(set) var isInsightLoading = false
     @Published private(set) var insightErrorMessage: String?
     @Published private(set) var savedItemIDs: Set<String> = []
-    @Published private(set) var hiddenItemIDs: Set<String> = []
-    @Published var lowRelevanceItem: PolicyNewsItem?
 
     private let repository: PolicyNewsRepositoryProtocol
     private var pendingSummaryRequest: NewsroomPolicySummaryRequest?
     private var pendingSummaryUserAssetProfile: UserAssetProfile?
+    private var pendingSummaryMode: NewsroomInsightMode = .quick
 
     init(userId: Int64? = nil, repository: PolicyNewsRepositoryProtocol? = nil) {
         self.repository = repository ?? PolicyNewsRepositoryFactory.makeDefault(userId: userId)
@@ -25,39 +25,12 @@ final class PolicyNewsViewModel: ObservableObject {
     }
 
     var visibleNews: [PolicyNewsItem] {
-        news.filter { !hiddenItemIDs.contains($0.id) }
+        news.sorted { $0.publishedAt > $1.publishedAt }
     }
 
-    var highRelevanceNews: [PolicyNewsItem] {
-        Array(
-            visibleNews
-                .filter { $0.newsroomRelevanceLevel == .high }
-                .prefix(2)
-        )
-    }
-
-    var mediumRelevanceNews: [PolicyNewsItem] {
-        let highIDs = Set(highRelevanceNews.map(\.id))
-
-        return Array(
-            visibleNews
-                .filter { !highIDs.contains($0.id) && $0.newsroomRelevanceLevel == .medium }
-                .prefix(3)
-        )
-    }
-
-    var lowRelevanceNews: [PolicyNewsItem] {
-        let surfacedIDs = Set((highRelevanceNews + mediumRelevanceNews).map(\.id))
-
-        return Array(
-            visibleNews
-                .filter { !surfacedIDs.contains($0.id) && $0.newsroomRelevanceLevel == .low }
-                .prefix(2)
-        )
-    }
-
-    var savedNews: [PolicyNewsItem] {
-        visibleNews.filter { savedItemIDs.contains($0.id) }
+    func news(matching categories: Set<PolicyNewsCategory>) -> [PolicyNewsItem] {
+        guard !categories.isEmpty else { return visibleNews }
+        return visibleNews.filter { categories.contains($0.category) }
     }
 
     func loadNews() {
@@ -88,9 +61,14 @@ final class PolicyNewsViewModel: ObservableObject {
         }
     }
 
-    func presentSummary(for request: NewsroomPolicySummaryRequest, userAssetProfile: UserAssetProfile) {
+    func presentSummary(
+        for request: NewsroomPolicySummaryRequest,
+        userAssetProfile: UserAssetProfile,
+        mode: NewsroomInsightMode = .quick
+    ) {
         pendingSummaryRequest = request
         pendingSummaryUserAssetProfile = userAssetProfile
+        pendingSummaryMode = mode
 
         guard !news.isEmpty else {
             if !isFeedLoading {
@@ -102,7 +80,12 @@ final class PolicyNewsViewModel: ObservableObject {
         presentPendingSummaryIfNeeded()
     }
 
-    func presentInsight(for item: PolicyNewsItem, userAssetProfile: UserAssetProfile) {
+    func presentInsight(
+        for item: PolicyNewsItem,
+        userAssetProfile: UserAssetProfile,
+        mode: NewsroomInsightMode = .quick
+    ) {
+        presentedInsightMode = mode
         presentedItem = item
         presentedInsight = nil
         insightErrorMessage = nil
@@ -128,18 +111,6 @@ final class PolicyNewsViewModel: ObservableObject {
         savedItemIDs.contains(item.id)
     }
 
-    func hide(_ item: PolicyNewsItem) {
-        hiddenItemIDs.insert(item.id)
-    }
-
-    func presentLowRelevanceReason(for item: PolicyNewsItem) {
-        lowRelevanceItem = item
-    }
-
-    func dismissLowRelevanceReason() {
-        lowRelevanceItem = nil
-    }
-
     func dismissPresentedInsight() {
         presentedItem = nil
         presentedInsight = nil
@@ -162,7 +133,9 @@ final class PolicyNewsViewModel: ObservableObject {
 
         pendingSummaryRequest = nil
         pendingSummaryUserAssetProfile = nil
-        presentInsight(for: item, userAssetProfile: userAssetProfile)
+        let mode = pendingSummaryMode
+        pendingSummaryMode = .quick
+        presentInsight(for: item, userAssetProfile: userAssetProfile, mode: mode)
     }
 
     private func bestNewsItem(matching request: NewsroomPolicySummaryRequest) -> PolicyNewsItem? {
@@ -240,14 +213,12 @@ final class PolicyNewsViewModel: ObservableObject {
     private func makeErrorMessage(for error: Error, fallback: String) -> String {
         if let networkError = error as? NetworkError {
             switch networkError {
-            case .apiFailure(_, _, let message):
-                return message
-            case .httpStatus(let statusCode):
-                return "서버 응답이 올바르지 않았어요. 상태 코드: \(statusCode)"
+            case .apiFailure, .httpStatus:
+                return AppVocabulary.ErrorMessage.userFacing(for: networkError, fallback: fallback)
             case .invalidURL:
-                return "백엔드 주소 설정이 올바르지 않아요."
+                return AppVocabulary.ErrorMessage.unknown
             default:
-                return fallback
+                return AppVocabulary.ErrorMessage.userFacing(for: networkError, fallback: fallback)
             }
         }
 

@@ -39,7 +39,7 @@ struct AssetRebalanceSection: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("이번 주 리밸런싱")
+                    Text(AppVocabulary.Rebalancing.weeklyTitle)
                         .font(.pretendard(22, weight: .bold))
                         .foregroundStyle(Color.textPrimary)
 
@@ -129,7 +129,7 @@ struct AssetRebalanceSection: View {
                     color: .policyAmber
                 )
                 RebalancingMetricCard(
-                    title: "추천 거래",
+                    title: AppVocabulary.Rebalancing.recommendedAdjustment,
                     value: "\(dashboard.summary.tradeCount)건",
                     iconName: "list.bullet.rectangle.fill",
                     color: .emerald
@@ -152,23 +152,23 @@ struct AssetRebalanceSection: View {
 
     private var policyGrid: some View {
         VStack(alignment: .leading, spacing: 12) {
-            AssetSectionTitle("적용 정책")
+            AssetSectionTitle(AppVocabulary.Rebalancing.appliedCriteria)
 
             LazyVGrid(columns: twoColumnGrid, spacing: 10) {
                 RebalancingCompactMetric(
-                    title: "목표 현금",
+                    title: AppVocabulary.Rebalancing.targetCashWeight,
                     value: percentText(dashboard.policy.targetCashWeight)
                 )
                 RebalancingCompactMetric(
-                    title: "리밸런싱 기준",
+                    title: AppVocabulary.Rebalancing.rebalanceThreshold,
                     value: percentText(dashboard.policy.rebalanceThreshold)
                 )
                 RebalancingCompactMetric(
-                    title: "단일 자산 한도",
+                    title: AppVocabulary.Rebalancing.maxSingleAssetWeight,
                     value: percentText(dashboard.policy.maxSingleAssetWeight)
                 )
                 RebalancingCompactMetric(
-                    title: "최소 거래금액",
+                    title: AppVocabulary.Rebalancing.minTradeAmount,
                     value: currencyText(dashboard.policy.minTradeAmount)
                 )
             }
@@ -177,7 +177,7 @@ struct AssetRebalanceSection: View {
 
     private var recommendationFilter: some View {
         VStack(alignment: .leading, spacing: 12) {
-            AssetSectionTitle("추천 리스트")
+            AssetSectionTitle(AppVocabulary.Rebalancing.adjustmentSuggestions)
 
             HStack(spacing: 8) {
                 ForEach(RebalancingRecommendationFilter.allCases) { filter in
@@ -208,8 +208,11 @@ struct AssetRebalanceSection: View {
                 ForEach(filteredRecommendations) { recommendation in
                     RebalancingRecommendationCard(
                         recommendation: recommendation,
+                        policy: dashboard.policy,
+                        profileName: dashboard.investmentProfileDisplayName,
                         currencyText: currencyText,
-                        percentText: percentText
+                        percentText: percentText,
+                        percentagePointText: percentagePointText
                     )
                 }
             }
@@ -222,7 +225,7 @@ struct AssetRebalanceSection: View {
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(Color.emerald)
 
-            Text("해당 조건의 추천 거래가 없습니다.")
+            Text("해당 조건의 조정 제안이 없습니다.")
                 .font(.pretendard(13, weight: .semibold))
                 .foregroundStyle(Color.textPrimary)
         }
@@ -267,6 +270,11 @@ struct AssetRebalanceSection: View {
     private func percentText(_ value: Double) -> String {
         let normalized = abs(value) <= 1 ? value * 100 : value
         return String(format: "%.1f%%", normalized)
+    }
+
+    private func percentagePointText(_ value: Double) -> String {
+        let normalized = abs(value) <= 1 ? value * 100 : value
+        return String(format: "%.1f%%p", abs(normalized))
     }
 
     private static let currencyFormatter: NumberFormatter = {
@@ -338,8 +346,11 @@ private struct RebalancingCompactMetric: View {
 
 private struct RebalancingRecommendationCard: View {
     let recommendation: RebalancingRecommendation
+    let policy: RebalancingPolicy
+    let profileName: String
     let currencyText: (Double) -> String
     let percentText: (Double) -> String
+    let percentagePointText: (Double) -> String
 
     var body: some View {
         DisclosureGroup {
@@ -379,7 +390,7 @@ private struct RebalancingRecommendationCard: View {
 
                 HStack(spacing: 8) {
                     RebalancingWeightPill(
-                        title: "현재",
+                        title: AppVocabulary.Rebalancing.currentWeight,
                         value: percentText(recommendation.currentWeight)
                     )
 
@@ -388,7 +399,7 @@ private struct RebalancingRecommendationCard: View {
                         .foregroundStyle(Color.mutedForeground)
 
                     RebalancingWeightPill(
-                        title: "목표",
+                        title: AppVocabulary.Rebalancing.targetWeight,
                         value: percentText(recommendation.targetWeight)
                     )
                 }
@@ -431,20 +442,41 @@ private struct RebalancingRecommendationCard: View {
 
     private var details: some View {
         VStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(
+                    AppVocabulary.Rebalancing.differenceText(
+                        diff: weightDiffText,
+                        isOverTarget: recommendation.currentWeight > recommendation.targetWeight
+                    )
+                )
+                .font(.pretendard(12, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
+
+                Text(
+                    AppVocabulary.Rebalancing.actionProposalText(
+                        actionSummary: actionSummaryText,
+                        tradeAmount: currencyText(recommendation.tradeAmount)
+                    )
+                )
+                .font(.pretendard(12, weight: .semibold))
+                .foregroundStyle(recommendation.action.tintColor)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
             HStack(spacing: 10) {
-                RebalancingDetailMetric(title: "현재가", value: currencyText(recommendation.currentPrice))
-                RebalancingDetailMetric(title: "평가금액", value: currencyText(recommendation.currentValue))
-                RebalancingDetailMetric(title: "편차", value: percentText(recommendation.drift))
+                RebalancingDetailMetric(title: AppVocabulary.Rebalancing.currentPrice, value: currencyText(recommendation.currentPrice))
+                RebalancingDetailMetric(title: AppVocabulary.Rebalancing.currentValue, value: currencyText(recommendation.currentValue))
+                RebalancingDetailMetric(title: AppVocabulary.Rebalancing.drift, value: weightDiffText)
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("계산 근거")
+                Text(AppVocabulary.Rebalancing.explanationTitle)
                     .font(.pretendard(11, weight: .semibold))
                     .foregroundStyle(Color.mutedForeground)
 
                 FlowLayout(spacing: 6) {
-                    ForEach(recommendation.reasonCodes, id: \.self) { code in
-                        Text(code)
+                    ForEach(reasonRows, id: \.self) { reason in
+                        Text(reason)
                             .font(.pretendard(10, weight: .bold))
                             .foregroundStyle(Color.electricBlue)
                             .padding(.horizontal, 8)
@@ -457,6 +489,25 @@ private struct RebalancingRecommendationCard: View {
         }
         .padding(12)
         .background(Color.subtle, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private var weightDiffText: String {
+        percentagePointText(recommendation.targetWeight - recommendation.currentWeight)
+    }
+
+    private var reasonRows: [String] {
+        recommendation.reasonCodes.map { code in
+            AppVocabulary.Rebalancing.reasonText(
+                for: code,
+                profile: profileName,
+                targetWeight: percentText(recommendation.targetWeight),
+                diff: weightDiffText,
+                limit: percentText(policy.maxSingleAssetWeight),
+                cashRatio: percentText(policy.targetCashWeight),
+                amount: currencyText(policy.minTradeAmount),
+                threshold: percentText(policy.rebalanceThreshold)
+            )
+        }
     }
 }
 

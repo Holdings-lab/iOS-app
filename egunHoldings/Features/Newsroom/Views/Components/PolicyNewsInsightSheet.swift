@@ -8,6 +8,14 @@ struct PolicyNewsInsightDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
 
+    private var mode: NewsroomInsightMode {
+        viewModel.presentedInsightMode
+    }
+
+    private var modeTint: Color {
+        mode == .quick ? Color.electricBlue : item.newsroomAccentColor
+    }
+
     var body: some View {
         ZStack {
             Color.canvas.ignoresSafeArea()
@@ -15,11 +23,14 @@ struct PolicyNewsInsightDetailView: View {
             VStack(spacing: 0) {
                 topBar
 
-                ScrollView(.vertical, showsIndicators: false) {
-                    content
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 24)
+                GeometryReader { geometry in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        content
+                            .frame(width: max(0, geometry.size.width - 32), alignment: .leading)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+                            .padding(.bottom, 24)
+                    }
                 }
             }
         }
@@ -32,28 +43,21 @@ struct PolicyNewsInsightDetailView: View {
 
     private var topBar: some View {
         HStack {
-            Button {
-                close()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .bold))
-                    Text("이전")
-                        .font(.pretendard(14, weight: .bold))
-                }
-                .foregroundStyle(Color.textSecondary)
-                .frame(height: 40)
-            }
-            .buttonStyle(.plain)
+            LiquidGlassBackButton(action: close)
 
             Spacer()
 
-            Text("1분 요약")
-                .font(.pretendard(13, weight: .bold))
-                .foregroundStyle(Color.electricBlue)
-                .padding(.horizontal, 12)
-                .frame(height: 32)
-                .background(Color.electricBlue.opacity(0.10), in: Capsule(style: .continuous))
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(mode.title)
+                    .font(.pretendard(13, weight: .bold))
+                    .foregroundStyle(modeTint)
+                Text(mode.readingTimeText)
+                    .font(.pretendard(10, weight: .semibold))
+                    .foregroundStyle(Color.textTertiary)
+            }
+            .padding(.horizontal, 12)
+            .frame(height: 38)
+            .background(modeTint.opacity(0.10), in: Capsule(style: .continuous))
         }
         .padding(.horizontal, 16)
         .padding(.top, 6)
@@ -64,15 +68,16 @@ struct PolicyNewsInsightDetailView: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: 14) {
-            summaryHeader
-
             if let insight = viewModel.presentedInsight {
                 loadedContent(insight)
             } else if viewModel.isInsightLoading {
+                summaryHeader
                 loadingState
             } else if let errorMessage = viewModel.insightErrorMessage {
+                summaryHeader
                 errorState(message: errorMessage)
             } else {
+                summaryHeader
                 loadingState
             }
         }
@@ -116,72 +121,299 @@ struct PolicyNewsInsightDetailView: View {
         }
     }
 
+    @ViewBuilder
     private func loadedContent(_ insight: PolicyNewsInsight) -> some View {
+        switch mode {
+        case .quick:
+            quickContent(insight)
+        case .detail:
+            detailContent(insight)
+        }
+    }
+
+    private func quickContent(_ insight: PolicyNewsInsight) -> some View {
         VStack(alignment: .leading, spacing: 14) {
+            summaryHeader
+
+            quickLeadCard
+
             InsightVisualCard(
-                title: "기사 핵심",
-                subtitle: "바로 확인할 내용",
-                iconName: "newspaper.fill",
+                title: "핵심 요약",
+                subtitle: "3개만 빠르게",
+                iconName: "text.alignleft",
                 tint: Color.electricBlue,
-                rows: insight.articleSummary,
+                rows: quickSummaryRows(from: insight),
                 style: .numbered
             )
 
-            portfolioImpactCard(insight)
+            industrySnapshotCard
 
             InsightVisualCard(
                 title: "확인 포인트",
-                subtitle: "매수/매도보다 먼저 볼 것",
+                subtitle: "기사에서 볼 숫자",
                 iconName: "checklist",
                 tint: Color.policyAmber,
-                rows: insight.actionChecklist.isEmpty ? [item.newsroomCheckConditionText] : insight.actionChecklist,
+                rows: quickChecklist(from: insight),
                 style: .check
             )
 
-            relatedHoldingsCard
-
-            InsightVisualCard(
-                title: "주의할 해석",
-                subtitle: "과하게 반응하지 않기",
-                iconName: "exclamationmark.triangle.fill",
-                tint: Color.textTertiary,
-                rows: riskRows(from: insight),
-                style: .dot
-            )
+            sourceInfoCard(insight)
 
             NewsInvestmentDisclaimer()
                 .padding(.top, 2)
         }
     }
 
-    private func portfolioImpactCard(_ insight: PolicyNewsInsight) -> some View {
+    private func detailContent(_ insight: PolicyNewsInsight) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            InsightSectionHeader(
-                title: "내 자산 기준",
-                subtitle: "보유자산 영향",
-                iconName: "chart.pie.fill",
-                tint: Color.emerald
-            )
+            detailProgressHeader
 
+            summaryHeader
+
+            detailDecisionStrip
+
+            DetailDisclosureCard(
+                title: "정책/기사 배경",
+                subtitle: "왜 나온 이슈인지",
+                iconName: "newspaper.fill",
+                tint: Color.electricBlue,
+                isExpanded: true
+            ) {
+                insightRows(insight.articleSummary, tint: Color.electricBlue, style: .numbered)
+            }
+
+            DetailDisclosureCard(
+                title: "내 보유자산별 영향",
+                subtitle: "보유 비중과 연결",
+                iconName: "chart.pie.fill",
+                tint: Color.emerald,
+                isExpanded: true
+            ) {
+                detailPortfolioContent(insight)
+            }
+
+            DetailDisclosureCard(
+                title: "긍정/부정 시나리오",
+                subtitle: "어느 쪽으로 확인할지",
+                iconName: "arrow.left.arrow.right",
+                tint: item.newsroomAccentColor
+            ) {
+                scenarioComparisonContent
+            }
+
+            DetailDisclosureCard(
+                title: "확인할 숫자와 날짜",
+                subtitle: "판단 기준",
+                iconName: "checklist",
+                tint: Color.policyAmber
+            ) {
+                insightRows(
+                    insight.actionChecklist.isEmpty ? [item.newsroomCheckConditionText] : insight.actionChecklist,
+                    tint: Color.policyAmber,
+                    style: .check
+                )
+            }
+
+            DetailDisclosureCard(
+                title: "과잉 해석 주의",
+                subtitle: "반대로 볼 지점",
+                iconName: "exclamationmark.triangle.fill",
+                tint: Color.textTertiary
+            ) {
+                insightRows(riskRows(from: insight), tint: Color.textTertiary, style: .dot)
+            }
+
+            DetailDisclosureCard(
+                title: "관련 자산 및 출처",
+                subtitle: "추가 확인 경로",
+                iconName: "link",
+                tint: Color.electricBlue
+            ) {
+                detailSourceContent(insight)
+            }
+
+            LearningGuideCard(tint: item.newsroomAccentColor)
+
+            NewsInvestmentDisclaimer()
+                .padding(.top, 2)
+        }
+    }
+
+    private var detailProgressHeader: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("분석 리포트")
+                    .font(.pretendard(13, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+
+                Spacer()
+
+                Text("요약 → 영향 → 시나리오 → 출처")
+                    .font(.pretendard(10, weight: .semibold))
+                    .foregroundStyle(Color.textTertiary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+
+            HStack(spacing: 5) {
+                ForEach(0..<4, id: \.self) { index in
+                    Capsule(style: .continuous)
+                        .fill(index == 0 ? item.newsroomAccentColor : item.newsroomAccentColor.opacity(0.22))
+                        .frame(height: 5)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 2)
+    }
+
+    private var detailDecisionStrip: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: decisionIconName)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(decisionTint)
+                .frame(width: 34, height: 34)
+                .background(decisionTint.opacity(0.12), in: Circle())
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 6) {
+                    Text("요약 판단")
+                        .font(.pretendard(11, weight: .bold))
+                        .foregroundStyle(decisionTint)
+                    Text(mode.subtitle)
+                        .font(.pretendard(10, weight: .semibold))
+                        .foregroundStyle(Color.textTertiary)
+                }
+
+                Text(decisionTitle)
+                    .font(.pretendard(17, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+
+                Text(decisionDescription)
+                    .font(.pretendard(12, weight: .medium))
+                    .foregroundStyle(Color.textSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(decisionTint.opacity(0.08), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(decisionTint.opacity(0.15), lineWidth: 1)
+        }
+    }
+
+    private func detailPortfolioContent(_ insight: PolicyNewsInsight) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
             Text(insight.portfolioHeadline)
                 .font(.pretendard(15, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
 
-            LazyVGrid(
-                columns: [GridItem(.flexible()), GridItem(.flexible())],
-                alignment: .leading,
-                spacing: 8
-            ) {
-                ForEach(Array(insight.portfolioBullets.enumerated()), id: \.offset) { index, bullet in
-                    MiniInsightTile(
-                        index: index + 1,
-                        text: bullet,
-                        tint: Color.emerald
-                    )
-                }
+            AssetImpactMeterList(tags: item.newsroomAssetTags, tint: item.newsroomAccentColor)
+
+            insightRows(insight.portfolioBullets, tint: Color.emerald, style: .numbered)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var scenarioComparisonContent: some View {
+        LazyVGrid(
+            columns: [GridItem(.flexible()), GridItem(.flexible())],
+            alignment: .leading,
+            spacing: 8
+        ) {
+            ScenarioTile(
+                title: "긍정",
+                text: positiveScenarioText,
+                tint: Color.emerald,
+                strength: item.sentiment == .positive ? 0.78 : 0.52
+            )
+
+            ScenarioTile(
+                title: "부정",
+                text: negativeScenarioText,
+                tint: Color.policyCoral,
+                strength: item.sentiment == .caution ? 0.78 : 0.48
+            )
+        }
+    }
+
+    private func detailSourceContent(_ insight: PolicyNewsInsight) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("연결 자산")
+                    .font(.pretendard(11, weight: .bold))
+                    .foregroundStyle(Color.textTertiary)
+                NewsAssetTagFlow(tags: item.newsroomAssetTags)
             }
+
+            HStack(spacing: 10) {
+                sourceInfoTile(title: "출처", value: insight.sourceName)
+                sourceInfoTile(title: "생성 시각", value: insight.generatedAtText)
+            }
+
+            if let sourceURL {
+                Text(sourceURL.host ?? sourceURL.absoluteString)
+                    .font(.pretendard(12, weight: .semibold))
+                    .foregroundStyle(Color.electricBlue)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(Color.electricBlue.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+        }
+    }
+
+    private var quickLeadCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            InsightSectionHeader(
+                title: "1분 요약",
+                subtitle: "보유 자산 뉴스",
+                iconName: item.sentiment.iconName,
+                tint: item.newsroomDirectionColor
+            )
+
+            Text(item.newsroomIndustryLeadText)
+                .font(.pretendard(20, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("연결된 보유 자산과 실시간 속보 흐름을 기준으로 빠르게 정리했어요.")
+                .font(.pretendard(13, weight: .semibold))
+                .foregroundStyle(Color.textSecondary)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(item.newsroomDirectionColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(item.newsroomDirectionColor.opacity(0.16), lineWidth: 1)
+        }
+    }
+
+    private var industrySnapshotCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            InsightSectionHeader(
+                title: "뉴스 흐름",
+                subtitle: item.category.title,
+                iconName: item.category.newsroomIconName,
+                tint: item.newsroomAccentColor
+            )
+
+            Text(item.summary)
+                .font(.pretendard(14, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+
+            NewsAssetTagFlow(tags: item.newsroomAssetTags)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -192,16 +424,29 @@ struct PolicyNewsInsightDetailView: View {
         }
     }
 
-    private var relatedHoldingsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+    private func sourceInfoCard(_ insight: PolicyNewsInsight) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
             InsightSectionHeader(
-                title: "관련 보유자산",
-                subtitle: "\(item.newsroomAssetTags.count)개 연결",
-                iconName: "tag.fill",
-                tint: item.newsroomAccentColor
+                title: "관련 원문/출처",
+                subtitle: "확인 기준",
+                iconName: "link",
+                tint: Color.electricBlue
             )
 
-            NewsAssetTagFlow(tags: item.newsroomAssetTags)
+            HStack(spacing: 10) {
+                sourceInfoTile(title: "출처", value: insight.sourceName)
+                sourceInfoTile(title: "생성 시각", value: insight.generatedAtText)
+            }
+
+            if let sourceURL {
+                Text(sourceURL.host ?? sourceURL.absoluteString)
+                    .font(.pretendard(12, weight: .semibold))
+                    .foregroundStyle(Color.electricBlue)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(Color.electricBlue.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -218,12 +463,12 @@ struct PolicyNewsInsightDetailView: View {
                 ProgressView()
                     .tint(Color.electricBlue)
 
-                Text("맞춤 1분 요약을 만드는 중이에요")
+                Text(mode.loadingMessage)
                     .font(.pretendard(15, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
             }
 
-            Text("기사 핵심, 내 자산 영향, 확인 포인트 순서로 정리합니다.")
+            Text(mode == .quick ? "지금 판단, 핵심 영향, 오늘 확인할 것만 먼저 보여줍니다." : "배경, 자산별 영향, 시나리오, 확인 기준을 함께 보여줍니다.")
                 .font(.pretendard(13, weight: .medium))
                 .foregroundStyle(Color.textTertiary)
         }
@@ -289,20 +534,40 @@ struct PolicyNewsInsightDetailView: View {
             .disabled(sourceURL == nil)
             .buttonStyle(PressScaleButtonStyle())
 
-            Button {
-                viewModel.toggleSaved(item)
-            } label: {
-                Image(systemName: viewModel.isSaved(item) ? "bookmark.fill" : "bookmark")
-                    .font(.system(size: 19, weight: .bold))
-                    .foregroundStyle(viewModel.isSaved(item) ? Color.electricBlue : Color.textTertiary)
-                    .frame(width: 52, height: 52)
-                    .background(Color.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.hairline, lineWidth: 1)
-                    }
+            if mode == .quick {
+                Button {
+                    viewModel.toggleSaved(item)
+                } label: {
+                    Label(viewModel.isSaved(item) ? "나중에 보기 추가됨" : "나중에 보기", systemImage: viewModel.isSaved(item) ? "bookmark.fill" : "bookmark")
+                        .font(.pretendard(13, weight: .bold))
+                        .foregroundStyle(viewModel.isSaved(item) ? Color.electricBlue : Color.textTertiary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Color.hairline, lineWidth: 1)
+                        }
+                }
+                .buttonStyle(PressScaleButtonStyle())
+            } else {
+                Button {
+                    viewModel.toggleSaved(item)
+                } label: {
+                    Label(viewModel.isSaved(item) ? "관심 뉴스 추가됨" : "관심 뉴스에 추가", systemImage: viewModel.isSaved(item) ? "bookmark.fill" : "bookmark")
+                        .font(.pretendard(13, weight: .bold))
+                        .foregroundStyle(viewModel.isSaved(item) ? Color.electricBlue : Color.textTertiary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.74)
+                        .frame(width: 142, height: 52)
+                        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .stroke(Color.hairline, lineWidth: 1)
+                        }
+                }
+                .buttonStyle(PressScaleButtonStyle())
             }
-            .buttonStyle(PressScaleButtonStyle())
         }
         .padding(.horizontal, 16)
         .padding(.top, 10)
@@ -322,9 +587,223 @@ struct PolicyNewsInsightDetailView: View {
         return insight.riskNotes
     }
 
+    private func quickChecklist(from insight: PolicyNewsInsight) -> [String] {
+        let checklist = insight.actionChecklist.isEmpty ? [item.newsroomCheckConditionText] : insight.actionChecklist
+        return Array(checklist.prefix(3))
+    }
+
+    private func quickSummaryRows(from insight: PolicyNewsInsight) -> [String] {
+        let summaryRows = insight.articleSummary.isEmpty ? [item.summary] : insight.articleSummary
+        return Array(summaryRows.prefix(3))
+    }
+
+    private func insightRows(_ rows: [String], tint: Color, style: InsightRowStyle) -> some View {
+        VStack(spacing: 8) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                InsightRow(index: index + 1, text: row, tint: tint, style: style)
+            }
+        }
+    }
+
+    private var decisionTitle: String {
+        item.newsroomDecisionTitle
+    }
+
+    private var decisionDescription: String {
+        item.newsroomDecisionDescription
+    }
+
+    private var decisionIconName: String {
+        item.newsroomDecisionIconName
+    }
+
+    private var decisionTint: Color {
+        item.newsroomDecisionColor
+    }
+
+    private var positiveScenarioText: String {
+        switch item.category {
+        case .semiconductor:
+            return "지원금 집행 시점과 수혜 기업이 명확해지면 관련 ETF 거래대금과 비중 확대 명분이 강해져요."
+        case .interestRate:
+            return "인하 기대가 커지면 성장주와 채권 ETF가 먼저 반응하고 환율 부담은 완화될 수 있어요."
+        case .energy:
+            return "예산과 입법 일정이 구체화되면 전력망, 신재생 인프라 자산에 수혜 기대가 붙을 수 있어요."
+        default:
+            return "정책 방향과 실제 숫자가 함께 확인되면 관련 자산의 모멘텀이 강화될 수 있어요."
+        }
+    }
+
+    private var negativeScenarioText: String {
+        switch item.category {
+        case .semiconductor:
+            return "집행 지연이나 수혜 기업 불확실성이 남으면 헤드라인만 보고 오른 가격이 되돌릴 수 있어요."
+        case .interestRate:
+            return "결정문이 매파적으로 해석되면 성장주와 장기채가 동시에 흔들리고 환율 부담이 커질 수 있어요."
+        case .energy:
+            return "예산 배정이 약하거나 후속 입법이 밀리면 기대만 반영된 종목은 변동성이 커질 수 있어요."
+        default:
+            return "정책 발표와 실제 집행 사이의 간극이 크면 단기 가격 반응은 다시 되돌려질 수 있어요."
+        }
+    }
+
+    private func sourceInfoTile(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.pretendard(10, weight: .bold))
+                .foregroundStyle(Color.textTertiary)
+
+            Text(value)
+                .font(.pretendard(13, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.subtle.opacity(0.65), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
     private func close() {
         dismiss()
         viewModel.dismissPresentedInsight()
+    }
+}
+
+private struct DetailDisclosureCard<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let iconName: String
+    let tint: Color
+    private let content: Content
+
+    @State private var isExpanded: Bool
+
+    init(
+        title: String,
+        subtitle: String,
+        iconName: String,
+        tint: Color,
+        isExpanded: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.subtitle = subtitle
+        self.iconName = iconName
+        self.tint = tint
+        self.content = content()
+        _isExpanded = State(initialValue: isExpanded)
+    }
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            content
+                .padding(.top, 14)
+        } label: {
+            InsightSectionHeader(title: title, subtitle: subtitle, iconName: iconName, tint: tint)
+        }
+        .tint(tint)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.hairline, lineWidth: 1)
+        }
+    }
+}
+
+private struct AssetImpactMeterList: View {
+    let tags: [NewsroomAssetTag]
+    let tint: Color
+
+    var body: some View {
+        VStack(spacing: 9) {
+            ForEach(Array(tags.enumerated()), id: \.offset) { index, tag in
+                AssetImpactMeterRow(
+                    title: tag.title,
+                    value: impactValue(for: index),
+                    color: tag.color
+                )
+            }
+        }
+        .padding(12)
+        .background(tint.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private func impactValue(for index: Int) -> Double {
+        min(0.88, 0.52 + Double(index) * 0.14)
+    }
+}
+
+private struct AssetImpactMeterRow: View {
+    let title: String
+    let value: Double
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(title)
+                    .font(.pretendard(11, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Text("\(Int(value * 100))% 연결")
+                    .font(.pretendard(10, weight: .semibold))
+                    .foregroundStyle(Color.textTertiary)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule(style: .continuous)
+                        .fill(Color.hairline)
+
+                    Capsule(style: .continuous)
+                        .fill(color)
+                        .frame(width: max(0, proxy.size.width * value))
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+}
+
+private struct LearningGuideCard: View {
+    let tint: Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "graduationcap.fill")
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(tint)
+                .frame(width: 34, height: 34)
+                .background(tint.opacity(0.12), in: Circle())
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("학습 가이드")
+                    .font(.pretendard(11, weight: .bold))
+                    .foregroundStyle(tint)
+
+                Text("이런 정책은 자산에 어떤 영향을 줄까?")
+                    .font(.pretendard(14, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+
+                Text("금리, 보조금, 규제 뉴스가 ETF와 개별 종목에 전달되는 경로를 짧게 복습할 수 있어요.")
+                    .font(.pretendard(12, weight: .medium))
+                    .foregroundStyle(Color.textSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.hairline, lineWidth: 1)
+        }
     }
 }
 
@@ -439,16 +918,44 @@ private struct InsightRow: View {
     }
 }
 
-private struct MiniInsightTile: View {
-    let index: Int
+private struct ScenarioTile: View {
+    let title: String
     let text: String
     let tint: Color
+    let strength: Double
+
+    init(title: String, text: String, tint: Color, strength: Double = 0.58) {
+        self.title = title
+        self.text = text
+        self.tint = tint
+        self.strength = strength
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("포인트 \(index)")
-                .font(.pretendard(9, weight: .bold))
-                .foregroundStyle(tint)
+            HStack {
+                Text(title)
+                    .font(.pretendard(11, weight: .bold))
+                    .foregroundStyle(tint)
+
+                Spacer()
+
+                Text("\(Int(strength * 100))%")
+                    .font(.pretendard(10, weight: .bold))
+                    .foregroundStyle(tint)
+            }
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule(style: .continuous)
+                        .fill(tint.opacity(0.14))
+
+                    Capsule(style: .continuous)
+                        .fill(tint)
+                        .frame(width: max(0, proxy.size.width * strength))
+                }
+            }
+            .frame(height: 5)
 
             Text(text)
                 .font(.pretendard(12, weight: .semibold))
@@ -456,12 +963,12 @@ private struct MiniInsightTile: View {
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 142, alignment: .topLeading)
         .padding(12)
         .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(tint.opacity(0.12), lineWidth: 1)
+                .stroke(tint.opacity(0.14), lineWidth: 1)
         }
     }
 }

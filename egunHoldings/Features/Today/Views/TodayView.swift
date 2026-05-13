@@ -4,12 +4,12 @@ import SwiftUI
 
 struct TodayView: View {
     @StateObject private var viewModel: TodayViewModel
+    @StateObject private var policyNewsViewModel: PolicyNewsViewModel
     @StateObject private var notificationCenter = AppNotificationCenter.shared
     @ObservedObject private var exchangeRateViewModel: ExchangeRateViewModel
     @State private var navigationPath: [TodayRoute] = []
     private let userId: Int64?
     private let onAssetTabRequested: () -> Void
-    private let onPolicySummaryRequested: (TodayPolicyEvent) -> Void
 
     init(
         userId: Int64? = nil,
@@ -17,12 +17,10 @@ struct TodayView: View {
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         viewModel: TodayViewModel? = nil,
         exchangeRateViewModel: ExchangeRateViewModel? = nil,
-        onAssetTabRequested: @escaping () -> Void = {},
-        onPolicySummaryRequested: @escaping (TodayPolicyEvent) -> Void = { _ in }
+        onAssetTabRequested: @escaping () -> Void = {}
     ) {
         self.userId = userId
         self.onAssetTabRequested = onAssetTabRequested
-        self.onPolicySummaryRequested = onPolicySummaryRequested
         _viewModel = StateObject(
             wrappedValue: viewModel ?? TodayViewModel(
                 userId: userId,
@@ -30,6 +28,7 @@ struct TodayView: View {
                 portfolioSnapshot: portfolioSnapshot
             )
         )
+        _policyNewsViewModel = StateObject(wrappedValue: PolicyNewsViewModel(userId: userId))
         self.exchangeRateViewModel = exchangeRateViewModel ?? ExchangeRateViewModel()
     }
 
@@ -67,7 +66,7 @@ struct TodayView: View {
                         TodayPolicyImpactCard(
                             policies: Array(viewModel.policyEvents.prefix(3)),
                             totalPolicyCount: viewModel.policyEvents.count,
-                            onPolicyTap: onPolicySummaryRequested,
+                            onPolicyTap: openPolicyAnalysis,
                             onShowAll: { viewModel.present(.policyList) }
                         )
 
@@ -99,6 +98,13 @@ struct TodayView: View {
                     )
                 }
             }
+            .navigationDestination(item: $policyNewsViewModel.presentedItem) { item in
+                PolicyNewsInsightDetailView(
+                    item: item,
+                    userAssetProfile: viewModel.userAssetProfile,
+                    viewModel: policyNewsViewModel
+                )
+            }
             .toolbar(.hidden, for: .navigationBar)
             .preferredColorScheme(.light)
             .task {
@@ -111,6 +117,17 @@ struct TodayView: View {
                     .presentationCornerRadius(KDXRadius.bottomSheet)
             }
         }
+    }
+
+    private func openPolicyAnalysis(_ policy: TodayPolicyEvent) {
+        policyNewsViewModel.presentSummary(
+            for: NewsroomPolicySummaryRequest(
+                policyTitle: policy.title,
+                relatedAssets: policy.relatedAssets
+            ),
+            userAssetProfile: viewModel.userAssetProfile,
+            mode: .detail
+        )
     }
 
     private var judgmentState: TodayJudgmentDisplayState {
@@ -159,7 +176,13 @@ struct TodayView: View {
         case .policyList:
             PolicyListSheet(
                 policies: viewModel.policyEvents,
-                onSelect: { viewModel.present(.policyDetail($0)) }
+                onSelect: { policy in
+                    viewModel.activeSheet = nil
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 220_000_000)
+                        openPolicyAnalysis(policy)
+                    }
+                }
             )
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)

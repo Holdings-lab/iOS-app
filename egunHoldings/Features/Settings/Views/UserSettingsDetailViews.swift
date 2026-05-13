@@ -58,9 +58,9 @@ struct RebalancingSettingsDetailView: View {
                 }
             }
 
-            SettingsSection(title: "리밸런싱 기준") {
+            SettingsSection(title: AppVocabulary.Rebalancing.appliedCriteria) {
                 SettingsStepperRow(
-                    title: "목표 현금",
+                    title: AppVocabulary.Rebalancing.targetCashWeight,
                     valueText: "\(viewModel.settings.rebalancing.targetCashWeight)%",
                     decrement: {
                         Task {
@@ -75,7 +75,7 @@ struct RebalancingSettingsDetailView: View {
                 )
                 SettingsDivider()
                 SettingsStepperRow(
-                    title: "리밸런싱 기준",
+                    title: AppVocabulary.Rebalancing.rebalanceThreshold,
                     valueText: "\(viewModel.settings.rebalancing.rebalanceThreshold)%",
                     decrement: {
                         Task {
@@ -90,7 +90,7 @@ struct RebalancingSettingsDetailView: View {
                 )
                 SettingsDivider()
                 SettingsStepperRow(
-                    title: "단일 자산 한도",
+                    title: AppVocabulary.Rebalancing.maxSingleAssetWeight,
                     valueText: "\(viewModel.settings.rebalancing.maxSingleAssetWeight)%",
                     decrement: {
                         Task {
@@ -105,7 +105,7 @@ struct RebalancingSettingsDetailView: View {
                 )
                 SettingsDivider()
                 SettingsInfoRow(
-                    title: "최소 거래금액",
+                    title: AppVocabulary.Rebalancing.minTradeAmount,
                     value: "\(viewModel.settings.rebalancing.minTradeAmount.formattedKRW)원"
                 )
             }
@@ -115,7 +115,7 @@ struct RebalancingSettingsDetailView: View {
     private func profileSubtitle(_ profile: InvestmentProfile) -> String {
         switch profile {
         case .conservative:
-            return "방어적 현금 비중과 낮은 단일 자산 한도"
+            return "방어적 현금 비중과 낮은 한 자산 최대 비중"
         case .balanced:
             return "현금 방어와 성장 노출을 균형 있게 반영"
         case .aggressive:
@@ -536,7 +536,7 @@ struct InvestmentDisclaimerSettingsDetailView: View {
     @ObservedObject var viewModel: UserSettingsViewModel
 
     var body: some View {
-        SettingsDetailContainer(title: "투자 권유 아님") {
+        SettingsDetailContainer(title: "투자 추천 아님") {
             SettingsSection(title: "안내") {
                 ForEach(Array(viewModel.settings.guide.disclaimerItems.enumerated()), id: \.offset) { index, item in
                     SettingsInfoRow(title: "안내 \(index + 1)", value: item)

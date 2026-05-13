@@ -94,7 +94,7 @@ nonisolated struct MockAssetRebalancingRepository: AssetRebalancingRepositoryPro
             ],
             notes: [
                 "매수/매도 수량은 정수 주식 단위와 최소 거래 금액을 반영해 계산했습니다.",
-                "실계좌 보유 종목이 연결되면 현재 수량, 현재가, 현금 기준으로 미리보기를 갱신합니다."
+                "실계좌 보유 종목이 연결되면 현재 수량, 현재 가격, 현금 기준으로 미리보기를 갱신합니다."
             ]
         )
     }

@@ -179,9 +179,9 @@ extension InvestmentProfile {
     var impactSummary: String {
         switch self {
         case .conservative:
-            return "현금 비중과 단일 자산 한도를 더 보수적으로 잡아요"
+            return "현금 비중과 한 자산 최대 비중을 더 보수적으로 잡아요"
         case .balanced:
-            return "목표 현금과 성장자산 비중을 균형 있게 맞춰요"
+            return "유지할 현금 비중과 성장자산 비중을 균형 있게 맞춰요"
         case .aggressive:
             return "매수 기회 탐지와 성장자산 허용폭을 더 넓게 봐요"
         }

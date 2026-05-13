@@ -142,7 +142,7 @@ struct OnboardingPage2View: View {
         case .allocation:
             VStack(alignment: .leading, spacing: 20) {
                 PreferenceSection(
-                    title: "목표 현금 비중",
+                    title: AppVocabulary.Rebalancing.targetCashWeight,
                     options: TargetCashWeight.allCases,
                     selected: viewModel.rebalancingPreference.targetCashWeightOption,
                     onSelect: viewModel.selectTargetCashWeight

@@ -40,11 +40,11 @@ final class AssetViewModel: ObservableObject {
     var rebalancingDataStatusText: String {
         switch rebalancingLoadState {
         case .idle:
-            return "추천 준비 중"
+            return "조정 제안 준비 중"
         case .loading:
-            return "추천 계산 중"
+            return "조정 제안 계산 중"
         case .loaded:
-            return rebalancingDashboard.dataSource == "MOCK" ? "예시 데이터" : "서버 추천 연결됨"
+            return rebalancingDashboard.dataSource == "MOCK" ? "예시 데이터" : "서버 조정 제안 연결됨"
         case .usingFallback:
             return "예시 데이터"
         }
@@ -53,15 +53,15 @@ final class AssetViewModel: ObservableObject {
     var rebalancingDataFootnote: String {
         switch rebalancingLoadState {
         case .idle:
-            return "투자성향과 보유자산 기준의 리밸런싱 추천을 준비하고 있습니다."
+            return "투자 성향과 보유 자산 기준의 조정 제안을 준비하고 있습니다."
         case .loading:
-            return "서버가 투자성향, 보유수량, 현재가, 현금을 기준으로 추천을 계산 중입니다."
+            return "서버가 투자 성향, 보유 수량, 현재 가격, 현금을 기준으로 조정 제안을 계산 중입니다."
         case .loaded:
             return rebalancingDashboard.dataSource == "REQUEST"
-                ? "실계좌 보유수량, 현재가, 현금을 서버 preview API로 보내 계산한 결과입니다."
+                ? "실계좌 보유 수량, 현재 가격, 현금을 서버로 보내 계산한 결과입니다."
                 : "서버의 관심자산 기반 예시 포지션으로 계산한 결과입니다."
         case .usingFallback(let message):
-            return message.map { "서버 연결 실패로 예시 추천을 표시합니다. \($0)" }
+            return message.map { "\($0)" }
                 ?? "서버 연결 전까지 예시 추천을 표시합니다."
         }
     }
@@ -117,10 +117,6 @@ final class AssetViewModel: ObservableObject {
     }
 
     private static func errorMessage(for error: Error) -> String {
-        if let networkError = error as? NetworkError {
-            return networkError.localizedDescription
-        }
-
-        return error.localizedDescription
+        AppVocabulary.ErrorMessage.userFacing(for: error)
     }
 }
