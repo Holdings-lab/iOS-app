@@ -2,6 +2,134 @@ import SwiftUI
 
 struct AssetMockData {
     static let dashboard = AssetDashboard(
+        totalAssetAmount: "₩13,520,000",
+        totalProfitSummary: "+₩1,580,000 (+13.2%)",
+        totalProfitColor: .policyCoral,
+        weeklyAdjustmentNotice: AssetAdjustmentNotice(
+            id: 1,
+            title: "이번 주 조정 제안 2건",
+            summary: "전체 자산 기준으로 반도체 비중과 현금 비중 조정이 필요해요.",
+            count: 2,
+            color: .electricBlue
+        ),
+        accounts: [
+            AssetAccount(
+                id: 1,
+                brokerName: "키움증권",
+                accountName: "위탁종합",
+                accountNumber: "5797993410",
+                totalAmount: "₩33,297,509",
+                cashAmount: "₩607,376",
+                profitSummary: "+64.1%",
+                profitColor: .policyCoral,
+                symbol: "arrow.up.right.square.fill",
+                tint: .policyPurple,
+                policyTags: [
+                    AssetPolicyTag(id: 101, title: "반도체 영향: 강함", color: .electricBlue),
+                    AssetPolicyTag(id: 102, title: "성장주 영향: 강함", color: .policyPurple)
+                ],
+                holdings: [
+                    AssetHoldingRow(
+                        id: 101,
+                        name: "QQQ 인베스코 ETF",
+                        weight: "10주",
+                        amount: "₩10,444,326",
+                        tags: [
+                            AssetPolicyTag(id: 1011, title: "성장주 영향: 강함", color: .policyPurple),
+                            AssetPolicyTag(id: 1012, title: "금리 영향: 보통", color: .policyAmber)
+                        ]
+                    ),
+                    AssetHoldingRow(
+                        id: 102,
+                        name: "엔비디아",
+                        weight: "22주",
+                        amount: "₩7,256,929",
+                        tags: [
+                            AssetPolicyTag(id: 1021, title: "반도체 영향: 강함", color: .electricBlue),
+                            AssetPolicyTag(id: 1022, title: "미중 갈등 영향: 보통", color: .policyCoral)
+                        ]
+                    ),
+                    AssetHoldingRow(
+                        id: 103,
+                        name: "마이크로소프트",
+                        weight: "9주",
+                        amount: "₩5,410,648",
+                        tags: [
+                            AssetPolicyTag(id: 1031, title: "AI 영향: 강함", color: .policyPurple),
+                            AssetPolicyTag(id: 1032, title: "성장주 영향: 보통", color: .electricBlue)
+                        ]
+                    )
+                ],
+                exposureMetrics: [
+                    AssetExposureMetric(id: 101, title: "반도체", percent: 48, symbol: "cpu.fill", color: .electricBlue, trend: .up),
+                    AssetExposureMetric(id: 102, title: "성장주", percent: 36, symbol: "sparkles", color: .policyPurple, trend: .up),
+                    AssetExposureMetric(id: 103, title: "금리/채권", percent: 16, symbol: "building.columns.fill", color: .policyAmber, trend: .stable)
+                ],
+                hiddenBets: [
+                    HiddenAssetBet(
+                        id: 101,
+                        title: "반도체·성장주 동시 노출",
+                        assets: "QQQ·엔비디아·마이크로소프트",
+                        percent: "48%",
+                        note: "금리와 수출 규제 뉴스에 같이 반응할 가능성이 커요.",
+                        color: .electricBlue
+                    )
+                ]
+            ),
+            AssetAccount(
+                id: 2,
+                brokerName: "토스증권",
+                accountName: "해외주식",
+                accountNumber: "2038419201",
+                totalAmount: "₩5,000,000",
+                cashAmount: "₩1,000,000",
+                profitSummary: "+12.3%",
+                profitColor: .policyCoral,
+                symbol: "bolt.horizontal.circle.fill",
+                tint: .electricBlue,
+                policyTags: [
+                    AssetPolicyTag(id: 201, title: "채권 영향: 강함", color: .emerald),
+                    AssetPolicyTag(id: 202, title: "방어자산 영향: 보통", color: .policyAmber)
+                ],
+                holdings: [
+                    AssetHoldingRow(
+                        id: 201,
+                        name: "TIGER 국채3년",
+                        weight: "11.8%",
+                        amount: "₩1,600,000",
+                        tags: [
+                            AssetPolicyTag(id: 2011, title: "채권 영향: 강함", color: .electricBlue),
+                            AssetPolicyTag(id: 2012, title: "금리 하락 시 손실 영향: 보통", color: .policyCoral)
+                        ]
+                    ),
+                    AssetHoldingRow(
+                        id: 202,
+                        name: "GLD",
+                        weight: "9.2%",
+                        amount: "₩1,250,000",
+                        tags: [
+                            AssetPolicyTag(id: 2021, title: "달러 영향: 보통", color: .emerald),
+                            AssetPolicyTag(id: 2022, title: "방어자산 영향: 강함", color: .emerald)
+                        ]
+                    )
+                ],
+                exposureMetrics: [
+                    AssetExposureMetric(id: 201, title: "금리/채권", percent: 44, symbol: "building.columns.fill", color: .electricBlue, trend: .stable),
+                    AssetExposureMetric(id: 202, title: "달러/환율", percent: 31, symbol: "dollarsign.circle.fill", color: .policyAmber, trend: .down),
+                    AssetExposureMetric(id: 203, title: "방어자산", percent: 25, symbol: "shield.fill", color: .emerald, trend: .stable)
+                ],
+                hiddenBets: [
+                    HiddenAssetBet(
+                        id: 201,
+                        title: "금리와 달러가 함께 작동",
+                        assets: "TIGER국채3년·GLD",
+                        percent: "31%",
+                        note: "금리 발표와 환율 변동을 함께 확인해야 해요.",
+                        color: .policyAmber
+                    )
+                ]
+            )
+        ],
         exposureMetrics: [
             AssetExposureMetric(id: 1, title: "반도체", percent: 42, symbol: "cpu.fill", color: .policyPurple, trend: .up),
             AssetExposureMetric(id: 2, title: "금리/채권", percent: 28, symbol: "building.columns.fill", color: .electricBlue, trend: .stable),

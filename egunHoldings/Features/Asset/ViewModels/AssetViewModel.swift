@@ -5,6 +5,8 @@ import SwiftUI
 final class AssetViewModel: ObservableObject {
     @Published var selectedSegment: AssetSegment = .overview
     @Published var isBrokerConnectionPresented = false
+    @Published var isOverallPolicyDetailPresented = false
+    @Published var selectedAssetAccountId: Int?
     @Published var selectedRecommendationFilter: RebalancingRecommendationFilter = .all
     @Published private(set) var rebalancingLoadState: RebalancingLoadState = .idle
     @Published private(set) var rebalancingDashboard: RebalancingDashboard
@@ -35,6 +37,11 @@ final class AssetViewModel: ObservableObject {
         }
 
         return rebalancingDashboard.recommendations.filter { $0.action == action }
+    }
+
+    var selectedAssetAccount: AssetAccount? {
+        guard let selectedAssetAccountId else { return nil }
+        return dashboard.accounts.first { $0.id == selectedAssetAccountId }
     }
 
     var rebalancingDataStatusText: String {
@@ -68,6 +75,21 @@ final class AssetViewModel: ObservableObject {
 
     func selectSegment(_ segment: AssetSegment) {
         selectedSegment = segment
+    }
+
+    func showOverallPolicyDetail() {
+        selectedAssetAccountId = nil
+        isOverallPolicyDetailPresented = true
+    }
+
+    func selectAssetAccount(_ account: AssetAccount) {
+        isOverallPolicyDetailPresented = false
+        selectedAssetAccountId = account.id
+    }
+
+    func closeAssetDrilldown() {
+        isOverallPolicyDetailPresented = false
+        selectedAssetAccountId = nil
     }
 
     func selectRecommendationFilter(_ filter: RebalancingRecommendationFilter) {

@@ -17,6 +17,11 @@ enum AssetSegment: String, CaseIterable, Identifiable {
 }
 
 struct AssetDashboard {
+    let totalAssetAmount: String
+    let totalProfitSummary: String
+    let totalProfitColor: Color
+    let weeklyAdjustmentNotice: AssetAdjustmentNotice?
+    let accounts: [AssetAccount]
     let exposureMetrics: [AssetExposureMetric]
     let defenseMetrics: [AssetDefenseMetric]
     let holdingRows: [AssetHoldingRow]
@@ -24,6 +29,31 @@ struct AssetDashboard {
     let rebalanceModes: [AssetRebalanceModeRow]
     let constraints: [AssetConstraint]
     let scenarios: [AssetScenarioChange]
+}
+
+struct AssetAdjustmentNotice: Identifiable {
+    let id: Int
+    let title: String
+    let summary: String
+    let count: Int
+    let color: Color
+}
+
+struct AssetAccount: Identifiable {
+    let id: Int
+    let brokerName: String
+    let accountName: String
+    let accountNumber: String
+    let totalAmount: String
+    let cashAmount: String
+    let profitSummary: String
+    let profitColor: Color
+    let symbol: String
+    let tint: Color
+    let policyTags: [AssetPolicyTag]
+    let holdings: [AssetHoldingRow]
+    let exposureMetrics: [AssetExposureMetric]
+    let hiddenBets: [HiddenAssetBet]
 }
 
 struct AssetExposureMetric: Identifiable {

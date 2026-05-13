@@ -22,7 +22,11 @@ struct AssetView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AssetHeaderView()
+            AssetHeaderView(
+                totalAmount: viewModel.dashboard.totalAssetAmount,
+                profitSummary: viewModel.dashboard.totalProfitSummary,
+                profitColor: viewModel.dashboard.totalProfitColor
+            )
                 .padding(.horizontal, KDXSpacing.screenHorizontal)
                 .padding(.top, 14)
                 .padding(.bottom, 14)
@@ -57,6 +61,14 @@ struct AssetView: View {
         PFContentScrollView(spacing: 20, topPadding: 4, scrollsToTopOnAppear: true) {
             AssetExposureOverviewSection(
                 dashboard: viewModel.dashboard,
+                selectedAccount: viewModel.selectedAssetAccount,
+                isOverallPolicyDetailPresented: viewModel.isOverallPolicyDetailPresented,
+                onShowOverallPolicyDetail: viewModel.showOverallPolicyDetail,
+                onSelectAccount: viewModel.selectAssetAccount,
+                onBackToAccounts: viewModel.closeAssetDrilldown,
+                onShowRebalancing: {
+                    viewModel.selectSegment(.rebalance)
+                },
                 onBrokerConnectionTap: viewModel.presentBrokerConnection
             )
         }
