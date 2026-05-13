@@ -78,10 +78,35 @@ struct PolicyNewsItem: Identifiable, Equatable, Hashable, Sendable {
     let publishedAt: Date
     let title: String
     let summary: String
+    let articleBody: String?
     let sourceName: String
     let sourceURL: URL?
     let relatedTickers: [String]
     let sentiment: PolicyNewsSentiment
+
+    nonisolated init(
+        id: String,
+        category: PolicyNewsCategory,
+        publishedAt: Date,
+        title: String,
+        summary: String,
+        articleBody: String? = nil,
+        sourceName: String,
+        sourceURL: URL?,
+        relatedTickers: [String],
+        sentiment: PolicyNewsSentiment
+    ) {
+        self.id = id
+        self.category = category
+        self.publishedAt = publishedAt
+        self.title = title
+        self.summary = summary
+        self.articleBody = articleBody
+        self.sourceName = sourceName
+        self.sourceURL = sourceURL
+        self.relatedTickers = relatedTickers
+        self.sentiment = sentiment
+    }
 }
 
 struct PolicyNewsInsight: Equatable, Sendable {

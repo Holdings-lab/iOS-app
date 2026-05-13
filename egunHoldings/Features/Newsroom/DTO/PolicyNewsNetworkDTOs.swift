@@ -54,6 +54,10 @@ nonisolated struct PolicyNewsCardDTO: Decodable, Sendable {
     let docType: String?
     let title: String
     let bodySummary: String?
+    let body: String?
+    let fullText: String?
+    let articleBody: String?
+    let content: String?
     let link: String?
     let sentiment: PolicyNewsCardSentimentDTO?
     let modelSignal: PolicyNewsCardModelSignalDTO?
@@ -65,6 +69,7 @@ nonisolated struct PolicyNewsCardDTO: Decodable, Sendable {
             publishedAt: Self.parseDate(date) ?? Date(),
             title: title,
             summary: bodySummary ?? "",
+            articleBody: Self.firstNonBlank(body, fullText, articleBody, content),
             sourceName: Self.sourceName(category: category, docType: docType, fallback: defaultSourceName),
             sourceURL: link.flatMap(URL.init(string:)),
             relatedTickers: [defaultTicker, modelSignal?.clusterLabel].compactMap { $0 }.filter { !$0.isEmpty },
@@ -82,6 +87,12 @@ nonisolated struct PolicyNewsCardDTO: Decodable, Sendable {
         }
 
         return fallback ?? "Policy Feed"
+    }
+
+    private static func firstNonBlank(_ values: String?...) -> String? {
+        values
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty }
     }
 
     private static func parseDate(_ value: String?) -> Date? {

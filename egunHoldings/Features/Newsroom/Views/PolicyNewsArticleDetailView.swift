@@ -147,18 +147,29 @@ struct PolicyNewsArticleDetailView: View {
         VStack(alignment: .leading, spacing: 14) {
             NewsArticleSectionHeader(
                 title: "전문 보기",
-                subtitle: "중요 문장만 하이라이트",
+                subtitle: article.paragraphs.isEmpty ? "원문 링크에서 확인" : "중요 문장만 하이라이트",
                 iconName: "doc.plaintext",
                 tint: Color.electricBlue
             )
 
-            VStack(alignment: .leading, spacing: 16) {
-                ForEach(Array(article.paragraphs.enumerated()), id: \.offset) { _, paragraph in
-                    Text(highlighted(paragraph))
-                        .font(.pretendard(15, weight: .medium))
-                        .foregroundStyle(Color.textSecondary)
-                        .lineSpacing(7)
-                        .fixedSize(horizontal: false, vertical: true)
+            if article.paragraphs.isEmpty {
+                ArticleBodyUnavailableCard(
+                    hasSourceURL: item.sourceURL != nil,
+                    onOpenSource: {
+                        if let sourceURL = item.sourceURL {
+                            openURL(sourceURL)
+                        }
+                    }
+                )
+            } else {
+                VStack(alignment: .leading, spacing: 16) {
+                    ForEach(Array(article.paragraphs.enumerated()), id: \.offset) { _, paragraph in
+                        Text(highlighted(paragraph))
+                            .font(.pretendard(15, weight: .medium))
+                            .foregroundStyle(Color.textSecondary)
+                            .lineSpacing(7)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
         }
@@ -287,6 +298,39 @@ private struct NewsArticleBulletRow: View {
     }
 }
 
+private struct ArticleBodyUnavailableCard: View {
+    let hasSourceURL: Bool
+    let onOpenSource: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("기사 전문 데이터가 아직 제공되지 않았어요")
+                .font(.pretendard(15, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
+
+            Text("전문 보기는 서버가 실제 기사 본문을 내려줄 때 그대로 표시합니다. 현재는 요약과 원문 링크만 확인할 수 있어요.")
+                .font(.pretendard(13, weight: .medium))
+                .foregroundStyle(Color.textSecondary)
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: onOpenSource) {
+                Label(hasSourceURL ? "원문에서 전문 보기" : "원문 링크 없음", systemImage: "arrow.up.forward.square")
+                    .font(.pretendard(13, weight: .bold))
+                    .foregroundStyle(hasSourceURL ? Color.electricBlue : Color.textDisabled)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 42)
+                    .background(Color.electricBlue.opacity(hasSourceURL ? 0.10 : 0.04), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(PressScaleButtonStyle())
+            .disabled(!hasSourceURL)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color.subtle.opacity(0.66), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
 private struct NewsArticleCategoryBadge: View {
     let category: PolicyNewsCategory
 
@@ -311,43 +355,12 @@ private struct NewsroomArticleDetailContent {
 
     static func make(for item: PolicyNewsItem) -> NewsroomArticleDetailContent {
         let tickers = item.relatedTickers.joined(separator: ", ")
-        let relatedAssetText = tickers.isEmpty ? "관련 자산의 직접 영향은 제한적으로 확인됩니다." : "\(tickers) 관련 흐름이 함께 언급됐습니다."
-        let sourceText = "\(item.sourceName)은 \(item.category.title) 이슈가 시장 심리에 미치는 영향을 전했습니다."
-
-        let summaryBullets = [
-            item.summary,
-            relatedAssetText,
-            item.sentiment == .caution ? "단기 변동성이 커질 수 있어 원문 수치와 일정을 확인할 필요가 있습니다." : "단기 반응보다 실제 발표 수치와 집행 일정을 함께 확인하는 편이 좋습니다."
-        ]
-
-        let categoryContext: String
-        switch item.category {
-        case .semiconductor:
-            categoryContext = "반도체 업종은 보조금, 수출 규제, 설비투자 뉴스에 민감하게 반응합니다. 특히 장비와 소재 공급망까지 기대가 번질 경우 ETF 거래대금이 함께 늘어날 수 있습니다."
-        case .interestRate:
-            categoryContext = "금리 뉴스는 결정 자체보다 발표문 문구와 시장의 다음 인하 시점 해석이 중요합니다. 은행주, 채권, 환율이 서로 다른 속도로 반응할 수 있습니다."
-        case .energy:
-            categoryContext = "에너지 정책은 예산 배정과 실제 집행 일정에 따라 수혜 범위가 달라집니다. 전력망, 재생에너지, 저장장치처럼 세부 산업별 반응도 분리해서 볼 필요가 있습니다."
-        case .macro:
-            categoryContext = "거시경제 지표는 주식, 달러, 금리 기대를 동시에 움직입니다. 첫 반응은 되돌림이 잦기 때문에 수치와 시장 예상치의 차이를 같이 확인해야 합니다."
-        case .finance:
-            categoryContext = "금융 뉴스는 예금 금리, 대출 비용, 은행주 수익성에 동시에 영향을 줄 수 있습니다. 숫자보다 시행 시점과 적용 범위를 확인하는 것이 우선입니다."
-        case .ai:
-            categoryContext = "AI 규제와 가이드라인은 플랫폼, 반도체, 클라우드 기업의 투자 심리에 영향을 줄 수 있습니다. 다만 실제 매출 변화로 이어지는 데에는 시간이 필요합니다."
-        }
-
-        let paragraphs = [
-            sourceText + " 이번 기사에서 가장 먼저 볼 부분은 \(item.summary)",
-            categoryContext,
-            "기사에 따르면 \(relatedAssetText) 다만 같은 업종 안에서도 기업별 노출도와 수혜 시점은 달라질 수 있어 제목만으로 방향을 단정하기는 어렵습니다.",
-            "전문을 읽을 때는 발표 주체, 시행 시점, 실제 금액이나 수치가 확인됐는지 순서대로 보는 것이 좋습니다. 이미 가격이 먼저 움직인 경우에는 추가 뉴스보다 거래대금과 변동성 확대 여부가 더 중요한 확인 지점입니다."
-        ]
+        let summaryBullets = Self.summarySentences(from: item.summary)
+        let paragraphs = Self.articleParagraphs(from: item.articleBody)
 
         let highlights = [
             item.summary,
-            relatedAssetText,
-            "발표 주체, 시행 시점, 실제 금액이나 수치",
-            "제목만으로 방향을 단정하기는 어렵습니다"
+            tickers
         ] + item.relatedTickers
 
         return NewsroomArticleDetailContent(
@@ -355,6 +368,29 @@ private struct NewsroomArticleDetailContent {
             paragraphs: paragraphs,
             highlightPhrases: highlights
         )
+    }
+
+    private static func summarySentences(from summary: String) -> [String] {
+        let sentences = summary
+            .split(whereSeparator: { ".!?。！？".contains($0) })
+            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        if sentences.isEmpty {
+            let trimmedSummary = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmedSummary.isEmpty ? ["요약 데이터가 아직 제공되지 않았어요."] : [trimmedSummary]
+        }
+
+        return Array(sentences.prefix(3))
+    }
+
+    private static func articleParagraphs(from articleBody: String?) -> [String] {
+        guard let articleBody else { return [] }
+
+        return articleBody
+            .components(separatedBy: CharacterSet.newlines)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 }
 
