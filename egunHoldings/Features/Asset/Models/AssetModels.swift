@@ -16,6 +16,20 @@ enum AssetSegment: String, CaseIterable, Identifiable {
     }
 }
 
+enum AssetNavigationDestination: Hashable, Identifiable {
+    case overallPolicy
+    case account(Int)
+
+    var id: String {
+        switch self {
+        case .overallPolicy:
+            return "overall-policy"
+        case .account(let accountId):
+            return "account-\(accountId)"
+        }
+    }
+}
+
 struct AssetDashboard {
     let totalAssetAmount: String
     let totalProfitSummary: String

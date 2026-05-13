@@ -22,10 +22,7 @@ struct AssetView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if viewModel.isAssetDetailPresented == false {
-                topChrome
-                    .transition(topChromeTransition)
-            }
+            topChrome
 
             Group {
                 switch viewModel.selectedSegment {
@@ -38,7 +35,12 @@ struct AssetView: View {
             .animation(pageTransitionAnimation, value: viewModel.selectedSegment)
         }
         .policyFinanceLightTabChrome()
-        .animation(pageTransitionAnimation, value: viewModel.isAssetDetailPresented)
+        .navigationDestination(item: $viewModel.navigationDestination) { destination in
+            AssetExposureDestinationView(
+                destination: destination,
+                dashboard: viewModel.dashboard
+            )
+        }
         .sheet(isPresented: $viewModel.isBrokerConnectionPresented) {
             BrokerConnectionStubView(onDismiss: viewModel.dismissBrokerConnection)
                 .presentationDetents([.medium])
@@ -71,17 +73,17 @@ struct AssetView: View {
     private var overviewContent: some View {
         PFContentScrollView(
             spacing: 20,
-            topPadding: viewModel.isAssetDetailPresented ? 14 : 4,
+            topPadding: 4,
             scrollsToTopOnAppear: true
         ) {
             AssetExposureOverviewSection(
                 dashboard: viewModel.dashboard,
                 weeklyAdjustmentNotice: viewModel.weeklyAdjustmentNotice,
-                selectedAccount: viewModel.selectedAssetAccount,
-                isOverallPolicyDetailPresented: viewModel.isOverallPolicyDetailPresented,
+                selectedAccount: nil,
+                isOverallPolicyDetailPresented: false,
                 onShowOverallPolicyDetail: viewModel.showOverallPolicyDetail,
                 onSelectAccount: viewModel.selectAssetAccount,
-                onBackToAccounts: viewModel.closeAssetDrilldown,
+                onBackToAccounts: {},
                 onShowRebalancing: {
                     viewModel.selectSegment(.rebalance)
                 },
@@ -134,13 +136,6 @@ struct AssetView: View {
 
     private var pageTransitionAnimation: Animation {
         .easeInOut(duration: 0.28)
-    }
-
-    private var topChromeTransition: AnyTransition {
-        .asymmetric(
-            insertion: .move(edge: .top).combined(with: .opacity),
-            removal: .move(edge: .top).combined(with: .opacity)
-        )
     }
 }
 

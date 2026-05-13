@@ -12,22 +12,12 @@ struct AssetExposureOverviewSection: View {
     let onBrokerConnectionTap: () -> Void
 
     var body: some View {
-        currentPage
-            .id(pageIdentity)
-            .animation(pageTransitionAnimation, value: pageIdentity)
-    }
-
-    @ViewBuilder
-    private var currentPage: some View {
         if let selectedAccount {
             accountDetailView(selectedAccount)
-                .transition(detailPageTransition)
         } else if isOverallPolicyDetailPresented {
             overallPolicyDetailView
-                .transition(detailPageTransition)
         } else {
             accountOverviewView
-                .transition(overviewPageTransition)
         }
     }
 
@@ -413,30 +403,97 @@ struct AssetExposureOverviewSection: View {
         return "\(metric.title) 정책에 가장 많이 묶여있어요."
     }
 
-    private var pageIdentity: String {
-        if let selectedAccount {
-            return "account-\(selectedAccount.id)"
+}
+
+struct AssetExposureDestinationView: View {
+    let destination: AssetNavigationDestination
+    let dashboard: AssetDashboard
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack {
+            Color.canvas.ignoresSafeArea()
+
+            destinationContent
         }
-
-        return isOverallPolicyDetailPresented ? "overall-detail" : "overview"
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
-    private var pageTransitionAnimation: Animation {
-        .easeInOut(duration: 0.28)
+    @ViewBuilder
+    private var destinationContent: some View {
+        switch destination {
+        case .overallPolicy:
+            detailScrollView(
+                selectedAccount: nil,
+                isOverallPolicyDetailPresented: true
+            )
+        case .account(let accountId):
+            if let account = dashboard.accounts.first(where: { $0.id == accountId }) {
+                detailScrollView(
+                    selectedAccount: account,
+                    isOverallPolicyDetailPresented: false
+                )
+            } else {
+                missingAccountView
+            }
+        }
     }
 
-    private var detailPageTransition: AnyTransition {
-        .asymmetric(
-            insertion: .move(edge: .trailing).combined(with: .opacity),
-            removal: .move(edge: .trailing).combined(with: .opacity)
-        )
+    private func detailScrollView(
+        selectedAccount: AssetAccount?,
+        isOverallPolicyDetailPresented: Bool
+    ) -> some View {
+        PFContentScrollView(
+            spacing: 20,
+            topPadding: 8,
+            bottomPadding: 34,
+            scrollsToTopOnAppear: true,
+            locksHorizontalOverflow: true
+        ) {
+            AssetExposureOverviewSection(
+                dashboard: dashboard,
+                weeklyAdjustmentNotice: nil,
+                selectedAccount: selectedAccount,
+                isOverallPolicyDetailPresented: isOverallPolicyDetailPresented,
+                onShowOverallPolicyDetail: {},
+                onSelectAccount: { _ in },
+                onBackToAccounts: { dismiss() },
+                onShowRebalancing: {},
+                onBrokerConnectionTap: {}
+            )
+        }
     }
 
-    private var overviewPageTransition: AnyTransition {
-        .asymmetric(
-            insertion: .move(edge: .leading).combined(with: .opacity),
-            removal: .move(edge: .leading).combined(with: .opacity)
-        )
+    private var missingAccountView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                LiquidGlassBackButton(action: { dismiss() })
+
+                Spacer()
+
+                Text("계좌")
+                    .font(.pretendard(17, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+
+                Spacer()
+
+                Color.clear
+                    .frame(width: 34, height: 34)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 12)
+
+            Spacer()
+
+            Text("계좌 정보를 찾을 수 없어요.")
+                .font(.pretendard(15, weight: .semibold))
+                .foregroundStyle(Color.textTertiary)
+
+            Spacer()
+        }
     }
 }
 

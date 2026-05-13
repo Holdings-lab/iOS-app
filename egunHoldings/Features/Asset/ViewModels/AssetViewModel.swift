@@ -5,8 +5,7 @@ import SwiftUI
 final class AssetViewModel: ObservableObject {
     @Published var selectedSegment: AssetSegment = .overview
     @Published var isBrokerConnectionPresented = false
-    @Published var isOverallPolicyDetailPresented = false
-    @Published var selectedAssetAccountId: Int?
+    @Published var navigationDestination: AssetNavigationDestination?
     @Published var selectedRecommendationFilter: RebalancingRecommendationFilter = .all
     @Published private(set) var rebalancingLoadState: RebalancingLoadState = .idle
     @Published private(set) var rebalancingDashboard: RebalancingDashboard
@@ -39,13 +38,8 @@ final class AssetViewModel: ObservableObject {
         return rebalancingDashboard.recommendations.filter { $0.action == action }
     }
 
-    var selectedAssetAccount: AssetAccount? {
-        guard let selectedAssetAccountId else { return nil }
-        return dashboard.accounts.first { $0.id == selectedAssetAccountId }
-    }
-
-    var isAssetDetailPresented: Bool {
-        isOverallPolicyDetailPresented || selectedAssetAccountId != nil
+    func account(id: Int) -> AssetAccount? {
+        dashboard.accounts.first { $0.id == id }
     }
 
     var weeklyAdjustmentNotice: AssetAdjustmentNotice? {
@@ -100,8 +94,7 @@ final class AssetViewModel: ObservableObject {
     func selectSegment(_ segment: AssetSegment) {
         withAnimation(Self.pageTransitionAnimation) {
             if segment != .overview {
-                isOverallPolicyDetailPresented = false
-                selectedAssetAccountId = nil
+                navigationDestination = nil
             }
 
             selectedSegment = segment
@@ -109,24 +102,15 @@ final class AssetViewModel: ObservableObject {
     }
 
     func showOverallPolicyDetail() {
-        withAnimation(Self.pageTransitionAnimation) {
-            selectedAssetAccountId = nil
-            isOverallPolicyDetailPresented = true
-        }
+        navigationDestination = .overallPolicy
     }
 
     func selectAssetAccount(_ account: AssetAccount) {
-        withAnimation(Self.pageTransitionAnimation) {
-            isOverallPolicyDetailPresented = false
-            selectedAssetAccountId = account.id
-        }
+        navigationDestination = .account(account.id)
     }
 
     func closeAssetDrilldown() {
-        withAnimation(Self.pageTransitionAnimation) {
-            isOverallPolicyDetailPresented = false
-            selectedAssetAccountId = nil
-        }
+        navigationDestination = nil
     }
 
     func selectRecommendationFilter(_ filter: RebalancingRecommendationFilter) {
