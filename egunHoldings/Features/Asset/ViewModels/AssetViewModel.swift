@@ -98,26 +98,35 @@ final class AssetViewModel: ObservableObject {
     }
 
     func selectSegment(_ segment: AssetSegment) {
-        if segment != .overview {
-            closeAssetDrilldown()
-        }
+        withAnimation(Self.pageTransitionAnimation) {
+            if segment != .overview {
+                isOverallPolicyDetailPresented = false
+                selectedAssetAccountId = nil
+            }
 
-        selectedSegment = segment
+            selectedSegment = segment
+        }
     }
 
     func showOverallPolicyDetail() {
-        selectedAssetAccountId = nil
-        isOverallPolicyDetailPresented = true
+        withAnimation(Self.pageTransitionAnimation) {
+            selectedAssetAccountId = nil
+            isOverallPolicyDetailPresented = true
+        }
     }
 
     func selectAssetAccount(_ account: AssetAccount) {
-        isOverallPolicyDetailPresented = false
-        selectedAssetAccountId = account.id
+        withAnimation(Self.pageTransitionAnimation) {
+            isOverallPolicyDetailPresented = false
+            selectedAssetAccountId = account.id
+        }
     }
 
     func closeAssetDrilldown() {
-        isOverallPolicyDetailPresented = false
-        selectedAssetAccountId = nil
+        withAnimation(Self.pageTransitionAnimation) {
+            isOverallPolicyDetailPresented = false
+            selectedAssetAccountId = nil
+        }
     }
 
     func selectRecommendationFilter(_ filter: RebalancingRecommendationFilter) {
@@ -169,4 +178,6 @@ final class AssetViewModel: ObservableObject {
     private static func errorMessage(for error: Error) -> String {
         AppVocabulary.ErrorMessage.userFacing(for: error)
     }
+
+    private static let pageTransitionAnimation = Animation.easeInOut(duration: 0.28)
 }

@@ -12,14 +12,22 @@ struct AssetExposureOverviewSection: View {
     let onBrokerConnectionTap: () -> Void
 
     var body: some View {
-        VStack(spacing: 20) {
-            if let selectedAccount {
-                accountDetailView(selectedAccount)
-            } else if isOverallPolicyDetailPresented {
-                overallPolicyDetailView
-            } else {
-                accountOverviewView
-            }
+        currentPage
+            .id(pageIdentity)
+            .animation(pageTransitionAnimation, value: pageIdentity)
+    }
+
+    @ViewBuilder
+    private var currentPage: some View {
+        if let selectedAccount {
+            accountDetailView(selectedAccount)
+                .transition(detailPageTransition)
+        } else if isOverallPolicyDetailPresented {
+            overallPolicyDetailView
+                .transition(detailPageTransition)
+        } else {
+            accountOverviewView
+                .transition(overviewPageTransition)
         }
     }
 
@@ -403,6 +411,32 @@ struct AssetExposureOverviewSection: View {
         }
 
         return "\(metric.title) 정책에 가장 많이 묶여있어요."
+    }
+
+    private var pageIdentity: String {
+        if let selectedAccount {
+            return "account-\(selectedAccount.id)"
+        }
+
+        return isOverallPolicyDetailPresented ? "overall-detail" : "overview"
+    }
+
+    private var pageTransitionAnimation: Animation {
+        .easeInOut(duration: 0.28)
+    }
+
+    private var detailPageTransition: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .trailing).combined(with: .opacity)
+        )
+    }
+
+    private var overviewPageTransition: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: .leading).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+        )
     }
 }
 

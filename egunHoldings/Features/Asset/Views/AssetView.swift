@@ -23,21 +23,8 @@ struct AssetView: View {
     var body: some View {
         VStack(spacing: 0) {
             if viewModel.isAssetDetailPresented == false {
-                AssetHeaderView(
-                    totalAmount: viewModel.dashboard.totalAssetAmount,
-                    profitSummary: viewModel.dashboard.totalProfitSummary,
-                    profitColor: viewModel.dashboard.totalProfitColor
-                )
-                    .padding(.horizontal, KDXSpacing.screenHorizontal)
-                    .padding(.top, 14)
-                    .padding(.bottom, 14)
-
-                AssetSegmentControl(
-                    selectedSegment: $viewModel.selectedSegment,
-                    onSelect: viewModel.selectSegment
-                )
-                .padding(.horizontal, KDXSpacing.screenHorizontal)
-                .padding(.bottom, 12)
+                topChrome
+                    .transition(topChromeTransition)
             }
 
             Group {
@@ -48,14 +35,36 @@ struct AssetView: View {
                     rebalanceContent
                 }
             }
+            .animation(pageTransitionAnimation, value: viewModel.selectedSegment)
         }
         .policyFinanceLightTabChrome()
+        .animation(pageTransitionAnimation, value: viewModel.isAssetDetailPresented)
         .sheet(isPresented: $viewModel.isBrokerConnectionPresented) {
             BrokerConnectionStubView(onDismiss: viewModel.dismissBrokerConnection)
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.elevated)
                 .presentationCornerRadius(KDXRadius.bottomSheet)
+        }
+    }
+
+    private var topChrome: some View {
+        VStack(spacing: 0) {
+            AssetHeaderView(
+                totalAmount: viewModel.dashboard.totalAssetAmount,
+                profitSummary: viewModel.dashboard.totalProfitSummary,
+                profitColor: viewModel.dashboard.totalProfitColor
+            )
+            .padding(.horizontal, KDXSpacing.screenHorizontal)
+            .padding(.top, 14)
+            .padding(.bottom, 14)
+
+            AssetSegmentControl(
+                selectedSegment: $viewModel.selectedSegment,
+                onSelect: viewModel.selectSegment
+            )
+            .padding(.horizontal, KDXSpacing.screenHorizontal)
+            .padding(.bottom, 12)
         }
     }
 
@@ -121,6 +130,17 @@ struct AssetView: View {
                 )
             }
         }
+    }
+
+    private var pageTransitionAnimation: Animation {
+        .easeInOut(duration: 0.28)
+    }
+
+    private var topChromeTransition: AnyTransition {
+        .asymmetric(
+            insertion: .move(edge: .top).combined(with: .opacity),
+            removal: .move(edge: .top).combined(with: .opacity)
+        )
     }
 }
 
