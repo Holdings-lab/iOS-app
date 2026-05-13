@@ -65,13 +65,13 @@ final class TodayViewModel: ObservableObject {
     var connectionStatusText: String {
         switch loadState {
         case .idle:
-            return "Mock 데이터 사용 중"
+            return "예시 데이터 사용 중"
         case .loading:
             return "서버 동기화 중"
         case .loaded:
             return "서버 데이터 연결됨"
         case .usingFallback:
-            return "Mock 데이터 사용 중"
+            return "예시 데이터 사용 중"
         }
     }
 
@@ -80,12 +80,12 @@ final class TodayViewModel: ObservableObject {
         case .loaded:
             return "서버에서 받은 Today 브리핑과 읽기 전용 보유 자산을 기준으로 구성합니다."
         case .loading:
-            return "현재 서버 데이터를 동기화하고 있습니다. 동기화 전까지는 마지막 mock 브리핑을 보여줍니다."
+            return "현재 서버 데이터를 동기화하고 있습니다. 동기화 전까지는 마지막 예시 브리핑을 보여줍니다."
         case .usingFallback(let message):
-            return message.map { "서버 연결 실패로 mock 브리핑을 유지합니다. \($0)" }
-                ?? "Mock 데이터를 사용 중입니다. 실제 계좌 연결 시 실계좌 기준 분석으로 전환됩니다."
+            return message.map { "\($0)" }
+                ?? "예시 데이터를 사용 중입니다. 실제 계좌 연결 시 실계좌 기준 분석으로 전환됩니다."
         case .idle:
-            return "Mock 데이터를 사용 중입니다. 실제 계좌 연결 시 실계좌 기준 분석으로 전환됩니다."
+            return "예시 데이터를 사용 중입니다. 실제 계좌 연결 시 실계좌 기준 분석으로 전환됩니다."
         }
     }
 
@@ -157,11 +157,7 @@ final class TodayViewModel: ObservableObject {
     }
 
     private static func errorMessage(for error: Error) -> String {
-        if let networkError = error as? NetworkError {
-            return networkError.localizedDescription
-        }
-
-        return error.localizedDescription
+        AppVocabulary.ErrorMessage.userFacing(for: error)
     }
 
     private static func rankByImpact(_ policies: [TodayPolicyEvent]) -> [TodayPolicyEvent] {

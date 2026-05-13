@@ -287,7 +287,7 @@ final class SignalViewModel: ObservableObject {
         let outcomeGuidance = "수수료 반영 순효과는 \(netImprovementText)%p, 비관 시나리오에서는 \(pessimisticScenarioText)%로 예상돼요."
         let fxGuidance: String
         if usdExposureAmount > 0 {
-            fxGuidance = "달러 노출이 있어 환율이 10원 움직이면 평가금액이 약 \(currencyText(fx10WonImpactKRW)) 변할 수 있어요."
+            fxGuidance = "달러 노출이 있어 환율이 10원 움직이면 보유 금액이 약 \(currencyText(fx10WonImpactKRW)) 변할 수 있어요."
         } else {
             fxGuidance = "원화 자산 비중이 높아 환율 변동 영향은 제한적이에요."
         }

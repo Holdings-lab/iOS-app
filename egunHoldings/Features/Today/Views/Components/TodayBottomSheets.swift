@@ -39,8 +39,8 @@ struct SettingsSheet: View {
             ("person.circle", "계정 정보", "투자자님"),
             ("bell", "알림 설정", "3개 활성화"),
             ("building.columns", "증권사 연결 관리", connectedBrokerText),
-            ("chart.bar", "데이터 출처", "정책 브리핑 Mock"),
-            ("info.circle", "투자 권유 아님 안내", "")
+            ("chart.bar", "데이터 출처", "정책 브리핑 예시"),
+            ("info.circle", "투자 추천 아님 안내", "")
         ]
     }
 
@@ -272,7 +272,7 @@ struct QuickReasonSheet: View {
                         Image(systemName: "shield")
                             .font(.system(size: 11))
                             .foregroundStyle(PSColor.textFaint)
-                        Text("이 판단은 정보 제공 목적이며 투자 권유가 아닙니다.")
+                        Text("이 판단은 정보 제공 목적이며 투자 추천이 아닙니다.")
                             .font(PSFont.caption())
                             .foregroundStyle(PSColor.textFaint)
                             .fixedSize(horizontal: false, vertical: true)

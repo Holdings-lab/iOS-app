@@ -105,7 +105,7 @@ final class AppNotificationCenter: ObservableObject {
     }
 
     func updateRemoteRegistrationError(_ error: Error) {
-        remoteRegistrationError = error.localizedDescription
+        remoteRegistrationError = AppVocabulary.ErrorMessage.userFacing(for: error)
     }
 
     func markAsRead(_ item: AppNotificationItem) {

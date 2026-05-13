@@ -365,7 +365,7 @@ private struct BrokerageConnectionReviewSheet: View {
                             ReviewBulletRow(
                                 icon: "chart.bar.doc.horizontal",
                                 title: "잔고 조회",
-                                description: "총 평가금액과 현금 비중을 불러옵니다."
+                                description: "총 보유 금액과 현금 비중을 불러옵니다."
                             )
                             ReviewBulletRow(
                                 icon: "list.bullet.rectangle",

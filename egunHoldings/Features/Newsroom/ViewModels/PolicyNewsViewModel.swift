@@ -213,14 +213,12 @@ final class PolicyNewsViewModel: ObservableObject {
     private func makeErrorMessage(for error: Error, fallback: String) -> String {
         if let networkError = error as? NetworkError {
             switch networkError {
-            case .apiFailure(_, _, let message):
-                return message
-            case .httpStatus(let statusCode):
-                return "서버 응답이 올바르지 않았어요. 상태 코드: \(statusCode)"
+            case .apiFailure, .httpStatus:
+                return AppVocabulary.ErrorMessage.userFacing(for: networkError, fallback: fallback)
             case .invalidURL:
-                return "백엔드 주소 설정이 올바르지 않아요."
+                return AppVocabulary.ErrorMessage.unknown
             default:
-                return fallback
+                return AppVocabulary.ErrorMessage.userFacing(for: networkError, fallback: fallback)
             }
         }
 

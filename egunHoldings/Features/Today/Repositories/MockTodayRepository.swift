@@ -37,8 +37,8 @@ nonisolated struct MockTodayRepository: TodayRepositoryProtocol {
             noActionWatchCondition: TodayMockData.noActionWatchCondition,
             primaryCheckpointText: TodayMockData.checkpoints.first?.text ?? judgment.invalidationCondition,
             dataUpdatedAt: topPolicy?.updatedAt ?? "오전 11:24",
-            dataSources: ["Mock 데이터"],
-            aiSummaryStatus: "Mock 브리핑"
+            dataSources: ["예시 데이터"],
+            aiSummaryStatus: "예시 브리핑"
         )
     }
 }

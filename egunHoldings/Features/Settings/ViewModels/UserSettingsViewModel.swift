@@ -164,11 +164,7 @@ final class UserSettingsViewModel: ObservableObject {
     }
 
     private static func errorMessage(for error: Error) -> String {
-        if let networkError = error as? NetworkError {
-            return networkError.localizedDescription
-        }
-
-        return error.localizedDescription
+        AppVocabulary.ErrorMessage.userFacing(for: error)
     }
 }
 

@@ -155,7 +155,7 @@ private enum BrokerageSyncStage {
         case .authentication:
             return "읽기 전용 연결 상태를 검증하고 있어요."
         case .balance:
-            return "총 평가금액과 현금 비중을 불러오는 중입니다."
+            return "총 보유 금액과 현금 비중을 불러오는 중입니다."
         case .holdings:
             return "보유 ETF와 종목을 분석 화면에 반영할 준비를 하고 있어요."
         }

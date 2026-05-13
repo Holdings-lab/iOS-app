@@ -19,21 +19,19 @@ extension NetworkError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notImplemented:
-            return "아직 구현되지 않은 네트워크 요청입니다."
+            return AppVocabulary.ErrorMessage.serverFallback
         case .invalidURL:
-            return "요청 주소가 올바르지 않습니다."
+            return AppVocabulary.ErrorMessage.unknown
         case .invalidResponse:
-            return "서버 응답이 올바르지 않습니다."
-        case .httpStatus(let statusCode):
-            return "서버 응답 상태 코드가 올바르지 않습니다. 상태 코드: \(statusCode)"
-        case .apiFailure(_, _, let message):
-            return message
+            return AppVocabulary.ErrorMessage.serverFallback
+        case .httpStatus, .apiFailure:
+            return AppVocabulary.ErrorMessage.userFacing(for: self)
         case .emptyResult:
-            return "응답 데이터가 비어 있습니다."
+            return AppVocabulary.ErrorMessage.serverFallback
         case .decodingFailed:
-            return "응답 데이터를 해석하지 못했습니다."
+            return AppVocabulary.ErrorMessage.serverFallback
         case .missingRefreshToken:
-            return "리프레시 토큰이 없습니다."
+            return AppVocabulary.ErrorMessage.loginExpired
         }
     }
 }

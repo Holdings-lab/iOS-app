@@ -177,7 +177,7 @@ struct NewsInvestmentDisclaimer: View {
                 .foregroundStyle(Color.mutedForeground.opacity(0.25))
                 .padding(.top, 2)
 
-            Text("이 해설은 투자 권유가 아니며, 정책 변화에 대한 해석입니다.")
+            Text("이 해설은 투자 추천이 아니며, 정책 변화에 대한 해석입니다.")
                 .font(.pretendard(11, weight: .medium))
                 .foregroundStyle(Color.mutedForeground.opacity(0.3))
                 .lineSpacing(3)

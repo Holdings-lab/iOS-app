@@ -16,7 +16,7 @@ struct AssetExposureOverviewSection: View {
 
     private var exposureSummaryGrid: some View {
         VStack(alignment: .leading, spacing: 12) {
-            AssetSectionTitle("정책 노출도 요약")
+            AssetSectionTitle(AppVocabulary.Asset.exposureSummary)
 
             LazyVGrid(columns: twoColumnGrid, spacing: 10) {
                 ForEach(dashboard.exposureMetrics) { metric in
@@ -28,7 +28,7 @@ struct AssetExposureOverviewSection: View {
 
     private var defenseConcentrationCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            AssetSectionTitle("방어력·집중도")
+            AssetSectionTitle(AppVocabulary.Asset.defenseConcentration)
 
             LazyVGrid(columns: twoColumnGrid, spacing: 10) {
                 ForEach(dashboard.defenseMetrics) { metric in
@@ -54,7 +54,7 @@ struct AssetExposureOverviewSection: View {
 
     private var assetPolicyMatrix: some View {
         VStack(alignment: .leading, spacing: 12) {
-            AssetSectionTitle("자산-정책 매트릭스")
+            AssetSectionTitle(AppVocabulary.Asset.policyMatrix)
 
             VStack(spacing: 10) {
                 ForEach(dashboard.holdingRows) { row in
@@ -71,7 +71,7 @@ struct AssetExposureOverviewSection: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color.policyAmber)
 
-                Text("숨은 정책 베팅")
+                Text(AppVocabulary.Asset.hiddenPolicyBets)
                     .font(.pretendard(15, weight: .semibold))
                     .foregroundStyle(Color.textPrimary)
             }

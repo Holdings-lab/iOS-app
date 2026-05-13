@@ -66,7 +66,7 @@ struct UserSettingsView: View {
             SettingsDivider()
             SettingsNavigationLink(
                 iconName: "slider.horizontal.3",
-                title: "투자 성향과 리밸런싱 기준",
+                title: "투자 성향과 조정 기준",
                 value: viewModel.settings.rebalancing.investmentProfile.displayName
             ) {
                 RebalancingSettingsDetailView(viewModel: viewModel)
@@ -206,7 +206,7 @@ struct UserSettingsView: View {
             SettingsDivider()
             SettingsNavigationLink(
                 iconName: "info.circle.fill",
-                title: "투자 권유 아님 안내"
+                title: "투자 추천 아님 안내"
             ) {
                 InvestmentDisclaimerSettingsDetailView(viewModel: viewModel)
             }

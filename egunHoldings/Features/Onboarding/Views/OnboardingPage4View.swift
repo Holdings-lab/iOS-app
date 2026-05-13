@@ -34,7 +34,7 @@ struct OnboardingPage4View: View {
 
             completionSummaryCard
 
-            Text("이 설정은 리밸런싱 추천의 목표 현금 비중, 단일 자산 한도, 매수/매도 민감도에 반영됩니다.")
+            Text("이 설정은 조정 제안의 유지할 현금 비중, 한 자산 최대 비중, 매수/매도 민감도에 반영됩니다.")
                 .font(.pretendard(11, weight: .medium))
                 .foregroundStyle(Color.textTertiary)
                 .multilineTextAlignment(.center)
@@ -94,10 +94,10 @@ struct OnboardingPage4View: View {
 
     private var completionSubtitle: String {
         if viewModel.connectedInstitution == nil {
-            return "계좌는 나중에 연결하고, 선택한 리밸런싱 기준으로 홈을 구성해요"
+            return "계좌는 나중에 연결하고, 선택한 조정 기준으로 홈을 구성해요"
         }
 
-        return "선택한 리밸런싱 기준으로 홈을 구성해요"
+        return "선택한 조정 기준으로 홈을 구성해요"
     }
 
     private func saveAndStart() {
