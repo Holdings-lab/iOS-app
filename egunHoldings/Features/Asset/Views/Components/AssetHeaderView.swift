@@ -16,49 +16,27 @@ struct AssetHeaderView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .center, spacing: 12) {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.electricBlue.opacity(0.12))
-                    .frame(width: 44, height: 44)
-                    .overlay {
-                        Image(systemName: "wallet.pass.fill")
-                            .font(.system(size: 21, weight: .semibold))
-                            .foregroundStyle(Color.electricBlue)
-                    }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("내 자산")
-                        .font(.pretendard(26, weight: .bold))
-                        .foregroundStyle(Color.textPrimary)
-                        .tracking(-0.5)
-
-                    Text("나는 지금 어디에 노출돼 있지?")
-                        .font(.pretendard(13, weight: .medium))
-                        .foregroundStyle(Color.mutedForeground)
-                }
-
-                Spacer()
-            }
+        VStack(alignment: .leading, spacing: 6) {
+            Text("내 자산")
+                .font(.pretendard(25, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
 
             if !totalAmount.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("내 총자산")
-                        .font(.pretendard(12, weight: .semibold))
-                        .foregroundStyle(Color.textTertiary)
-
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(totalAmount)
-                        .font(.pretendard(31, weight: .bold))
+                        .font(.pretendard(29, weight: .bold))
                         .foregroundStyle(Color.textPrimary)
                         .monospacedDigit()
                         .lineLimit(1)
-                        .minimumScaleFactor(0.82)
+                        .minimumScaleFactor(0.78)
 
                     if !profitSummary.isEmpty {
                         Text(profitSummary)
                             .font(.pretendard(13, weight: .bold))
                             .foregroundStyle(profitColor)
                             .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.78)
                     }
                 }
             }

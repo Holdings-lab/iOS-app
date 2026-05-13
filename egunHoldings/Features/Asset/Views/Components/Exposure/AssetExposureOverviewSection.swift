@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AssetExposureOverviewSection: View {
     let dashboard: AssetDashboard
+    let weeklyAdjustmentNotice: AssetAdjustmentNotice?
     let selectedAccount: AssetAccount?
     let isOverallPolicyDetailPresented: Bool
     let onShowOverallPolicyDetail: () -> Void
@@ -26,7 +27,7 @@ struct AssetExposureOverviewSection: View {
         VStack(spacing: 20) {
             portfolioInsightCard
 
-            if let notice = dashboard.weeklyAdjustmentNotice {
+            if let notice = weeklyAdjustmentNotice {
                 adjustmentNoticeCard(notice)
             }
 
@@ -107,13 +108,16 @@ struct AssetExposureOverviewSection: View {
 
                 Spacer(minLength: 0)
 
-                HStack(spacing: 4) {
-                    Text("자세히")
+                HStack(spacing: 5) {
+                    Text("자산별로 보기")
                         .font(.pretendard(12, weight: .bold))
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .bold))
                 }
                 .foregroundStyle(Color.electricBlue)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(Color.electricBlue.opacity(0.1), in: Capsule())
             }
             .padding(16)
             .glassCard()
@@ -244,7 +248,13 @@ struct AssetExposureOverviewSection: View {
                 }
             }
 
-            PolicyTagPillRow(tags: account.policyTags)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("이 계좌의 정책 태그")
+                    .font(.pretendard(11, weight: .semibold))
+                    .foregroundStyle(Color.textTertiary)
+
+                PolicyTagPillRow(tags: account.policyTags)
+            }
         }
         .padding(18)
         .glassCard()
@@ -278,7 +288,13 @@ struct AssetExposureOverviewSection: View {
 
     private func exposureSummaryGrid(metrics: [AssetExposureMetric], title: String) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            AssetSectionTitle(title)
+            VStack(alignment: .leading, spacing: 4) {
+                AssetSectionTitle(title)
+
+                Text("화살표는 지난주 대비 노출 변화입니다.")
+                    .font(.pretendard(11, weight: .medium))
+                    .foregroundStyle(Color.textTertiary)
+            }
 
             LazyVGrid(columns: twoColumnGrid, spacing: 10) {
                 ForEach(metrics) { metric in

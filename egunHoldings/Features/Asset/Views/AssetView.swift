@@ -61,6 +61,7 @@ struct AssetView: View {
         PFContentScrollView(spacing: 20, topPadding: 4, scrollsToTopOnAppear: true) {
             AssetExposureOverviewSection(
                 dashboard: viewModel.dashboard,
+                weeklyAdjustmentNotice: viewModel.weeklyAdjustmentNotice,
                 selectedAccount: viewModel.selectedAssetAccount,
                 isOverallPolicyDetailPresented: viewModel.isOverallPolicyDetailPresented,
                 onShowOverallPolicyDetail: viewModel.showOverallPolicyDetail,
@@ -71,22 +72,15 @@ struct AssetView: View {
                 },
                 onBrokerConnectionTap: viewModel.presentBrokerConnection
             )
+            .task {
+                await viewModel.loadRebalancingIfNeeded()
+            }
         }
     }
 
     private var rebalanceContent: some View {
         GeometryReader { proxy in
             PFContentScrollView(spacing: 20, topPadding: 4, scrollsToTopOnAppear: true) {
-                ExchangeRateSnapshotCard(
-                    viewModel: exchangeRateViewModel,
-                    title: "달러 노출 확인 기준",
-                    caption: "USD/KRW"
-                )
-                .frame(
-                    width: max(0, proxy.size.width - KDXSpacing.screenHorizontal * 2),
-                    alignment: .leading
-                )
-
                 AssetRebalanceSection(
                     dashboard: viewModel.rebalancingDashboard,
                     loadState: viewModel.rebalancingLoadState,
@@ -109,6 +103,16 @@ struct AssetView: View {
                 .task {
                     await viewModel.loadRebalancingIfNeeded()
                 }
+
+                ExchangeRateSnapshotCard(
+                    viewModel: exchangeRateViewModel,
+                    title: "달러 노출 확인 기준",
+                    caption: "USD/KRW"
+                )
+                .frame(
+                    width: max(0, proxy.size.width - KDXSpacing.screenHorizontal * 2),
+                    alignment: .leading
+                )
             }
         }
     }

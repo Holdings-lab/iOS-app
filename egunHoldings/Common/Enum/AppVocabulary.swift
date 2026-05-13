@@ -2,8 +2,8 @@ import Foundation
 
 nonisolated enum AppVocabulary {
     enum Asset {
-        static let policyExposureTab = "정책별 영향 노출"
-        static let rebalancingTab = "이번 주 조정 (정책 기준)"
+        static let policyExposureTab = "정책 노출"
+        static let rebalancingTab = "조정 제안"
         static let exposureSummary = "영향이 큰 정책 TOP"
         static let defenseConcentration = "안전망·쏠림 정도"
         static let policyMatrix = "자산별 정책 영향"
