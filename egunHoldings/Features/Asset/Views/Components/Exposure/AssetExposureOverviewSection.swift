@@ -6,12 +6,40 @@ struct AssetExposureOverviewSection: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            exposureSummaryGrid
-            defenseConcentrationCard
+            exposureInsightCard
             assetPolicyMatrix
             hiddenPolicyBetsCard
+            exposureSummaryGrid
             brokerConnectionCTA
         }
+    }
+
+    private var exposureInsightCard: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: leadingExposureMetric?.symbol ?? "scope")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(leadingExposureMetric?.color ?? Color.electricBlue)
+                .frame(width: 28, height: 28)
+                .background((leadingExposureMetric?.color ?? Color.electricBlue).opacity(0.1), in: Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(exposureInsightText)
+                    .font(.pretendard(15, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if leadingExposureMetric != nil {
+                    Text("아래 보유 자산의 정책 태그를 합산한 결과입니다.")
+                        .font(.pretendard(11, weight: .medium))
+                        .foregroundStyle(Color.mutedForeground)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(16)
+        .glassCard()
     }
 
     private var exposureSummaryGrid: some View {
@@ -24,32 +52,6 @@ struct AssetExposureOverviewSection: View {
                 }
             }
         }
-    }
-
-    private var defenseConcentrationCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            AssetSectionTitle(AppVocabulary.Asset.defenseConcentration)
-
-            LazyVGrid(columns: twoColumnGrid, spacing: 10) {
-                ForEach(dashboard.defenseMetrics) { metric in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(metric.title)
-                            .font(.pretendard(11, weight: .semibold))
-                            .foregroundStyle(Color.mutedForeground)
-
-                        Text(metric.value)
-                            .font(.pretendard(20, weight: .bold))
-                            .foregroundStyle(metric.color)
-                            .monospacedDigit()
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .background(metric.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
-            }
-        }
-        .padding(16)
-        .glassCard()
     }
 
     private var assetPolicyMatrix: some View {
@@ -131,6 +133,20 @@ struct AssetExposureOverviewSection: View {
             GridItem(.flexible(), spacing: 10),
             GridItem(.flexible(), spacing: 10)
         ]
+    }
+
+    private var leadingExposureMetric: AssetExposureMetric? {
+        dashboard.exposureMetrics.max { lhs, rhs in
+            lhs.percent < rhs.percent
+        }
+    }
+
+    private var exposureInsightText: String {
+        guard let metric = leadingExposureMetric else {
+            return "보유 자산의 정책 연결 정도를 확인해 보세요."
+        }
+
+        return "\(metric.title) 정책에 가장 많이 연결돼 있어요."
     }
 }
 
