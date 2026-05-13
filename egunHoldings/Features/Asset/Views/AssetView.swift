@@ -22,21 +22,23 @@ struct AssetView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            AssetHeaderView(
-                totalAmount: viewModel.dashboard.totalAssetAmount,
-                profitSummary: viewModel.dashboard.totalProfitSummary,
-                profitColor: viewModel.dashboard.totalProfitColor
-            )
-                .padding(.horizontal, KDXSpacing.screenHorizontal)
-                .padding(.top, 14)
-                .padding(.bottom, 14)
+            if viewModel.isAssetDetailPresented == false {
+                AssetHeaderView(
+                    totalAmount: viewModel.dashboard.totalAssetAmount,
+                    profitSummary: viewModel.dashboard.totalProfitSummary,
+                    profitColor: viewModel.dashboard.totalProfitColor
+                )
+                    .padding(.horizontal, KDXSpacing.screenHorizontal)
+                    .padding(.top, 14)
+                    .padding(.bottom, 14)
 
-            AssetSegmentControl(
-                selectedSegment: $viewModel.selectedSegment,
-                onSelect: viewModel.selectSegment
-            )
-            .padding(.horizontal, KDXSpacing.screenHorizontal)
-            .padding(.bottom, 12)
+                AssetSegmentControl(
+                    selectedSegment: $viewModel.selectedSegment,
+                    onSelect: viewModel.selectSegment
+                )
+                .padding(.horizontal, KDXSpacing.screenHorizontal)
+                .padding(.bottom, 12)
+            }
 
             Group {
                 switch viewModel.selectedSegment {
@@ -58,7 +60,11 @@ struct AssetView: View {
     }
 
     private var overviewContent: some View {
-        PFContentScrollView(spacing: 20, topPadding: 4, scrollsToTopOnAppear: true) {
+        PFContentScrollView(
+            spacing: 20,
+            topPadding: viewModel.isAssetDetailPresented ? 14 : 4,
+            scrollsToTopOnAppear: true
+        ) {
             AssetExposureOverviewSection(
                 dashboard: viewModel.dashboard,
                 weeklyAdjustmentNotice: viewModel.weeklyAdjustmentNotice,

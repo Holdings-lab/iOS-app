@@ -44,6 +44,10 @@ final class AssetViewModel: ObservableObject {
         return dashboard.accounts.first { $0.id == selectedAssetAccountId }
     }
 
+    var isAssetDetailPresented: Bool {
+        isOverallPolicyDetailPresented || selectedAssetAccountId != nil
+    }
+
     var weeklyAdjustmentNotice: AssetAdjustmentNotice? {
         guard rebalancingLoadState != .idle, rebalancingLoadState != .loading else {
             return nil
@@ -94,6 +98,10 @@ final class AssetViewModel: ObservableObject {
     }
 
     func selectSegment(_ segment: AssetSegment) {
+        if segment != .overview {
+            closeAssetDrilldown()
+        }
+
         selectedSegment = segment
     }
 

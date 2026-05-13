@@ -32,6 +32,12 @@ struct AssetExposureOverviewSection: View {
             }
 
             accountListSection
+
+            hiddenPolicyBetsCard(
+                bets: dashboard.hiddenBets,
+                title: AppVocabulary.Asset.hiddenPolicyBets
+            )
+
             brokerConnectionCTA
         }
     }
