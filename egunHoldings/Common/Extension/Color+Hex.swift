@@ -16,37 +16,41 @@ extension Color {
         self.init(.sRGB, red: r, green: g, blue: b, opacity: alpha)
     }
 
-    // KODEX Light — Surface
-    nonisolated static let canvas       = Color(hex: "F5F6F8")
+    // Stockit Light — Surface
+    nonisolated static let canvas       = Color(hex: "F4F6FB")
     nonisolated static let elevated     = Color.white
-    nonisolated static let subtle       = Color(hex: "F7F8FA")
-    nonisolated static let muted        = Color(hex: "F4F5F7")
-    nonisolated static let divider      = Color(hex: "F0F1F4")
-    nonisolated static let kdxDivider   = Color(hex: "F0F1F4")
-    nonisolated static let hairline     = Color(hex: "ECEEF1")
+    nonisolated static let subtle       = Color(hex: "F4F6FB")
+    nonisolated static let muted        = Color(hex: "EEF1F6")
+    nonisolated static let divider      = Color(hex: "EEF1F6")
+    nonisolated static let kdxDivider   = Color(hex: "EEF1F6")
+    nonisolated static let hairline     = Color(hex: "EEF1F6")
+    nonisolated static let cardShadow   = Color(hex: "0A0E27", alpha: 0.04)
 
-    // KODEX Light — Text
-    nonisolated static let textPrimary    = Color(hex: "0F1115")
-    nonisolated static let textSecondary  = Color(hex: "1A1A1A")
-    nonisolated static let textTertiary   = Color(hex: "6B7280")
-    nonisolated static let textQuaternary = Color(hex: "9AA0A6")
-    nonisolated static let textDisabled   = Color(hex: "B5BAC2")
+    // Stockit Light — Text
+    nonisolated static let textPrimary    = Color(hex: "0A0E27")
+    nonisolated static let textSecondary  = Color(hex: "8B92A8")
+    nonisolated static let textTertiary   = Color(hex: "8B92A8")
+    nonisolated static let textQuaternary = Color(hex: "AEB5C6")
+    nonisolated static let textDisabled   = Color(hex: "C8CEDB")
     nonisolated static let textOnAccent   = Color.white
 
-    // KODEX Light — Brand
-    nonisolated static let brand         = Color(hex: "2566E8")
-    nonisolated static let brandDark     = Color(hex: "0F3FB0")
-    nonisolated static let brandLight    = Color(hex: "5B8DEF")
-    nonisolated static let brandTintBg   = Color(hex: "EEF4FF")
-    nonisolated static let brandChipBg   = Color(hex: "E8EFFD")
-    nonisolated static let brandChipText = Color(hex: "2566E8")
+    // Stockit Light — Brand
+    nonisolated static let brand         = Color(hex: "3461FD")
+    nonisolated static let brandDark     = Color(hex: "2849C8")
+    nonisolated static let brandLight    = Color(hex: "6D92FF")
+    nonisolated static let brandTintBg   = Color(hex: "3461FD", alpha: 0.10)
+    nonisolated static let brandChipBg   = Color(hex: "3461FD", alpha: 0.08)
+    nonisolated static let brandChipText = Color(hex: "3461FD")
 
-    // KODEX Light — Semantic
-    nonisolated static let up            = Color(hex: "E84B4B")
-    nonisolated static let upBg          = Color(hex: "FCEAEA")
-    nonisolated static let down          = Color(hex: "2566E8")
-    nonisolated static let success       = Color(hex: "1F8A4C")
-    nonisolated static let successBg     = Color(hex: "E6F4EC")
+    // Stockit Light — Semantic
+    nonisolated static let trendUp       = Color(hex: "1ECB81")
+    nonisolated static let trendDown     = Color(hex: "F25C5C")
+    nonisolated static let up            = Color.trendDown
+    nonisolated static let upBg          = Color(hex: "F25C5C", alpha: 0.12)
+    nonisolated static let down          = Color.trendDown
+    nonisolated static let downBg        = Color(hex: "F25C5C", alpha: 0.12)
+    nonisolated static let success       = Color.trendUp
+    nonisolated static let successBg     = Color(hex: "1ECB81", alpha: 0.12)
     nonisolated static let warning       = Color(hex: "C58B00")
     nonisolated static let warningBg     = Color(hex: "FFFBEB")
     nonisolated static let warningBorder = Color(hex: "FCE9A6")
@@ -64,7 +68,7 @@ extension Color {
     nonisolated static let emeraldSoft = Color.successBg
     nonisolated static let policyPurple = Color.brandDark
     nonisolated static let policyAmber = Color.warning
-    nonisolated static let policyCoral = Color.up
+    nonisolated static let policyCoral = Color.trendDown
     nonisolated static let policyCyan = Color.brandLight
     nonisolated static let policyGold = Color.kodexYellow
 
@@ -77,5 +81,5 @@ extension Color {
     nonisolated static let midnightTextTertiary = Color.textQuaternary
     nonisolated static let midnightAccent = Color.brand
     nonisolated static let midnightSuccess = Color.success
-    nonisolated static let midnightError = Color.up
+    nonisolated static let midnightError = Color.trendDown
 }
