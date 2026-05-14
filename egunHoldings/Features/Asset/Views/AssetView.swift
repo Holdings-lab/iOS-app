@@ -80,11 +80,13 @@ struct AssetView: View {
 
     private var overviewContent: some View {
         PFContentScrollView(
+            alignment: .leading,
             spacing: PSSpacing.sectionGap,
             horizontalPadding: PSSpacing.screenHorizontal,
             topPadding: 8,
             bottomPadding: 16,
-            scrollsToTopOnAppear: true
+            scrollsToTopOnAppear: true,
+            locksHorizontalOverflow: true
         ) {
             AssetPortfolioOverviewSection(
                 dashboard: viewModel.dashboard,
@@ -188,18 +190,20 @@ private struct AssetPortfolioOverviewSection: View {
     }
 
     private var timeframePills: some View {
-        HStack(spacing: PSSpacing.pillGap) {
-            ForEach(AssetPortfolioTimeframe.allCases) { timeframe in
-                Button {
-                    selectedTimeframe = timeframe
-                } label: {
-                    PSStatusChip(
-                        label: timeframe.rawValue,
-                        color: Color.brand,
-                        isSelected: selectedTimeframe == timeframe
-                    )
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: PSSpacing.pillGap) {
+                ForEach(AssetPortfolioTimeframe.allCases) { timeframe in
+                    Button {
+                        selectedTimeframe = timeframe
+                    } label: {
+                        PSStatusChip(
+                            label: timeframe.rawValue,
+                            color: Color.brand,
+                            isSelected: selectedTimeframe == timeframe
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -245,9 +249,10 @@ private struct AssetPortfolioHoldingRow: View {
             Sparkline(
                 points: sparklinePoints,
                 isUp: isTrendUp,
-                width: 74,
+                width: 68,
                 height: 32
             )
+            .frame(width: 68)
 
             VStack(alignment: .trailing, spacing: 4) {
                 Text(row.amount)
@@ -263,7 +268,7 @@ private struct AssetPortfolioHoldingRow: View {
                     isUp: isTrendUp
                 )
             }
-            .frame(minWidth: 94, alignment: .trailing)
+            .frame(width: 98, alignment: .trailing)
         }
         .frame(height: 64)
     }
