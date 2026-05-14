@@ -31,7 +31,8 @@ struct AssetMockData {
                         tags: [
                             AssetPolicyTag(id: 1011, title: "성장주 영향: 강함", color: .electricBlue),
                             AssetPolicyTag(id: 1012, title: "금리 영향: 보통", color: .policyCoral)
-                        ]
+                        ],
+                        sparklinePoints: [132, 134, 133, 136, 139, 138, 142]
                     ),
                     AssetHoldingRow(
                         id: 102,
@@ -41,7 +42,8 @@ struct AssetMockData {
                         tags: [
                             AssetPolicyTag(id: 1021, title: "반도체 영향: 강함", color: .electricBlue),
                             AssetPolicyTag(id: 1022, title: "미중 갈등 영향: 보통", color: .policyCoral)
-                        ]
+                        ],
+                        sparklinePoints: [218, 224, 221, 236, 241, 238, 249]
                     ),
                     AssetHoldingRow(
                         id: 103,
@@ -51,7 +53,8 @@ struct AssetMockData {
                         tags: [
                             AssetPolicyTag(id: 1031, title: "AI 영향: 강함", color: .electricBlue),
                             AssetPolicyTag(id: 1032, title: "성장주 영향: 보통", color: .electricBlue)
-                        ]
+                        ],
+                        sparklinePoints: [74, 77, 76, 79, 82, 81, 84]
                     )
                 ],
                 exposureMetrics: [
@@ -94,7 +97,8 @@ struct AssetMockData {
                         tags: [
                             AssetPolicyTag(id: 2011, title: "채권 영향: 강함", color: .electricBlue),
                             AssetPolicyTag(id: 2012, title: "금리 하락 시 손실 영향: 보통", color: .policyCoral)
-                        ]
+                        ],
+                        sparklinePoints: [100, 99.8, 100.4, 100.1, 99.6, 99.4, 99.2]
                     ),
                     AssetHoldingRow(
                         id: 202,
@@ -104,7 +108,8 @@ struct AssetMockData {
                         tags: [
                             AssetPolicyTag(id: 2021, title: "달러 영향: 보통", color: .emerald),
                             AssetPolicyTag(id: 2022, title: "방어자산 영향: 강함", color: .emerald)
-                        ]
+                        ],
+                        sparklinePoints: [186, 187, 188.4, 187.8, 190, 191.2, 192]
                     )
                 ],
                 exposureMetrics: [
@@ -145,7 +150,8 @@ struct AssetMockData {
                 tags: [
                     AssetPolicyTag(id: 1, title: "성장주 영향: 강함", color: .electricBlue),
                     AssetPolicyTag(id: 2, title: "금리 영향: 보통", color: .policyCoral)
-                ]
+                ],
+                sparklinePoints: [132, 134, 133, 136, 139, 138, 142]
             ),
             AssetHoldingRow(
                 id: 2,
@@ -155,7 +161,8 @@ struct AssetMockData {
                 tags: [
                     AssetPolicyTag(id: 3, title: "반도체 영향: 강함", color: .electricBlue),
                     AssetPolicyTag(id: 4, title: "미중 갈등 영향: 보통", color: .policyCoral)
-                ]
+                ],
+                sparklinePoints: [218, 224, 221, 236, 241, 238, 249]
             ),
             AssetHoldingRow(
                 id: 3,
@@ -165,7 +172,8 @@ struct AssetMockData {
                 tags: [
                     AssetPolicyTag(id: 5, title: "AI 영향: 강함", color: .electricBlue),
                     AssetPolicyTag(id: 6, title: "성장주 영향: 보통", color: .electricBlue)
-                ]
+                ],
+                sparklinePoints: [74, 77, 76, 79, 82, 81, 84]
             ),
             AssetHoldingRow(
                 id: 4,
@@ -175,7 +183,8 @@ struct AssetMockData {
                 tags: [
                     AssetPolicyTag(id: 7, title: "채권 영향: 강함", color: .electricBlue),
                     AssetPolicyTag(id: 8, title: "금리 하락 시 손실 영향: 보통", color: .policyCoral)
-                ]
+                ],
+                sparklinePoints: [100, 99.8, 100.4, 100.1, 99.6, 99.4, 99.2]
             ),
             AssetHoldingRow(
                 id: 5,
@@ -185,7 +194,8 @@ struct AssetMockData {
                 tags: [
                     AssetPolicyTag(id: 9, title: "달러 영향: 보통", color: .emerald),
                     AssetPolicyTag(id: 10, title: "방어자산 영향: 강함", color: .emerald)
-                ]
+                ],
+                sparklinePoints: [186, 187, 188.4, 187.8, 190, 191.2, 192]
             )
         ],
         hiddenBets: [

@@ -120,6 +120,26 @@ struct AssetHoldingRow: Identifiable {
     let weight: String
     let amount: String
     let tags: [AssetPolicyTag]
+    let logoURL: String?
+    let sparklinePoints: [Double]
+
+    init(
+        id: Int,
+        name: String,
+        weight: String,
+        amount: String,
+        tags: [AssetPolicyTag],
+        logoURL: String? = nil,
+        sparklinePoints: [Double] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.weight = weight
+        self.amount = amount
+        self.tags = tags
+        self.logoURL = logoURL
+        self.sparklinePoints = sparklinePoints
+    }
 }
 
 struct AssetPolicyTag: Identifiable {
