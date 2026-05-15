@@ -10,6 +10,7 @@ struct TodayView: View {
     @State private var navigationPath: [TodayRoute] = []
     private let userId: Int64?
     private let onAssetTabRequested: () -> Void
+    private let onSignalRouteRequested: (PolSignalRoute) -> Void
 
     init(
         userId: Int64? = nil,
@@ -17,10 +18,12 @@ struct TodayView: View {
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         viewModel: TodayViewModel? = nil,
         exchangeRateViewModel: ExchangeRateViewModel? = nil,
-        onAssetTabRequested: @escaping () -> Void = {}
+        onAssetTabRequested: @escaping () -> Void = {},
+        onSignalRouteRequested: @escaping (PolSignalRoute) -> Void = { _ in }
     ) {
         self.userId = userId
         self.onAssetTabRequested = onAssetTabRequested
+        self.onSignalRouteRequested = onSignalRouteRequested
         _viewModel = StateObject(
             wrappedValue: viewModel ?? TodayViewModel(
                 userId: userId,
@@ -46,36 +49,15 @@ struct TodayView: View {
                             onSettings: { navigationPath.append(.settings) }
                         )
 
-                        ExchangeRateSnapshotCard(
-                            viewModel: exchangeRateViewModel,
-                            displayMode: .compact
-                        )
-
-                        TodayJudgmentHeroCard(
-                            judgment: viewModel.judgment,
-                            state: judgmentState,
-                            onDetail: { viewModel.present(.quickReason) }
-                        )
-
-                        TodayAssetSummaryCard(
-                            portfolio: viewModel.portfolio,
-                            holdings: viewModel.userAssetProfile.holdings,
-                            onAssetTabRequested: onAssetTabRequested
-                        )
-
-                        TodayPolicyImpactCard(
-                            policies: Array(viewModel.policyEvents.prefix(3)),
-                            totalPolicyCount: viewModel.policyEvents.count,
-                            onPolicyTap: openPolicyAnalysis,
-                            onShowAll: { viewModel.present(.policyList) }
-                        )
-
-                        TodayDecisionSupportCard(
-                            state: judgmentState,
-                            noActionReasons: viewModel.noActionReasons,
-                            actionEvidence: viewModel.judgment.forEvidence,
-                            watchCondition: viewModel.noActionWatchCondition,
-                            invalidationCondition: viewModel.judgment.invalidationCondition
+                        PolSignalTodayBriefingView(
+                            events: PolSignalFlowMockData.todayTopEvents,
+                            proposal: PolSignalFlowMockData.adjustmentProposal,
+                            onEventTap: { event in
+                                onSignalRouteRequested(.detail(event.id))
+                            },
+                            onProposalTap: {
+                                onSignalRouteRequested(.adjustment)
+                            }
                         )
                     }
                     .padding(.horizontal, KDXSpacing.screenHorizontal)

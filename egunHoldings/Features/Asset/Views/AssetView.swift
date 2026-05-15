@@ -6,12 +6,14 @@ struct AssetView: View {
     @ObservedObject private var exchangeRateViewModel: ExchangeRateViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var selectedTimeframe: AssetPortfolioTimeframe = .oneWeek
+    private let onAdjustmentRequested: () -> Void
 
     init(
         userId: Int64? = nil,
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
         viewModel: AssetViewModel? = nil,
-        exchangeRateViewModel: ExchangeRateViewModel? = nil
+        exchangeRateViewModel: ExchangeRateViewModel? = nil,
+        onAdjustmentRequested: @escaping () -> Void = {}
     ) {
         _viewModel = StateObject(
             wrappedValue: viewModel ?? AssetViewModel(
@@ -20,21 +22,28 @@ struct AssetView: View {
             )
         )
         self.exchangeRateViewModel = exchangeRateViewModel ?? ExchangeRateViewModel()
+        self.onAdjustmentRequested = onAdjustmentRequested
     }
 
     var body: some View {
         VStack(spacing: 0) {
             topChrome
 
-            Group {
-                switch viewModel.selectedSegment {
-                case .overview:
-                    overviewContent
-                case .rebalance:
-                    rebalanceContent
-                }
+            PFContentScrollView(
+                alignment: .leading,
+                spacing: 20,
+                horizontalPadding: PSSpacing.screenHorizontal,
+                topPadding: 8,
+                bottomPadding: 112,
+                scrollsToTopOnAppear: true,
+                locksHorizontalOverflow: true
+            ) {
+                PolSignalAssetSnapshotView(
+                    summary: PolSignalFlowMockData.assetSummary,
+                    proposal: PolSignalFlowMockData.adjustmentProposal,
+                    onProposalTap: onAdjustmentRequested
+                )
             }
-            .animation(pageTransitionAnimation, value: viewModel.selectedSegment)
         }
         .policyFinanceLightTabChrome()
         .navigationDestination(item: $viewModel.navigationDestination) { destination in

@@ -2,8 +2,8 @@ import SwiftUI
 
 enum RootTab: Hashable {
     case today
+    case signal
     case asset
-    case news
 }
 
 struct RootTabView: View {
@@ -12,6 +12,8 @@ struct RootTabView: View {
     let portfolioSnapshot: PortfolioSnapshot
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     @State private var selectedTab: RootTab = .today
+    @State private var signalRoute: PolSignalRoute?
+    @State private var signalViewIdentity = UUID()
     @StateObject private var exchangeRateViewModel = ExchangeRateViewModel()
 
     init(
@@ -36,6 +38,9 @@ struct RootTabView: View {
                 exchangeRateViewModel: exchangeRateViewModel,
                 onAssetTabRequested: {
                     selectedTab = .asset
+                },
+                onSignalRouteRequested: { route in
+                    openSignal(route)
                 }
             )
             .id(portfolioSnapshot)
@@ -44,32 +49,37 @@ struct RootTabView: View {
                 Label("오늘", systemImage: "sun.max.fill")
             }
 
+            SignalView(initialRoute: signalRoute, externalRoute: $signalRoute)
+                .id(signalViewIdentity)
+            .tag(RootTab.signal)
+            .tabItem {
+                Label("시그널", systemImage: "waveform.path.ecg")
+            }
+
             NavigationStack {
                 AssetView(
                     userId: userId,
                     brokerBalanceSnapshot: brokerBalanceSnapshot,
-                    exchangeRateViewModel: exchangeRateViewModel
+                    exchangeRateViewModel: exchangeRateViewModel,
+                    onAdjustmentRequested: {
+                        openSignal(.adjustment)
+                    }
                 )
             }
             .id(brokerBalanceSnapshot?.fetchedAt)
             .tag(RootTab.asset)
             .tabItem {
-                Label("내자산", systemImage: "chart.pie.fill")
-            }
-
-            NavigationStack {
-                NewsroomView(
-                    userId: userId,
-                    userAssetProfile: userAssetProfile
-                )
-            }
-            .tag(RootTab.news)
-            .tabItem {
-                Label("뉴스", systemImage: "newspaper.fill")
+                Label("내 자산", systemImage: "chart.pie.fill")
             }
         }
         .tint(Color.brand)
         .preferredColorScheme(.light)
+    }
+
+    private func openSignal(_ route: PolSignalRoute) {
+        signalRoute = route
+        signalViewIdentity = UUID()
+        selectedTab = .signal
     }
 
     private func setupTabBarAppearance() {
