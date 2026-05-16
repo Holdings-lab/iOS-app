@@ -6,6 +6,7 @@ struct OnboardingFlowView: View {
         case investmentGoal
         case funds
         case brokerageConnection
+        case brokerageLoading
         case completion
     }
 
@@ -57,7 +58,18 @@ struct OnboardingFlowView: View {
                     OnboardingPage3View(
                         viewModel: onboardingViewModel,
                         onBack: navigateBack,
-                        onNext: { path.append(.completion) }
+                        onNext: {
+                            path.append(onboardingViewModel.connectedInstitutionID == nil ? .completion : .brokerageLoading)
+                        }
+                    )
+                case .brokerageLoading:
+                    OnboardingBrokerageLoadingView(
+                        viewModel: onboardingViewModel,
+                        onSkip: {
+                            onboardingViewModel.skipBrokerageConnection()
+                            path.append(.completion)
+                        },
+                        onComplete: { path.append(.completion) }
                     )
                 case .completion:
                     OnboardingPage4View(
