@@ -1,46 +1,64 @@
 import SwiftUI
 
 nonisolated enum PSColor {
-    // Stockit Light aliases kept for existing PolSignal views.
-    static let background = Color.canvas
-    static let surface    = Color.elevated
+    static let background = Color(hex: "F0F4FF")
+    static let surface = Color.white
+    static let surfaceAlt = Color(hex: "F8FAFF")
+    static let border = Color(hex: "E2E8F0")
+    static let rule = Color(hex: "EEF2F8")
 
-    static let bgDeepNavy  = Color.canvas
-    static let bgCard      = Color.elevated
-    static let bgCardSub   = Color.subtle
-    static let bgCardMuted = Color.muted
+    static let textPrimary = Color(hex: "0F172A")
+    static let textSecondary = Color(hex: "64748B")
+    static let textMuted = Color(hex: "64748B")
+    static let textFaint = Color(hex: "94A3B8")
 
-    static let primaryBlue        = Color.brand
-    static let primaryBluePressed = Color.brandDark
-    static let electricBlue = Color.brand
-    static let blueSubtle   = Color.brandLight
-    static let purple       = Color.brandDark
-    static let emerald      = Color.success
-    static let yellow       = Color.warning
-    static let red          = Color.trendDown
-    static let cyan         = Color.brandLight
-    static let gray         = Color.textTertiary
-    static let trendUp      = Color.trendUp
-    static let trendDown    = Color.trendDown
+    static let primary = Color(hex: "2563EB")
+    static let primarySoft = Color(hex: "EFF6FF")
+    static let danger = Color(hex: "EF4444")
+    static let dangerBg = Color(hex: "FEF2F2")
+    static let warn = Color(hex: "F59E0B")
+    static let warnBg = Color(hex: "FFFBEB")
+    static let success = Color(hex: "10B981")
+    static let successBg = Color(hex: "ECFDF5")
 
-    static let textPrimary = Color.textPrimary
-    static let textSecondary = Color.textSecondary
-    static let textMuted   = Color.textSecondary
-    static let textFaint   = Color.textQuaternary
+    static let tagSemi = Color(hex: "3B82F6")
+    static let tagPolicy = Color(hex: "1E293B")
+    static let tagRate = Color(hex: "6B7280")
+    static let tagPolicyBg = Color(hex: "F1F5F9")
+    static let tagRateBg = Color(hex: "F3F4F6")
 
-    static let border       = Color.hairline
-    static let borderStrong = Color.divider
-    static let divider      = Color.divider
-    static let cardShadow   = Color.cardShadow
+    static let cardShadow = Color.black.opacity(0.06)
+    static let sheetShadow = Color(hex: "0F172A", alpha: 0.10)
+
+    // Compatibility aliases kept for existing PolSignal and Today mock code.
+    static let bgDeepNavy = background
+    static let bgCard = surface
+    static let bgCardSub = surfaceAlt
+    static let bgCardMuted = surfaceAlt
+    static let primaryBlue = primary
+    static let primaryBluePressed = Color(hex: "1D4ED8")
+    static let electricBlue = primary
+    static let blueSubtle = tagSemi
+    static let purple = tagPolicy
+    static let emerald = success
+    static let yellow = warn
+    static let red = danger
+    static let cyan = tagSemi
+    static let gray = textFaint
+    static let trendUp = success
+    static let trendDown = danger
+    static let borderStrong = border
+    static let divider = rule
 }
 
 enum PSRadius {
-    static let card: CGFloat  = 20
+    static let card: CGFloat  = 16
     static let inner: CGFloat = 14
-    static let small: CGFloat = 14
+    static let small: CGFloat = 10
     static let chip: CGFloat  = 999
     static let pill: CGFloat  = 999
-    static let button: CGFloat = 14
+    static let badge: CGFloat = 6
+    static let button: CGFloat = 12
 }
 
 enum PSSpacing {
@@ -54,7 +72,7 @@ enum PSSpacing {
 }
 
 enum PSFont {
-    static let displayTracking: CGFloat = -0.5
+    static let displayTracking: CGFloat = -0.01
 
     static func display(_ size: CGFloat = 34)  -> Font { .pretendard(size, weight: .bold) }
     static func title(_ size: CGFloat = 18)    -> Font { .pretendard(size, weight: .semibold) }
@@ -65,7 +83,7 @@ enum PSFont {
 }
 
 enum PSShadow {
-    static let cardColor = Color.cardShadow
-    static let cardYOffset: CGFloat = 8
-    static let cardBlur: CGFloat = 24
+    static let cardColor = PSColor.cardShadow
+    static let cardYOffset: CGFloat = 1
+    static let cardBlur: CGFloat = 4
 }

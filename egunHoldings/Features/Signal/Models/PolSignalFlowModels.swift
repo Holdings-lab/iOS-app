@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum PolSignalRoute: Hashable {
+    case list
     case detail(Int)
     case adjustment
 }
@@ -49,6 +50,41 @@ struct PolSignalEvent: Identifiable {
     let accentColor: Color
 }
 
+extension PolSignalEvent {
+    var timeText: String {
+        switch feedTab {
+        case .myImpact:
+            return "09:20"
+        case .breaking:
+            return "방금 전"
+        case .learning:
+            return "4분"
+        }
+    }
+
+    var analysisState: String {
+        switch feedTab {
+        case .myImpact:
+            return "영향 분석 완료"
+        case .breaking:
+            return "영향 분석 중"
+        case .learning:
+            return "내 노출 없음"
+        }
+    }
+
+    var exposureSummary: String {
+        exposures
+            .prefix(2)
+            .map { "\($0.ticker) \($0.weightText)" }
+            .joined(separator: " · ")
+    }
+
+    var sourceHeadline: String {
+        "\(institution) 원문 핵심 요약"
+    }
+}
+
 struct PolSignalAdjustmentReason: Identifiable {
     let id = UUID()
     let iconName: String
@@ -92,18 +128,18 @@ struct PolSignalRiskAlert: Identifiable {
     var color: Color {
         switch severity {
         case .red:
-            return .trendDown
+            return PSColor.danger
         case .yellow:
-            return .warning
+            return PSColor.warn
         }
     }
 
     var background: Color {
         switch severity {
         case .red:
-            return Color.trendDown.opacity(0.08)
+            return PSColor.dangerBg
         case .yellow:
-            return Color.warningBg
+            return PSColor.warnBg
         }
     }
 }

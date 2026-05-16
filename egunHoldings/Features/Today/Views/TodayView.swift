@@ -52,6 +52,9 @@ struct TodayView: View {
                         PolSignalTodayBriefingView(
                             events: PolSignalFlowMockData.todayTopEvents,
                             proposal: PolSignalFlowMockData.adjustmentProposal,
+                            onSignalListTap: {
+                                onSignalRouteRequested(.list)
+                            },
                             onEventTap: { event in
                                 onSignalRouteRequested(.detail(event.id))
                             },
@@ -184,31 +187,38 @@ private struct TodayHeaderSection: View {
         HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 5) {
                 Text(Self.dateText)
-                    .font(.pretendard(12, weight: .medium))
-                    .foregroundStyle(Color.textQuaternary)
-                Text("안녕하세요, \(name)님")
-                    .font(.pretendard(22, weight: .bold))
-                    .foregroundStyle(Color.textPrimary)
+                    .font(.pretendard(13, weight: .regular))
+                    .foregroundStyle(PSColor.textSecondary)
+                Text("오늘의 브리핑")
+                    .font(.pretendard(28, weight: .bold))
+                    .foregroundStyle(PSColor.textPrimary)
             }
 
             Spacer()
 
             HStack(spacing: 10) {
                 HeaderIconButton(
-                    iconName: "gearshape",
-                    accessibilityLabel: "설정",
-                    showsUnreadDot: false,
-                    action: onSettings
-                )
-
-                HeaderIconButton(
                     iconName: "bell",
                     accessibilityLabel: "알림",
                     showsUnreadDot: hasUnreadNotifications,
                     action: onNotifications
                 )
+
+                HeaderIconButton(
+                    iconName: "gearshape",
+                    accessibilityLabel: "설정",
+                    showsUnreadDot: false,
+                    action: onSettings
+                )
             }
         }
+        .overlay(alignment: .bottomLeading) {
+            Text("3초 안에 오늘 할 일을 파악하세요")
+                .font(.pretendard(13, weight: .regular))
+                .foregroundStyle(PSColor.textSecondary)
+                .offset(y: 24)
+        }
+        .padding(.bottom, 24)
     }
 
     private static var dateText: String {
@@ -234,7 +244,7 @@ private struct HeaderIconButton: View {
             ZStack(alignment: .topTrailing) {
                 Image(systemName: iconName)
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(Color.textSecondary)
+                    .foregroundStyle(PSColor.textSecondary)
                     .frame(width: 40, height: 40)
 
                 if showsUnreadDot {
@@ -244,8 +254,8 @@ private struct HeaderIconButton: View {
                         .offset(x: -7, y: 8)
                 }
             }
-            .background(Color.elevated, in: Circle())
-            .overlay { Circle().stroke(Color.hairline, lineWidth: 1) }
+            .background(PSColor.surface, in: Circle())
+            .overlay { Circle().stroke(PSColor.border, lineWidth: 1) }
         }
         .buttonStyle(PSPressStyle())
         .accessibilityLabel(accessibilityLabel)
@@ -261,42 +271,53 @@ private struct TodayJudgmentHeroCard: View {
 
     var body: some View {
         Button(action: onDetail) {
-            KDXCard(
-                padding: EdgeInsets(top: 24, leading: 16, bottom: 24, trailing: 16)
-            ) {
-                VStack(alignment: .leading, spacing: 18) {
-                    Text(state.label)
-                        .font(.pretendard(11, weight: .semibold))
+            let shape = RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
+
+            VStack(alignment: .leading, spacing: 18) {
+                Text(state.label)
+                    .font(.pretendard(11, weight: .semibold))
+                    .foregroundStyle(state.foreground)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(state.background, in: RoundedRectangle(cornerRadius: KDXRadius.chip, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(state.heroTitle(for: judgment))
+                        .font(.pretendard(22, weight: .bold))
+                        .foregroundStyle(Color.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .lineSpacing(3)
+
+                    Text(state.heroSubtitle(for: judgment))
+                        .font(.pretendard(14, weight: .regular))
+                        .foregroundStyle(Color.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .lineSpacing(3)
+                }
+
+                HStack {
+                    Spacer()
+                    Text("자세히 보기")
+                        .font(.pretendard(13, weight: .semibold))
                         .foregroundStyle(state.foreground)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(state.background, in: RoundedRectangle(cornerRadius: KDXRadius.chip, style: .continuous))
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(state.heroTitle(for: judgment))
-                            .font(.pretendard(22, weight: .bold))
-                            .foregroundStyle(Color.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .lineSpacing(3)
-
-                        Text(state.heroSubtitle(for: judgment))
-                            .font(.pretendard(14, weight: .regular))
-                            .foregroundStyle(Color.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .lineSpacing(3)
-                    }
-
-                    HStack {
-                        Spacer()
-                        Text("자세히 보기")
-                            .font(.pretendard(13, weight: .semibold))
-                            .foregroundStyle(Color.brand)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.brand)
-                    }
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(state.foreground)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(EdgeInsets(top: 24, leading: 16, bottom: 24, trailing: 16))
+            .overlay(alignment: .topTrailing) {
+                Image(systemName: state.heroIcon)
+                    .font(.system(size: 72, weight: .regular))
+                    .foregroundStyle(state.foreground.opacity(0.08))
+                    .padding(.top, 16)
+                    .padding(.trailing, 16)
+                    .allowsHitTesting(false)
+            }
+            .background(Color.elevated, in: shape)
+            .overlay { shape.stroke(state.foreground.opacity(0.20), lineWidth: 1) }
+            .shadow(color: state.foreground.opacity(0.10), radius: 20, x: 0, y: 6)
         }
         .buttonStyle(PSPressStyle())
     }
@@ -344,6 +365,13 @@ private struct TodayAssetSummaryCard: View {
                     .foregroundStyle(portfolio.todayChangeColor)
                     .monospacedDigit()
                 }
+
+                Sparkline(
+                    points: portfolio.weeklySparklinePoints,
+                    isUp: portfolio.todayChange >= 0,
+                    width: nil,
+                    height: 48
+                )
 
                 let distributionSegments = AssetDistributionSegment.make(from: holdings)
                 VStack(alignment: .leading, spacing: 10) {
@@ -463,7 +491,7 @@ private struct TodayPolicyImpactCard: View {
                             PolicyImpactRow(policy: policy)
                                 .padding(.vertical, 13)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressScaleButtonStyle())
 
                         if index < policies.count - 1 {
                             Divider().background(Color.divider)
@@ -483,7 +511,7 @@ private struct TodayPolicyImpactCard: View {
                     }
                     .padding(.top, 2)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleButtonStyle())
             }
         }
     }
@@ -571,9 +599,14 @@ private struct TodayDecisionSupportCard: View {
                 }
             }
         }
-        .padding(16)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(state.supportBackground, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
+                .stroke(Color.hairline, lineWidth: 1)
+        }
+        .shadow(color: Color.cardShadow, radius: 24, x: 0, y: 8)
     }
 
     private var items: [String] {
@@ -625,6 +658,14 @@ private enum TodayJudgmentDisplayState: Equatable {
         case .noAction:  return Color.brand
         case .review:    return Color(hex: "B86E00")
         case .immediate: return Color.up
+        }
+    }
+
+    var heroIcon: String {
+        switch self {
+        case .noAction:  return "checkmark.circle.fill"
+        case .review:    return "eye.circle.fill"
+        case .immediate: return "exclamationmark.circle.fill"
         }
     }
 

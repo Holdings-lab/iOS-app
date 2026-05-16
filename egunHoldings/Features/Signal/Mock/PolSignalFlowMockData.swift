@@ -19,28 +19,28 @@ enum PolSignalFlowMockData {
             aiSummary: "보조금 총액보다 집행 조건이 핵심입니다. 조건이 까다로우면 반도체 ETF의 기대 수혜가 약해질 수 있어요.",
             ctaTitle: "조정 제안 보기",
             exposures: [
-                PolSignalExposure(ticker: "SOXX", weightText: "12%", color: .brandDark),
-                PolSignalExposure(ticker: "SMH", weightText: "8%", color: .brand),
-                PolSignalExposure(ticker: "005930", weightText: "7%", color: .success)
+                PolSignalExposure(ticker: "SOXX", weightText: "12%", color: PSColor.tagSemi),
+                PolSignalExposure(ticker: "SMH", weightText: "8%", color: PSColor.primary),
+                PolSignalExposure(ticker: "005930", weightText: "7%", color: PSColor.success)
             ],
             scenarios: [
                 PolSignalScenario(
                     code: "A",
-                    probability: 45,
+                    probability: 54,
                     title: "조건부 호재",
                     outcome: "반도체 ETF 보합권",
                     note: "총액은 크지만 집행 조건이 붙어 단기 상승폭이 제한될 수 있어요."
                 ),
                 PolSignalScenario(
                     code: "B",
-                    probability: 35,
+                    probability: 32,
                     title: "예상 상회",
                     outcome: "SOXX 1~3거래일 강세",
                     note: "수혜 기업 범위가 넓으면 반도체 ETF 전체에 매수세가 붙을 수 있어요."
                 ),
                 PolSignalScenario(
                     code: "C",
-                    probability: 20,
+                    probability: 14,
                     title: "집행 지연",
                     outcome: "반도체 단기 조정",
                     note: "일정이 밀리면 이미 오른 종목부터 차익 실현이 나올 수 있어요."
@@ -49,7 +49,7 @@ enum PolSignalFlowMockData {
             weakeningCondition: "발표 총액이 예상치를 넘고 집행 일정이 30일 이내로 확정되면 축소 판단은 약해져요.",
             sourceSummary: "상무부는 첨단 패키징과 생산 설비 투자 조건을 함께 공개할 예정입니다. 시장은 총액보다 지급 속도와 대상 기업 범위를 확인하고 있습니다.",
             checkSchedule: "5월 16일 22:30 발표 확인",
-            accentColor: .brandDark
+            accentColor: PSColor.tagSemi
         ),
         PolSignalEvent(
             id: 102,
@@ -64,9 +64,9 @@ enum PolSignalFlowMockData {
             aiSummary: "파월 발언보다 위원들의 물가 표현이 중요합니다. 물가 우려가 반복되면 위험자산 기대가 낮아질 수 있어요.",
             ctaTitle: "시나리오 보기",
             exposures: [
-                PolSignalExposure(ticker: "USD", weightText: "15%", color: .warning),
-                PolSignalExposure(ticker: "QQQ", weightText: "9%", color: .brand),
-                PolSignalExposure(ticker: "SOXX", weightText: "12%", color: .brandDark)
+                PolSignalExposure(ticker: "USD", weightText: "15%", color: PSColor.warn),
+                PolSignalExposure(ticker: "QQQ", weightText: "9%", color: PSColor.primary),
+                PolSignalExposure(ticker: "SOXX", weightText: "12%", color: PSColor.tagSemi)
             ],
             scenarios: [
                 PolSignalScenario(code: "A", probability: 50, title: "동결 장기화", outcome: "달러 방어 유지", note: "달러 자산 평가는 버티지만 성장주는 눌릴 수 있어요."),
@@ -76,7 +76,7 @@ enum PolSignalFlowMockData {
             weakeningCondition: "의사록에서 고용 둔화와 인하 논의가 동시에 확인되면 달러 방어 판단은 약해져요.",
             sourceSummary: "시장 참여자는 의사록의 물가 표현, 고용 둔화 언급, 6월 정책 경로 힌트를 함께 보고 있습니다.",
             checkSchedule: "5월 17일 03:00 의사록 공개",
-            accentColor: .brand
+            accentColor: PSColor.primary
         ),
         PolSignalEvent(
             id: 103,
@@ -91,8 +91,8 @@ enum PolSignalFlowMockData {
             aiSummary: "환율 상승은 방어에는 좋지만 추격 매수 신호는 아닙니다. 기존 달러 비중이 완충 역할을 하고 있어요.",
             ctaTitle: "영향 분석 보기",
             exposures: [
-                PolSignalExposure(ticker: "USD", weightText: "15%", color: .warning),
-                PolSignalExposure(ticker: "069500", weightText: "10%", color: .success)
+                PolSignalExposure(ticker: "USD", weightText: "15%", color: PSColor.warn),
+                PolSignalExposure(ticker: "069500", weightText: "10%", color: PSColor.success)
             ],
             scenarios: [
                 PolSignalScenario(code: "A", probability: 55, title: "1,380원 안착", outcome: "달러 방어 유효", note: "달러 예금 평가액이 국내 자산 흔들림을 일부 상쇄해요."),
@@ -102,7 +102,7 @@ enum PolSignalFlowMockData {
             weakeningCondition: "외환 당국 구두 개입과 미국 금리 하락이 동시에 나오면 환율 상승 판단은 약해져요.",
             sourceSummary: "원달러 환율은 미국 금리 경계와 국내 수급 영향으로 상승했습니다. 시장은 1,380원 안착 여부를 보고 있습니다.",
             checkSchedule: "오늘 장 마감 환율 확인",
-            accentColor: .warning
+            accentColor: PSColor.warn
         ),
         PolSignalEvent(
             id: 104,
@@ -117,7 +117,7 @@ enum PolSignalFlowMockData {
             aiSummary: "정책은 방향을 만들고, 보유 비중은 행동의 크기를 정합니다. PolSignal은 이 두 정보를 분리해서 보여줘요.",
             ctaTitle: "영향 분석 보기",
             exposures: [
-                PolSignalExposure(ticker: "SOXX", weightText: "예시", color: .brandDark)
+                PolSignalExposure(ticker: "SOXX", weightText: "예시", color: PSColor.tagSemi)
             ],
             scenarios: [
                 PolSignalScenario(code: "A", probability: 60, title: "직접 노출", outcome: "행동 검토", note: "관련 티커 비중이 크면 상세 판단으로 이동합니다."),
@@ -127,7 +127,7 @@ enum PolSignalFlowMockData {
             weakeningCondition: "내 보유 자산과 티커 연결이 없으면 행동 제안은 생성하지 않아요.",
             sourceSummary: "정책 신호는 키워드가 아니라 보유 자산과의 연결 강도, 비중, 변동성으로 다시 계산됩니다.",
             checkSchedule: "상시 학습 콘텐츠",
-            accentColor: .success
+            accentColor: PSColor.success
         )
     ]
 
@@ -145,25 +145,25 @@ enum PolSignalFlowMockData {
                 iconName: "exclamationmark.triangle.fill",
                 title: "단일 테마 42%가 권장 35%를 초과",
                 detail: "반도체 정책 발표 전 변동성이 커질 때 손실이 한쪽으로 집중될 수 있어요.",
-                color: .trendDown
+                color: PSColor.danger
             ),
             PolSignalAdjustmentReason(
                 iconName: "calendar.badge.clock",
                 title: "CHIPS 발표가 D-1로 가까움",
                 detail: "결과 확인 전 일부 현금을 확보하면 발표 후 대응 선택지가 늘어납니다.",
-                color: .brand
+                color: PSColor.primary
             ),
             PolSignalAdjustmentReason(
                 iconName: "shield.lefthalf.filled",
                 title: "현금 방어 비중 10% 회복",
                 detail: "초보 투자자는 방향 예측보다 손실 폭 관리가 먼저입니다.",
-                color: .success
+                color: PSColor.success
             )
         ],
         effects: [
-            PolSignalAdjustmentEffect(title: "변동성", value: "-6%", color: .success),
-            PolSignalAdjustmentEffect(title: "확증 점수", value: "72", color: .brand),
-            PolSignalAdjustmentEffect(title: "다시 볼 날짜", value: "5/17", color: .warning)
+            PolSignalAdjustmentEffect(title: "변동성", value: "-1.2%", color: PSColor.success),
+            PolSignalAdjustmentEffect(title: "확증 점수", value: "+3", color: PSColor.primary),
+            PolSignalAdjustmentEffect(title: "다시 볼", value: "5/16", color: PSColor.warn)
         ],
         helperText: "대응을 실행하지 않아도 기록만 남길 수 있어요"
     )
@@ -171,21 +171,23 @@ enum PolSignalFlowMockData {
     static let assetSummary = PolSignalAssetSummary(
         totalAssetText: "₩134,829,500",
         returnBadgeText: "+1.2%",
-        returnColor: .trendUp,
+        returnColor: PSColor.success,
         composition: [
-            PolSignalThemeExposure(title: "반도체", percent: 42, color: .brandDark),
-            PolSignalThemeExposure(title: "금리·채권", percent: 24, color: .brand),
-            PolSignalThemeExposure(title: "친환경", percent: 18, color: .success),
-            PolSignalThemeExposure(title: "현금", percent: 16, color: .warning)
+            PolSignalThemeExposure(title: "반도체", percent: 42, color: PSColor.primary),
+            PolSignalThemeExposure(title: "금리·채권", percent: 24, color: PSColor.textFaint),
+            PolSignalThemeExposure(title: "친환경", percent: 18, color: PSColor.success),
+            PolSignalThemeExposure(title: "현금", percent: 16, color: PSColor.border)
         ],
         riskAlerts: [
             PolSignalRiskAlert(severity: .red, title: "반도체 단일 노출 42%", detail: "권장 35%를 초과해 발표 이벤트 전 변동성 위험이 큽니다."),
             PolSignalRiskAlert(severity: .yellow, title: "환율 변동성 +12%", detail: "달러 자산은 방어가 되지만 추가 매수는 신중해야 합니다.")
         ],
         themeExposures: [
-            PolSignalThemeExposure(title: "반도체", percent: 42, color: .brandDark),
-            PolSignalThemeExposure(title: "금리·채권", percent: 24, color: .brand),
-            PolSignalThemeExposure(title: "친환경", percent: 18, color: .success)
+            PolSignalThemeExposure(title: "반도체", percent: 42, color: PSColor.primary),
+            PolSignalThemeExposure(title: "금리·채권", percent: 24, color: PSColor.textFaint),
+            PolSignalThemeExposure(title: "친환경", percent: 18, color: PSColor.success),
+            PolSignalThemeExposure(title: "환율", percent: 15, color: PSColor.warn),
+            PolSignalThemeExposure(title: "현금", percent: 16, color: PSColor.border)
         ]
     )
 

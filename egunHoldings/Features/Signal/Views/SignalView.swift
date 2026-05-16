@@ -4,6 +4,8 @@ struct SignalView: View {
     @StateObject private var viewModel: PolSignalFlowViewModel
     @Binding private var externalRoute: PolSignalRoute?
     @State private var navigationPath: [PolSignalRoute]
+    @State private var isProposalSheetPresented: Bool
+    @State private var expandedAIEventID: Int?
 
     init(
         initialRoute: PolSignalRoute? = nil,
@@ -12,7 +14,20 @@ struct SignalView: View {
     ) {
         _viewModel = StateObject(wrappedValue: viewModel)
         _externalRoute = externalRoute
-        _navigationPath = State(initialValue: initialRoute.map { [$0] } ?? [])
+        switch initialRoute {
+        case .list:
+            _navigationPath = State(initialValue: [])
+            _isProposalSheetPresented = State(initialValue: false)
+        case .detail(let id):
+            _navigationPath = State(initialValue: [.detail(id)])
+            _isProposalSheetPresented = State(initialValue: false)
+        case .adjustment:
+            _navigationPath = State(initialValue: [])
+            _isProposalSheetPresented = State(initialValue: true)
+        case .none:
+            _navigationPath = State(initialValue: [])
+            _isProposalSheetPresented = State(initialValue: false)
+        }
     }
 
     init(viewModel: SignalViewModel) {
@@ -31,25 +46,32 @@ struct SignalView: View {
                 locksHorizontalOverflow: true
             ) {
                 header
-                vixCard
                 feedTabs
-                eventList
+                selectedFeedContent
             }
-            .policyFinanceLightTabChrome()
+            .background(PSColor.background.ignoresSafeArea())
             .navigationDestination(for: PolSignalRoute.self) { route in
                 switch route {
+                case .list:
+                    EmptyView()
                 case .detail(let eventId):
                     PolSignalDetailView(
                         event: viewModel.event(id: eventId),
                         proposal: viewModel.adjustmentProposal,
-                        onAdjustmentTap: {
-                            navigationPath.append(.adjustment)
-                        }
+                        onAdjustmentTap: openProposalSheet
                     )
                 case .adjustment:
-                    PolSignalAdjustmentProposalView(proposal: viewModel.adjustmentProposal)
+                    EmptyView()
                 }
             }
+            .toolbar(.hidden, for: .navigationBar)
+        }
+        .sheet(isPresented: $isProposalSheetPresented) {
+            PolSignalAdjustmentProposalSheetView(proposal: viewModel.adjustmentProposal)
+                .presentationDetents([.fraction(0.92)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(24)
+                .presentationBackground(PSColor.surface)
         }
         .onAppear {
             consumeExternalRoute()
@@ -60,56 +82,40 @@ struct SignalView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("시그널")
-                .font(.pretendard(28, weight: .bold))
-                .foregroundStyle(Color.textPrimary)
-
-            Text("정책 신호가 내 자산에 어떤 행동으로 이어지는지 확인하세요")
-                .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var vixCard: some View {
-        HStack(alignment: .center, spacing: 14) {
+        HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("VIX")
-                    .font(.pretendard(11, weight: .bold))
-                    .foregroundStyle(Color.textTertiary)
+                Text("이벤트 큐")
+                    .font(.pretendard(13, weight: .regular))
+                    .foregroundStyle(PSColor.textSecondary)
 
-                HStack(alignment: .firstTextBaseline, spacing: 7) {
-                    Text(viewModel.vixText)
-                        .font(.pretendard(28, weight: .bold))
-                        .foregroundStyle(Color.textPrimary)
-                        .monospacedDigit()
-
-                    Text(viewModel.vixChangeText)
-                        .font(.pretendard(12, weight: .bold))
-                        .foregroundStyle(Color.trendDown)
-                        .monospacedDigit()
-                }
+                Text("시그널")
+                    .font(.pretendard(28, weight: .bold))
+                    .foregroundStyle(PSColor.textPrimary)
             }
 
             Spacer(minLength: 0)
 
-            Text(viewModel.vixCaption)
-                .font(.pretendard(12, weight: .semibold))
-                .foregroundStyle(Color.textSecondary)
-                .multilineTextAlignment(.trailing)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(16)
-        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("VIX")
+                    .font(.pretendard(11, weight: .semibold))
+                    .foregroundStyle(PSColor.textFaint)
+
+                HStack(spacing: 4) {
+                    Text(viewModel.vixText)
+                        .font(.pretendard(18, weight: .bold))
+                        .foregroundStyle(PSColor.textPrimary)
+                        .monospacedDigit()
+
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(PSColor.danger)
+                }
+            }
         }
     }
 
     private var feedTabs: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             ForEach(PolSignalFeedTab.allCases) { tab in
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -117,113 +123,441 @@ struct SignalView: View {
                     }
                 } label: {
                     Text(tab.rawValue)
-                        .font(.pretendard(13, weight: .bold))
-                        .foregroundStyle(viewModel.selectedFeedTab == tab ? Color.white : Color.textSecondary)
+                        .font(.pretendard(13, weight: .semibold))
+                        .foregroundStyle(viewModel.selectedFeedTab == tab ? Color.white : PSColor.textSecondary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                        .frame(height: 36)
                         .background(
-                            viewModel.selectedFeedTab == tab ? Color.brand : Color.elevated,
-                            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            viewModel.selectedFeedTab == tab ? PSColor.primary : PSColor.surfaceAlt,
+                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                         )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(viewModel.selectedFeedTab == tab ? Color.brand : Color.hairline, lineWidth: 1)
-                        }
                 }
                 .buttonStyle(.plain)
             }
         }
+        .padding(3)
+        .background(Color(hex: "F1F5F9"), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
-    private var eventList: some View {
-        VStack(spacing: 12) {
-            ForEach(viewModel.filteredEvents) { event in
-                Button {
-                    navigationPath.append(.detail(event.id))
-                } label: {
-                    PolSignalEventCard(event: event)
+    @ViewBuilder
+    private var selectedFeedContent: some View {
+        switch viewModel.selectedFeedTab {
+        case .myImpact:
+            impactContent
+        case .breaking:
+            breakingContent
+        case .learning:
+            learningContent
+        }
+    }
+
+    private var impactContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            if let hero = viewModel.events.first(where: { $0.feedTab == .myImpact }) {
+                impactHeroCard(hero)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                let otherEvents = Array(viewModel.events.filter { $0.feedTab != .myImpact }.prefix(3))
+                PolSignalSectionHeader(title: "다른 시그널", meta: "\(otherEvents.count)건")
+
+                VStack(spacing: 10) {
+                    ForEach(otherEvents) { event in
+                        signalMiniCard(event)
+                    }
                 }
-                .buttonStyle(PressScaleButtonStyle())
             }
         }
+    }
+
+    private func impactHeroCard(_ event: PolSignalEvent) -> some View {
+        PolSignalCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 8) {
+                    PolSignalTag(text: event.category, style: .semi)
+                    PolSignalTag(text: "정책", style: .policy)
+                    Spacer(minLength: 0)
+                    PolSignalBadge(text: event.dDay, style: .warn)
+                }
+
+                Text(event.title)
+                    .font(.pretendard(19, weight: .bold))
+                    .foregroundStyle(PSColor.textPrimary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("내 노출")
+                        .font(.pretendard(12, weight: .semibold))
+                        .foregroundStyle(PSColor.textFaint)
+                    PolSignalFlowLayout(spacing: 6) {
+                        ForEach(event.exposures) { exposure in
+                            PolSignalChip(text: "\(exposure.ticker) \(exposure.weightText)", color: exposure.color)
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("예상 영향")
+                        .font(.pretendard(12, weight: .medium))
+                        .foregroundStyle(PSColor.textFaint)
+                    Text(event.expectedImpact)
+                        .font(.pretendard(14, weight: .regular))
+                        .foregroundStyle(PSColor.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                PolSignalAIBlock(
+                    text: event.aiSummary,
+                    isExpanded: expandedAIEventID == event.id,
+                    onTap: {
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            expandedAIEventID = expandedAIEventID == event.id ? nil : event.id
+                        }
+                    }
+                )
+
+                VStack(spacing: 8) {
+                    PolSignalButton("영향 분석 보기", iconName: "arrow.right", style: .primary) {
+                        openDetail(event)
+                    }
+
+                    HStack(spacing: 8) {
+                        PolSignalButton("시나리오 보기", style: .secondary, isSmall: true) {
+                            openDetail(event)
+                        }
+
+                        PolSignalButton("조정 제안 보기", style: .secondary, isSmall: true) {
+                            openProposalSheet()
+                        }
+                    }
+                }
+            }
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(PSColor.primary)
+                    .frame(height: 3)
+                    .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
+                    .offset(y: -16)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            openDetail(event)
+        }
+    }
+
+    private var breakingContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            PolSignalCard(variant: .warn, padding: EdgeInsets(top: 13, leading: 14, bottom: 13, trailing: 14)) {
+                HStack(alignment: .top, spacing: 9) {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(PSColor.warn)
+                    Text("속보는 내 자산 노출을 계산한 뒤 행동 카드로 전환됩니다.")
+                        .font(.pretendard(13, weight: .regular))
+                        .foregroundStyle(PSColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            if let live = viewModel.events.first(where: { $0.feedTab == .breaking }) {
+                liveBreakingCard(live)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                let otherBreaking = viewModel.events.filter { $0.feedTab != .breaking }.prefix(3)
+                PolSignalSectionHeader(title: "다른 속보", meta: "\(otherBreaking.count)건")
+                VStack(spacing: 10) {
+                    ForEach(Array(otherBreaking)) { event in
+                        breakingMiniCard(event)
+                    }
+                }
+            }
+        }
+    }
+
+    private func liveBreakingCard(_ event: PolSignalEvent) -> some View {
+        Button {
+            openDetail(event)
+        } label: {
+            PolSignalCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 8) {
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(PSColor.danger)
+                                .frame(width: 8, height: 8)
+                            Text("LIVE")
+                                .font(.pretendard(11, weight: .semibold))
+                                .foregroundStyle(PSColor.danger)
+                        }
+                        PolSignalBadge(text: "LIVE", style: .danger, inverted: true)
+                        PolSignalTag(text: event.category, style: .rate)
+                        Spacer(minLength: 0)
+                        Text(event.timeText)
+                            .font(.pretendard(12, weight: .medium))
+                            .foregroundStyle(PSColor.textSecondary)
+                    }
+
+                    Text(event.title)
+                        .font(.pretendard(18, weight: .bold))
+                        .foregroundStyle(PSColor.textPrimary)
+                        .lineLimit(2)
+
+                    Text(event.reason)
+                        .font(.pretendard(14, weight: .regular))
+                        .foregroundStyle(PSColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack {
+                        Text("내 노출 검토 중")
+                            .font(.pretendard(12, weight: .medium))
+                            .foregroundStyle(PSColor.textFaint)
+                        Spacer()
+                        PolSignalBadge(text: "위험", style: .danger)
+                    }
+
+                    HStack(spacing: 8) {
+                        PolSignalButton("원문 보기", style: .secondary, isSmall: true) {
+                            openDetail(event)
+                        }
+                        PolSignalButton("분석 알림 받기", style: .primary, isSmall: true) {}
+                    }
+                }
+                .overlay(alignment: .leading) {
+                    Rectangle()
+                        .fill(PSColor.danger)
+                        .frame(width: 4)
+                        .offset(x: -16)
+                }
+            }
+        }
+        .buttonStyle(PressScaleButtonStyle())
+    }
+
+    private var learningContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            continueLearningCard
+
+            VStack(alignment: .leading, spacing: 12) {
+                PolSignalSectionHeader(title: "지금 시그널과 연결된 개념")
+                VStack(spacing: 10) {
+                    ForEach(viewModel.events.filter { $0.feedTab == .learning || $0.feedTab == .myImpact }.prefix(3)) { event in
+                        conceptCard(event)
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                PolSignalSectionHeader(title: "개념 모아보기")
+                PolSignalFlowLayout(spacing: 8) {
+                    ForEach(["#반도체 12", "#금리 8", "#환율 6", "#ETF 5", "#정책 9"], id: \.self) { chip in
+                        PolSignalTag(text: chip, style: .neutral)
+                    }
+                }
+            }
+
+            learningStatsCard
+        }
+    }
+
+    private var continueLearningCard: some View {
+        PolSignalCard(variant: .tinted) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    PolSignalTag(text: "이어보기", style: .primary)
+                    Spacer()
+                    Text("3/5")
+                        .font(.pretendard(12, weight: .medium))
+                        .foregroundStyle(PSColor.textSecondary)
+                }
+
+                Text("정책 신호가 ETF 비중으로 번역되는 방식")
+                    .font(.pretendard(18, weight: .bold))
+                    .foregroundStyle(PSColor.textPrimary)
+
+                Text("정책 · 포트폴리오 영향")
+                    .font(.pretendard(13, weight: .regular))
+                    .foregroundStyle(PSColor.textSecondary)
+
+                GeometryReader { proxy in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Color(hex: "DBEAFE"))
+                        Capsule().fill(PSColor.primary).frame(width: proxy.size.width * 0.6)
+                    }
+                }
+                .frame(height: 6)
+
+                HStack {
+                    Text("남은 시간 4분")
+                    Spacer()
+                    Text("+2 학습 점수")
+                }
+                .font(.pretendard(12, weight: .medium))
+                .foregroundStyle(PSColor.textSecondary)
+
+                PolSignalButton("이어보기", iconName: "arrow.right", style: .primary) {}
+            }
+        }
+    }
+
+    private var learningStatsCard: some View {
+        PolSignalCard(variant: .surfaceAlt) {
+            HStack(spacing: 0) {
+                statColumn(title: "이번 주 점수", value: "22", color: PSColor.primary)
+                Divider().background(PSColor.rule)
+                statColumn(title: "완료 콘텐츠", value: "7", color: PSColor.textPrimary)
+                Divider().background(PSColor.rule)
+                statColumn(title: "연속 학습", value: "4일", color: PSColor.textPrimary)
+            }
+        }
+    }
+
+    private func statColumn(title: String, value: String, color: Color) -> some View {
+        VStack(spacing: 5) {
+            Text(value)
+                .font(.pretendard(title == "이번 주 점수" ? 22 : 18, weight: .bold))
+                .foregroundStyle(color)
+                .monospacedDigit()
+            Text(title)
+                .font(.pretendard(11, weight: .medium))
+                .foregroundStyle(PSColor.textFaint)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func conceptCard(_ event: PolSignalEvent) -> some View {
+        PolSignalCard {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(PSColor.primary)
+                    .frame(width: 44, height: 44)
+                    .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        PolSignalTag(text: event.category, style: event.category == "반도체" ? .semi : .rate)
+                        Text("4분")
+                            .font(.pretendard(12, weight: .medium))
+                            .foregroundStyle(PSColor.textFaint)
+                    }
+
+                    Text(event.title)
+                        .font(.pretendard(15, weight: .semibold))
+                        .foregroundStyle(PSColor.textPrimary)
+                        .lineLimit(2)
+
+                    Text("↳ \(event.reason)")
+                        .font(.pretendard(12, weight: .regular))
+                        .foregroundStyle(PSColor.primary)
+                        .lineLimit(2)
+                }
+            }
+        }
+    }
+
+    private func signalMiniCard(_ event: PolSignalEvent) -> some View {
+        Button {
+            openDetail(event)
+        } label: {
+            PolSignalCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        PolSignalTag(text: event.category, style: tagStyle(for: event))
+                        Text(event.timeText)
+                            .font(.pretendard(12, weight: .medium))
+                            .foregroundStyle(PSColor.textSecondary)
+                        Spacer()
+                        PolSignalBadge(text: event.feedTab == .breaking ? "속보" : "확인", style: event.feedTab == .breaking ? .danger : .primary)
+                    }
+
+                    Text(event.verdict)
+                        .font(.pretendard(15, weight: .semibold))
+                        .foregroundStyle(PSColor.textPrimary)
+                        .lineLimit(2)
+
+                    Text(event.reason)
+                        .font(.pretendard(13, weight: .regular))
+                        .foregroundStyle(PSColor.textSecondary)
+                        .lineLimit(2)
+
+                    Text("내 노출 · \(event.exposureSummary)")
+                        .font(.pretendard(12, weight: .medium))
+                        .foregroundStyle(PSColor.textFaint)
+                }
+            }
+        }
+        .buttonStyle(PressScaleButtonStyle())
+    }
+
+    private func breakingMiniCard(_ event: PolSignalEvent) -> some View {
+        Button {
+            openDetail(event)
+        } label: {
+            PolSignalCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        PolSignalTag(text: event.category, style: tagStyle(for: event))
+                        Text(event.timeText)
+                            .font(.pretendard(12, weight: .medium))
+                            .foregroundStyle(PSColor.textSecondary)
+                        Spacer()
+                        PolSignalBadge(text: event.feedTab == .breaking ? "주의" : "완료", style: event.feedTab == .breaking ? .warn : .success)
+                    }
+
+                    Text(event.title)
+                        .font(.pretendard(15, weight: .semibold))
+                        .foregroundStyle(PSColor.textPrimary)
+                        .lineLimit(2)
+
+                    Text(event.reason)
+                        .font(.pretendard(13, weight: .regular))
+                        .foregroundStyle(PSColor.textSecondary)
+                        .lineLimit(2)
+
+                    Text(event.analysisState)
+                        .font(.pretendard(11, weight: .medium))
+                        .foregroundStyle(PSColor.textFaint)
+                }
+            }
+        }
+        .buttonStyle(PressScaleButtonStyle())
+    }
+
+    private func tagStyle(for event: PolSignalEvent) -> PolSignalTagStyle {
+        switch event.category {
+        case "반도체":
+            return .semi
+        case "정책", "학습":
+            return .policy
+        case "환율", "금리":
+            return .rate
+        default:
+            return .primary
+        }
+    }
+
+    private func openDetail(_ event: PolSignalEvent) {
+        navigationPath.append(.detail(event.id))
+    }
+
+    private func openProposalSheet() {
+        isProposalSheetPresented = true
     }
 
     private func consumeExternalRoute() {
         guard let route = externalRoute else { return }
-        navigationPath = [route]
+        switch route {
+        case .list:
+            navigationPath = []
+        case .detail:
+            navigationPath = [route]
+        case .adjustment:
+            isProposalSheetPresented = true
+        }
         externalRoute = nil
-    }
-}
-
-private struct PolSignalEventCard: View {
-    let event: PolSignalEvent
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                PolSignalChip(text: event.category, color: event.accentColor)
-                PolSignalChip(text: event.dDay, color: event.accentColor, isProminent: true)
-                Spacer(minLength: 0)
-            }
-
-            Text(event.title)
-                .font(.pretendard(17, weight: .bold))
-                .foregroundStyle(Color.textPrimary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            exposureRow
-
-            Text(event.expectedImpact)
-                .font(.pretendard(13, weight: .semibold))
-                .foregroundStyle(Color.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(event.accentColor)
-                    .padding(.top, 1)
-
-                Text(event.aiSummary)
-                    .font(.pretendard(12, weight: .medium))
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(12)
-            .background(event.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-            HStack(spacing: 6) {
-                Text(event.ctaTitle)
-                    .font(.pretendard(13, weight: .bold))
-
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 11, weight: .bold))
-            }
-            .foregroundStyle(event.accentColor)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
-        }
-    }
-
-    private var exposureRow: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text("내 노출")
-                .font(.pretendard(11, weight: .semibold))
-                .foregroundStyle(Color.textTertiary)
-
-            PolSignalFlowLayout(spacing: 6) {
-                ForEach(event.exposures) { exposure in
-                    PolSignalChip(text: "\(exposure.ticker) \(exposure.weightText)", color: exposure.color)
-                }
-            }
-        }
     }
 }
 
@@ -232,11 +566,14 @@ private struct PolSignalDetailView: View {
     let proposal: PolSignalAdjustmentProposal
     let onAdjustmentTap: () -> Void
 
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedScenarioID: UUID?
     @State private var isSourceExpanded = false
 
     var body: some View {
         VStack(spacing: 0) {
+            navBar
+
             PFContentScrollView(
                 alignment: .leading,
                 spacing: 20,
@@ -249,7 +586,7 @@ private struct PolSignalDetailView: View {
                 detailHeader
                 exposureSection
                 expectedImpactSection
-                aiSummaryBlock
+                PolSignalAIBlock(text: event.aiSummary)
                 scenarioSection
                 sourceSummarySection
                 scheduleSection
@@ -257,34 +594,75 @@ private struct PolSignalDetailView: View {
 
             bottomCTA
         }
-        .policyFinanceLightTabChrome(bottomInset: 0)
+        .background(PSColor.background.ignoresSafeArea())
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             selectedScenarioID = selectedScenarioID ?? event.scenarios.first?.id
         }
     }
 
+    private var navBar: some View {
+        HStack {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(PSColor.textPrimary)
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            Text("시그널 상세")
+                .font(.pretendard(17, weight: .semibold))
+                .foregroundStyle(PSColor.textPrimary)
+
+            Spacer()
+
+            Button {} label: {
+                Image(systemName: "bookmark")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(PSColor.textPrimary)
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 48)
+        .background(PSColor.background)
+    }
+
     private var detailHeader: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                PolSignalChip(text: event.category, color: event.accentColor, isProminent: true)
-                PolSignalChip(text: event.institution, color: event.accentColor)
-                PolSignalChip(text: event.dDay, color: event.accentColor)
+        VStack(alignment: .leading, spacing: 10) {
+            PolSignalFlowLayout(spacing: 8) {
+                PolSignalTag(text: event.category, style: event.category == "반도체" ? .semi : .rate)
+                PolSignalTag(text: "정책", style: .policy)
+                PolSignalTag(text: "발표 대기", style: .primary)
+                Text(event.institution)
+                    .font(.pretendard(12, weight: .regular))
+                    .foregroundStyle(PSColor.textSecondary)
+                PolSignalBadge(text: event.dDay, style: .warn)
             }
 
             Text(event.title)
-                .font(.pretendard(25, weight: .bold))
-                .foregroundStyle(Color.textPrimary)
+                .font(.pretendard(28, weight: .bold))
+                .foregroundStyle(PSColor.textPrimary)
+                .lineSpacing(1)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
 
     private var exposureSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            PolSignalSectionTitle("내 노출")
+            PolSignalSectionHeader(title: "내 노출")
 
-            PolSignalFlowLayout(spacing: 7) {
-                ForEach(event.exposures) { exposure in
-                    PolSignalChip(text: "\(exposure.ticker) \(exposure.weightText)", color: exposure.color, isProminent: true)
+            PolSignalCard {
+                PolSignalFlowLayout(spacing: 7) {
+                    ForEach(event.exposures) { exposure in
+                        PolSignalChip(text: "\(exposure.ticker) \(exposure.weightText)", color: exposure.color)
+                    }
                 }
             }
         }
@@ -292,70 +670,44 @@ private struct PolSignalDetailView: View {
 
     private var expectedImpactSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            PolSignalSectionTitle("예상 영향")
+            PolSignalSectionHeader(title: "예상 영향")
 
             Text(event.expectedImpact)
-                .font(.pretendard(15, weight: .bold))
-                .foregroundStyle(Color.textPrimary)
+                .font(.pretendard(15, weight: .regular))
+                .foregroundStyle(PSColor.textPrimary)
+                .lineSpacing(4)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.hairline, lineWidth: 1)
-                }
-        }
-    }
-
-    private var aiSummaryBlock: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(event.accentColor)
-                .padding(.top, 1)
-
-            Text(event.aiSummary)
-                .font(.pretendard(14, weight: .semibold))
-                .foregroundStyle(Color.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(15)
-        .background(event.accentColor.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(event.accentColor.opacity(0.16), lineWidth: 1)
         }
     }
 
     private var scenarioSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PolSignalSectionTitle("시나리오")
+            PolSignalSectionHeader(title: "시나리오", meta: "확률 기반")
 
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 ForEach(event.scenarios) { scenario in
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             selectedScenarioID = scenario.id
                         }
                     } label: {
-                        VStack(spacing: 3) {
+                        VStack(spacing: 4) {
                             Text(scenario.code)
-                                .font(.pretendard(14, weight: .bold))
+                                .font(.pretendard(12, weight: .semibold))
                             Text("\(scenario.probability)%")
-                                .font(.pretendard(11, weight: .semibold))
+                                .font(.pretendard(16, weight: .bold))
                                 .monospacedDigit()
                         }
-                        .foregroundStyle(selectedScenarioID == scenario.id ? Color.white : Color.textSecondary)
+                        .foregroundStyle(selectedScenarioID == scenario.id ? Color.white : PSColor.textFaint)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(
-                            selectedScenarioID == scenario.id ? event.accentColor : Color.elevated,
-                            in: RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            selectedScenarioID == scenario.id ? PSColor.primary : PSColor.surface,
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                         )
                         .overlay {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .stroke(selectedScenarioID == scenario.id ? event.accentColor : Color.hairline, lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(selectedScenarioID == scenario.id ? PSColor.primary : PSColor.border, lineWidth: 1)
                         }
                     }
                     .buttonStyle(.plain)
@@ -363,244 +715,273 @@ private struct PolSignalDetailView: View {
             }
 
             if let scenario = selectedScenario {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(scenario.title)
-                        .font(.pretendard(16, weight: .bold))
-                        .foregroundStyle(Color.textPrimary)
+                PolSignalCard(variant: scenarioVariant(scenario)) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text(scenario.title)
+                                .font(.pretendard(16, weight: .bold))
+                                .foregroundStyle(PSColor.textPrimary)
+                            Spacer()
+                            PolSignalBadge(text: scenario.outcome, style: scenarioBadgeStyle(scenario))
+                        }
 
-                    Text(scenario.outcome)
-                        .font(.pretendard(14, weight: .bold))
-                        .foregroundStyle(event.accentColor)
-
-                    Text(scenario.note)
-                        .font(.pretendard(13, weight: .medium))
-                        .foregroundStyle(Color.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(15)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.hairline, lineWidth: 1)
+                        Text(scenario.note)
+                            .font(.pretendard(14, weight: .regular))
+                            .foregroundStyle(PSColor.textSecondary)
+                            .lineSpacing(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
 
-            warningBlock
-        }
-    }
-
-    private var warningBlock: some View {
-        HStack(alignment: .top, spacing: 9) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.warning)
-                .padding(.top, 2)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("판단 약화 조건")
-                    .font(.pretendard(12, weight: .bold))
-                    .foregroundStyle(Color.textPrimary)
-
-                Text(event.weakeningCondition)
-                    .font(.pretendard(12, weight: .medium))
-                    .foregroundStyle(Color.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(13)
-        .background(Color.warningBg, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.warningBorder, lineWidth: 1)
+            PolSignalCallout(title: "판단 약화 조건", message: event.weakeningCondition, tone: .danger)
         }
     }
 
     private var sourceSummarySection: some View {
-        DisclosureGroup(isExpanded: $isSourceExpanded) {
-            Text(event.sourceSummary)
-                .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 10)
-        } label: {
-            Text(isSourceExpanded ? "원문 접기" : "원문 펼치기")
-                .font(.pretendard(14, weight: .bold))
-                .foregroundStyle(Color.textPrimary)
-        }
-        .accentColor(Color.textSecondary)
-        .padding(15)
-        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
+        VStack(alignment: .leading, spacing: 12) {
+            PolSignalSectionHeader(title: "원문 요약", meta: "\(event.institution) · \(event.timeText)")
+
+            PolSignalCard {
+                VStack(alignment: .leading, spacing: 0) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isSourceExpanded.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Text(event.sourceHeadline)
+                                .font(.pretendard(14, weight: .medium))
+                                .foregroundStyle(PSColor.textPrimary)
+                                .multilineTextAlignment(.leading)
+                            Spacer(minLength: 0)
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(PSColor.textSecondary)
+                                .rotationEffect(.degrees(isSourceExpanded ? 180 : 0))
+                        }
+                    }
+                    .buttonStyle(.plain)
+
+                    if isSourceExpanded {
+                        Divider()
+                            .background(PSColor.rule)
+                            .padding(.top, 12)
+                        Text(event.sourceSummary)
+                            .font(.pretendard(13, weight: .regular))
+                            .foregroundStyle(PSColor.textSecondary)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 12)
+                    }
+                }
+            }
         }
     }
 
     private var scheduleSection: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "calendar")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(event.accentColor)
-                .frame(width: 32, height: 32)
-                .background(event.accentColor.opacity(0.1), in: Circle())
+        VStack(alignment: .leading, spacing: 12) {
+            PolSignalSectionHeader(title: "점검 일정")
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text("점검 일정")
-                    .font(.pretendard(12, weight: .bold))
-                    .foregroundStyle(Color.textTertiary)
-
-                Text(event.checkSchedule)
-                    .font(.pretendard(14, weight: .bold))
-                    .foregroundStyle(Color.textPrimary)
+            PolSignalCard(padding: EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16)) {
+                VStack(spacing: 0) {
+                    scheduleRow(title: "발표 확인", value: event.checkSchedule)
+                    Divider().background(PSColor.rule)
+                    scheduleRow(title: "다시 보기", value: "5월 16일 23:00")
+                }
             }
 
-            Spacer(minLength: 0)
-        }
-        .padding(15)
-        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
+            PolSignalButton("+ 캘린더 추가 · 알림", style: .secondary) {}
         }
     }
 
-    private var bottomCTA: some View {
-        Button(action: onAdjustmentTap) {
-            HStack(spacing: 8) {
-                Text("조정 제안 보기")
-                    .font(.pretendard(16, weight: .bold))
+    private func scheduleRow(title: String, value: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "calendar")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(PSColor.primary)
+                .frame(width: 28, height: 28)
 
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 14, weight: .bold))
-            }
-            .foregroundStyle(Color.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .background(Color.brand, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            Text(title)
+                .font(.pretendard(14, weight: .regular))
+                .foregroundStyle(PSColor.textPrimary)
+
+            Spacer()
+
+            Text(value)
+                .font(.pretendard(14, weight: .semibold))
+                .foregroundStyle(PSColor.primary)
+                .multilineTextAlignment(.trailing)
         }
-        .buttonStyle(PressScaleButtonStyle())
-        .padding(.horizontal, PSSpacing.screenHorizontal)
-        .padding(.top, 10)
-        .padding(.bottom, 16)
-        .background(Color.canvas)
+        .padding(.vertical, 12)
+    }
+
+    private var bottomCTA: some View {
+        PolSignalButton("조정 제안 보기", iconName: "arrow.right", style: .primary, action: onAdjustmentTap)
+            .padding(.horizontal, PSSpacing.screenHorizontal)
+            .padding(.top, 10)
+            .padding(.bottom, 16)
+            .background(PSColor.background)
     }
 
     private var selectedScenario: PolSignalScenario? {
         event.scenarios.first { $0.id == selectedScenarioID } ?? event.scenarios.first
     }
+
+    private func scenarioVariant(_ scenario: PolSignalScenario) -> PolSignalCardVariant {
+        switch scenario.code {
+        case "A":
+            return .surfaceAlt
+        case "B":
+            return .surfaceAlt
+        default:
+            return .danger
+        }
+    }
+
+    private func scenarioBadgeStyle(_ scenario: PolSignalScenario) -> PolSignalBadgeStyle {
+        switch scenario.code {
+        case "A":
+            return .success
+        case "B":
+            return .rate
+        default:
+            return .danger
+        }
+    }
 }
 
-private struct PolSignalAdjustmentProposalView: View {
+private struct PolSignalAdjustmentProposalSheetView: View {
     let proposal: PolSignalAdjustmentProposal
-    @State private var recordState: String?
+    @Environment(\.dismiss) private var dismiss
+    @State private var recorded: String?
 
     var body: some View {
-        PFContentScrollView(
-            alignment: .leading,
-            spacing: 20,
-            horizontalPadding: PSSpacing.screenHorizontal,
-            topPadding: 12,
-            bottomPadding: 112,
-            scrollsToTopOnAppear: true,
-            locksHorizontalOverflow: true
-        ) {
-            header
-            weightComparison
-            reasonSection
-            effectSection
-            actionButtons
+        VStack(spacing: 0) {
+            Capsule(style: .continuous)
+                .fill(Color(hex: "CBD5E1"))
+                .frame(width: 36, height: 5)
+                .padding(.top, 10)
+
+            sheetHeader
+
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 20) {
+                    statusTags
+                    proposalCard
+                    reasonSection
+                    effectSection
+                    actionArea
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 24)
+            }
         }
-        .policyFinanceLightTabChrome()
+        .background(PSColor.surface.ignoresSafeArea())
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                PolSignalChip(text: proposal.badgeText, color: .brand, isProminent: true)
-                PolSignalChip(text: proposal.indexText, color: .brand)
+    private var sheetHeader: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("조정 제안")
+                    .font(.pretendard(17, weight: .semibold))
+                    .foregroundStyle(PSColor.textPrimary)
+                Text(proposal.indexText + " ›")
+                    .font(.pretendard(13, weight: .regular))
+                    .foregroundStyle(PSColor.textSecondary)
             }
 
-            Text(proposal.title)
-                .font(.pretendard(24, weight: .bold))
-                .foregroundStyle(Color.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(PSColor.textSecondary)
+                    .frame(width: 30, height: 30)
+                    .background(PSColor.surfaceAlt, in: Circle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+    }
+
+    private var statusTags: some View {
+        HStack(spacing: 8) {
+            PolSignalTag(text: proposal.badgeText, style: .primary)
+            PolSignalTag(text: "정답 아님", style: .neutral)
         }
     }
 
-    private var weightComparison: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            HStack(alignment: .center) {
-                Text("\(proposal.currentLabel) \(Int(proposal.currentWeight))%")
-                    .font(.pretendard(18, weight: .bold))
-                    .foregroundStyle(Color.textPrimary)
-                    .monospacedDigit()
+    private var proposalCard: some View {
+        PolSignalCard(variant: .tinted) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Text(proposal.currentLabel)
+                        .font(.pretendard(14, weight: .semibold))
+                        .foregroundStyle(PSColor.textPrimary)
+                    Spacer()
+                    Text(proposal.allocationChanges.joined(separator: " · "))
+                        .font(.pretendard(12, weight: .regular))
+                        .foregroundStyle(PSColor.textSecondary)
+                }
 
-                Spacer()
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text("\(Int(proposal.currentWeight))%")
+                        .font(.pretendard(32, weight: .bold))
+                        .foregroundStyle(PSColor.textPrimary)
+                        .monospacedDigit()
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(PSColor.textFaint)
+                    Text("\(Int(proposal.proposedWeight))%")
+                        .font(.pretendard(32, weight: .bold))
+                        .foregroundStyle(PSColor.danger)
+                        .monospacedDigit()
+                }
 
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.textTertiary)
-
-                Spacer()
-
-                Text("\(proposal.proposedLabel) \(Int(proposal.proposedWeight))%")
-                    .font(.pretendard(18, weight: .bold))
-                    .foregroundStyle(Color.brand)
-                    .monospacedDigit()
-            }
-
-            VStack(spacing: 8) {
-                ProposalWeightBar(title: "현재 비중", value: proposal.currentWeight, color: .trendDown)
-                ProposalWeightBar(title: "제안 비중", value: proposal.proposedWeight, color: .brand)
-            }
-
-            PolSignalFlowLayout(spacing: 7) {
-                ForEach(proposal.allocationChanges, id: \.self) { change in
-                    PolSignalChip(text: change, color: change.contains("-") ? .trendDown : .success)
+                VStack(spacing: 10) {
+                    ProposalWeightBar(title: "현재", value: proposal.currentWeight, color: PSColor.primary)
+                    ProposalWeightBar(title: "제안 후", value: proposal.proposedWeight, color: PSColor.primary)
                 }
             }
-        }
-        .padding(16)
-        .background(Color.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
         }
     }
 
     private var reasonSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PolSignalSectionTitle("조정 근거 \(proposal.reasons.count)가지")
+            PolSignalSectionHeader(title: "조정 근거", meta: "\(proposal.reasons.count)가지")
 
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
                 ForEach(proposal.reasons) { reason in
-                    DisclosureGroup {
-                        Text(reason.detail)
-                            .font(.pretendard(12, weight: .medium))
-                            .foregroundStyle(Color.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.top, 8)
-                    } label: {
-                        HStack(spacing: 10) {
-                            Image(systemName: reason.iconName)
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(reason.color)
-                                .frame(width: 30, height: 30)
-                                .background(reason.color.opacity(0.1), in: Circle())
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(systemName: reason.iconName)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(PSColor.primary)
+                            .frame(width: 32, height: 32)
+                            .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-                            Text(reason.title)
-                                .font(.pretendard(13, weight: .bold))
-                                .foregroundStyle(Color.textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
+                        Text(reason.title)
+                            .font(.pretendard(14, weight: .regular))
+                            .foregroundStyle(PSColor.textPrimary)
+                            .lineSpacing(2)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Spacer(minLength: 0)
+
+                        Text("근거 ›")
+                            .font(.pretendard(13, weight: .semibold))
+                            .foregroundStyle(PSColor.primary)
                     }
-                    .accentColor(Color.textTertiary)
-                    .padding(14)
-                    .background(Color.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .padding(12)
+                    .background(PSColor.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(Color.hairline, lineWidth: 1)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(PSColor.border, lineWidth: 1)
                     }
                 }
             }
@@ -609,66 +990,78 @@ private struct PolSignalAdjustmentProposalView: View {
 
     private var effectSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PolSignalSectionTitle("예상 효과")
+            PolSignalSectionHeader(title: "예상 효과")
 
-            HStack(spacing: 10) {
-                ForEach(proposal.effects) { effect in
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(effect.title)
-                            .font(.pretendard(11, weight: .semibold))
-                            .foregroundStyle(Color.textTertiary)
+            PolSignalCard(padding: EdgeInsets(top: 14, leading: 0, bottom: 14, trailing: 0)) {
+                HStack(spacing: 0) {
+                    ForEach(Array(proposal.effects.enumerated()), id: \.element.id) { index, effect in
+                        VStack(spacing: 5) {
+                            Text(effect.title)
+                                .font(.pretendard(11, weight: .medium))
+                                .foregroundStyle(PSColor.textFaint)
+                            Text(effect.value)
+                                .font(.pretendard(18, weight: .bold))
+                                .foregroundStyle(effect.color)
+                                .monospacedDigit()
+                        }
+                        .frame(maxWidth: .infinity)
 
-                        Text(effect.value)
-                            .font(.pretendard(18, weight: .bold))
-                            .foregroundStyle(effect.color)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.72)
-                            .monospacedDigit()
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(12)
-                    .background(Color.elevated, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(Color.hairline, lineWidth: 1)
+                        if index < proposal.effects.count - 1 {
+                            Divider().background(PSColor.rule)
+                        }
                     }
                 }
             }
         }
     }
 
-    private var actionButtons: some View {
-        VStack(spacing: 11) {
-            HStack(spacing: 10) {
-                Button {
-                    recordState = "대기 기록 완료"
-                } label: {
-                    Text("대기 기록")
-                        .font(.pretendard(15, weight: .bold))
-                        .foregroundStyle(Color.brand)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.brand.opacity(0.08), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                }
-                .buttonStyle(PressScaleButtonStyle())
+    @ViewBuilder
+    private var actionArea: some View {
+        if let recorded {
+            VStack(spacing: 10) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(Color.white)
+                    .frame(width: 44, height: 44)
+                    .background(PSColor.success, in: Circle())
 
-                Button {
-                    recordState = "대응 기록 완료"
-                } label: {
-                    Text("대응 기록")
-                        .font(.pretendard(15, weight: .bold))
-                        .foregroundStyle(Color.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.brand, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                }
-                .buttonStyle(PressScaleButtonStyle())
+                Text("기록됐어요")
+                    .font(.pretendard(17, weight: .bold))
+                    .foregroundStyle(PSColor.success)
+
+                Text("\(recorded) 상태로 남겼습니다. 실제 주문은 실행되지 않았어요.")
+                    .font(.pretendard(13, weight: .regular))
+                    .foregroundStyle(PSColor.textSecondary)
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity)
+            .padding(18)
+            .background(PSColor.successBg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        } else {
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
+                    PolSignalButton("대기 기록", style: .secondary) {
+                        record("대기")
+                    }
+                    PolSignalButton("대응 기록", style: .primary) {
+                        record("대응")
+                    }
+                }
 
-            Text(recordState ?? proposal.helperText)
-                .font(.pretendard(12, weight: .medium))
-                .foregroundStyle(recordState == nil ? Color.textTertiary : Color.success)
-                .frame(maxWidth: .infinity, alignment: .center)
+                Text(proposal.helperText)
+                    .font(.pretendard(12, weight: .regular))
+                    .foregroundStyle(PSColor.textFaint)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+        }
+    }
+
+    private func record(_ value: String) {
+        withAnimation(.easeInOut(duration: 0.28)) {
+            recorded = value
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            dismiss()
         }
     }
 }
@@ -682,20 +1075,18 @@ private struct ProposalWeightBar: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack {
                 Text(title)
-                    .font(.pretendard(11, weight: .semibold))
-                    .foregroundStyle(Color.textTertiary)
-
+                    .font(.pretendard(12, weight: .medium))
+                    .foregroundStyle(PSColor.textSecondary)
                 Spacer()
-
                 Text("\(Int(value))%")
-                    .font(.pretendard(11, weight: .bold))
+                    .font(.pretendard(12, weight: .semibold))
                     .foregroundStyle(color)
                     .monospacedDigit()
             }
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.subtle)
+                    Capsule().fill(PSColor.rule)
                     Capsule()
                         .fill(color)
                         .frame(width: max(0, proxy.size.width * value / 100))
