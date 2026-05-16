@@ -4,9 +4,12 @@ struct OnboardingGoalView: View {
     @ObservedObject var viewModel: OnboardingFlowViewModel
     let onBack: () -> Void
     let onNext: () -> Void
+    @State private var isProgressCollapsed = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
+            OnboardingProgressScrollAnchor()
+
             VStack(alignment: .leading, spacing: 24) {
                 OnboardingV3StepHeader(step: 3, onBack: onBack)
 
@@ -61,11 +64,13 @@ struct OnboardingGoalView: View {
                 }
             }
             .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
-            .padding(.top, 16)
+            .padding(.top, OnboardingV3Layout.progressContentTopPadding)
             .padding(.bottom, 120)
             .frame(maxWidth: OnboardingV3Layout.maxWidth, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .trackOnboardingProgressScroll(isCollapsed: $isProgressCollapsed)
+        .onboardingProgressOverlay(step: 3, isCollapsed: isProgressCollapsed)
         .safeAreaInset(edge: .bottom) {
             OnboardingV3BottomBar {
                 OnboardingV3PrimaryButton(title: "다음", action: onNext)
@@ -79,6 +84,7 @@ struct OnboardingFundsView: View {
     @ObservedObject var viewModel: OnboardingFlowViewModel
     let onBack: () -> Void
     let onNext: () -> Void
+    @State private var isProgressCollapsed = false
 
     private let assetOptions: [AssetPreference] = [.etfFocused, .etfAndStocks]
 
@@ -91,6 +97,8 @@ struct OnboardingFundsView: View {
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
+            OnboardingProgressScrollAnchor()
+
             VStack(alignment: .leading, spacing: 24) {
                 OnboardingV3StepHeader(step: 4, onBack: onBack)
 
@@ -121,11 +129,13 @@ struct OnboardingFundsView: View {
                 }
             }
             .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
-            .padding(.top, 16)
+            .padding(.top, OnboardingV3Layout.progressContentTopPadding)
             .padding(.bottom, 144)
             .frame(maxWidth: OnboardingV3Layout.maxWidth, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .trackOnboardingProgressScroll(isCollapsed: $isProgressCollapsed)
+        .onboardingProgressOverlay(step: 4, isCollapsed: isProgressCollapsed)
         .safeAreaInset(edge: .bottom) {
             OnboardingV3BottomBar {
                 VStack(spacing: 10) {

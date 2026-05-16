@@ -4,6 +4,7 @@ struct OnboardingPage1View: View {
     @ObservedObject var viewModel: OnboardingFlowViewModel
     let onNext: () -> Void
     var onBack: () -> Void = {}
+    @State private var isProgressCollapsed = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -16,6 +17,8 @@ struct OnboardingPage1View: View {
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
+            OnboardingProgressScrollAnchor()
+
             VStack(alignment: .leading, spacing: 24) {
                 OnboardingV3StepHeader(step: 1, onBack: onBack)
 
@@ -40,11 +43,13 @@ struct OnboardingPage1View: View {
                 SectorNewsPreviewCard(item: previewItem)
             }
             .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
-            .padding(.top, 16)
+            .padding(.top, OnboardingV3Layout.progressContentTopPadding)
             .padding(.bottom, 120)
             .frame(maxWidth: OnboardingV3Layout.maxWidth, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .trackOnboardingProgressScroll(isCollapsed: $isProgressCollapsed)
+        .onboardingProgressOverlay(step: 1, isCollapsed: isProgressCollapsed)
         .safeAreaInset(edge: .bottom) {
             OnboardingV3BottomBar {
                 OnboardingV3PrimaryButton(

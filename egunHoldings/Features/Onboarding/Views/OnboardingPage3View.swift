@@ -4,6 +4,7 @@ struct OnboardingPage3View: View {
     @ObservedObject var viewModel: OnboardingFlowViewModel
     let onBack: () -> Void
     let onNext: () -> Void
+    @State private var isProgressCollapsed = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -12,17 +13,11 @@ struct OnboardingPage3View: View {
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
+            OnboardingProgressScrollAnchor()
+
             VStack(alignment: .leading, spacing: 24) {
                 HStack {
-                    Button(action: onBack) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 19, weight: .semibold))
-                            .foregroundStyle(Color.textPrimary)
-                            .frame(width: 34, height: 34)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("뒤로")
+                    OnboardingV3BackButton(action: onBack)
 
                     Spacer()
                 }
@@ -49,11 +44,13 @@ struct OnboardingPage3View: View {
                 }
             }
             .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
-            .padding(.top, 16)
+            .padding(.top, OnboardingV3Layout.progressContentTopPadding)
             .padding(.bottom, 150)
             .frame(maxWidth: OnboardingV3Layout.maxWidth, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .trackOnboardingProgressScroll(isCollapsed: $isProgressCollapsed)
+        .onboardingProgressOverlay(step: 4, isCollapsed: isProgressCollapsed)
         .safeAreaInset(edge: .bottom) {
             OnboardingV3BottomBar {
                 VStack(spacing: 10) {

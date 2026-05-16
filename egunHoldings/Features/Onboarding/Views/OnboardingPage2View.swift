@@ -7,9 +7,12 @@ struct OnboardingPage2View: View {
 
     @State private var showsRecommendation = false
     @State private var expandedSetting: RiskSetting?
+    @State private var isProgressCollapsed = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
+            OnboardingProgressScrollAnchor()
+
             VStack(alignment: .leading, spacing: 24) {
                 OnboardingV3StepHeader(step: 2, onBack: onBack)
 
@@ -42,11 +45,13 @@ struct OnboardingPage2View: View {
                 }
             }
             .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
-            .padding(.top, 16)
+            .padding(.top, OnboardingV3Layout.progressContentTopPadding)
             .padding(.bottom, 154)
             .frame(maxWidth: OnboardingV3Layout.maxWidth, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .trackOnboardingProgressScroll(isCollapsed: $isProgressCollapsed)
+        .onboardingProgressOverlay(step: 2, isCollapsed: isProgressCollapsed)
         .safeAreaInset(edge: .bottom) {
             OnboardingV3BottomBar {
                 VStack(spacing: 10) {
