@@ -2,9 +2,10 @@ import SwiftUI
 
 struct OnboardingFlowView: View {
     private enum OnboardingRoute: Hashable {
-        case investmentStyle
+        case riskProfile
+        case investmentGoal
+        case funds
         case brokerageConnection
-        case brokerageSync
         case completion
     }
 
@@ -29,31 +30,31 @@ struct OnboardingFlowView: View {
         NavigationStack(path: $path) {
             OnboardingPage1View(
                 viewModel: onboardingViewModel,
-                onNext: { path.append(.investmentStyle) },
+                onNext: { path.append(.riskProfile) },
                 onBack: onLogout
             )
             .navigationDestination(for: OnboardingRoute.self) { route in
                 switch route {
-                case .investmentStyle:
+                case .riskProfile:
                     OnboardingPage2View(
+                        viewModel: onboardingViewModel,
+                        onBack: navigateBack,
+                        onNext: { path.append(.investmentGoal) }
+                    )
+                case .investmentGoal:
+                    OnboardingGoalView(
+                        viewModel: onboardingViewModel,
+                        onBack: navigateBack,
+                        onNext: { path.append(.funds) }
+                    )
+                case .funds:
+                    OnboardingFundsView(
                         viewModel: onboardingViewModel,
                         onBack: navigateBack,
                         onNext: { path.append(.brokerageConnection) }
                     )
                 case .brokerageConnection:
                     OnboardingPage3View(
-                        viewModel: onboardingViewModel,
-                        onBack: navigateBack,
-                        onNext: {
-                            if onboardingViewModel.connectedInstitutionID == nil {
-                                path.append(.completion)
-                            } else {
-                                path.append(.brokerageSync)
-                            }
-                        }
-                    )
-                case .brokerageSync:
-                    OnboardingBrokerageLoadingView(
                         viewModel: onboardingViewModel,
                         onBack: navigateBack,
                         onNext: { path.append(.completion) }

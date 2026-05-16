@@ -10,33 +10,20 @@ struct OnboardingPage1View: View {
         GridItem(.flexible(), spacing: 12)
     ]
 
-    private var previewKey: String {
-        viewModel.previewItems.map(\.id).joined(separator: "-")
+    private var previewItem: OnboardingNewsPreviewItem? {
+        viewModel.previewItems.first
     }
 
     var body: some View {
-        PFContentScrollView(
-            alignment: .leading,
-            spacing: 24,
-            horizontalPadding: MidnightLayout.horizontal,
-            topPadding: 16,
-            bottomPadding: 160
-        ) {
-            FlowProgressHeader(currentStep: 1, totalSteps: 5, stepTitle: "맞춤 설정 · 관심 산업", onBack: onBack)
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 24) {
+                OnboardingV3StepHeader(step: 1, onBack: onBack)
 
-            VStack(alignment: .leading, spacing: 10) {
-                Text("어떤 산업을 주로 보시나요?")
-                    .font(.pretendard(28, weight: .bold))
-                    .foregroundStyle(Color.textPrimary)
+                OnboardingV3QuestionHeader(
+                    title: "어떤 산업을 주로 보시나요?",
+                    subtitle: "선택하면 아래 뉴스 미리보기가 즉시 바뀌어요"
+                )
 
-                Text("선택한 산업 중심으로 뉴스와 시그널을 우선 정리해요")
-                    .font(.pretendard(16, weight: .regular))
-                    .foregroundStyle(Color.textTertiary)
-            }
-
-            FlowInfoHint(text: "선택하면 아래 뉴스 미리보기가 즉시 바뀌어요")
-
-            ZStack(alignment: .bottom) {
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(viewModel.allSectors) { sector in
                         SectorSelectionCard(
@@ -50,48 +37,24 @@ struct OnboardingPage1View: View {
                     }
                 }
 
-                LinearGradient(
-                    colors: [.clear, Color.canvas.opacity(0.96)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 54)
-                .allowsHitTesting(false)
+                SectorNewsPreviewCard(item: previewItem)
             }
+            .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
+            .padding(.top, 16)
+            .padding(.bottom, 120)
+            .frame(maxWidth: OnboardingV3Layout.maxWidth, alignment: .leading)
+            .frame(maxWidth: .infinity)
         }
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 10) {
-                ZStack {
-                    CompactNewsPreviewStrip(items: viewModel.previewItems)
-                        .id(previewKey)
-                        .transition(.opacity)
-                }
-                .animation(.easeInOut(duration: 0.2), value: previewKey)
-
-                FlowPrimaryButton(
+            OnboardingV3BottomBar {
+                OnboardingV3PrimaryButton(
                     title: "다음",
                     isEnabled: viewModel.canAdvanceFromSectorStep,
                     action: onNext
                 )
             }
-            .padding(.horizontal, MidnightLayout.horizontal)
-            .padding(.top, 10)
-            .padding(.bottom, 12)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color.canvas.opacity(0),
-                        Color.canvas.opacity(0.88),
-                        Color.canvas
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
-            )
         }
-        .background(PFGradientBackground())
-        .toolbar(.hidden, for: .navigationBar)
+        .onboardingV3Background()
     }
 }
 
@@ -105,107 +68,89 @@ private struct SectorSelectionCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
                     Text(sector.emoji)
-                        .font(.system(size: 24))
+                        .font(.system(size: 32))
+                        .frame(width: 38, height: 38, alignment: .leading)
 
-                    Spacer()
+                    Spacer(minLength: 8)
 
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(isSelected ? Color.brand : Color.subtle)
-                        .frame(width: 20, height: 20)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .stroke(isSelected ? Color.brand : Color.divider, lineWidth: 1)
-
-                            if isSelected {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(.white)
-                            }
-                        }
+                    OnboardingV3SelectionCheck(isSelected: isSelected)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 5) {
                     Text(sector.title)
-                        .font(.pretendard(16, weight: .semibold))
+                        .font(.pretendard(15, weight: .bold))
                         .foregroundStyle(Color.textPrimary)
 
                     Text(sector.description)
-                        .font(.pretendard(12, weight: .regular))
-                        .foregroundStyle(Color.textTertiary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .font(.pretendard(13, weight: .regular))
+                        .foregroundStyle(OnboardingV3Theme.muted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 148, alignment: .leading)
-            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+            .padding(14)
             .background(
-                isSelected ? Color.brand.opacity(0.13) : Color.subtle,
-                in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+                isSelected ? OnboardingV3Theme.selectedBackground : OnboardingV3Theme.cardBackground,
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(isSelected ? Color.brand.opacity(0.45) : Color.hairline, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isSelected ? OnboardingV3Theme.primary : OnboardingV3Theme.border, lineWidth: isSelected ? 2 : 1)
             }
         }
         .buttonStyle(ScalingSelectionButtonStyle())
     }
 }
 
-private struct ScalingSelectionButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+private struct SectorNewsPreviewCard: View {
+    let item: OnboardingNewsPreviewItem?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("지금 이런 시그널이 분석되고 있어요")
+                .font(.pretendard(13, weight: .semibold))
+                .foregroundStyle(OnboardingV3Theme.muted)
+
+            HStack(alignment: .top, spacing: 12) {
+                Circle()
+                    .fill(OnboardingV3Theme.selectedBackground)
+                    .frame(width: 38, height: 38)
+                    .overlay {
+                        Image(systemName: "newspaper")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(OnboardingV3Theme.primary)
+                    }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(item?.title ?? "관심 산업을 선택하면 관련 뉴스가 표시돼요")
+                        .font(.pretendard(15, weight: .bold))
+                        .foregroundStyle(Color.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(item?.summary ?? "선택한 섹터에 맞춰 정책 뉴스와 시장 신호를 먼저 보여드릴게요.")
+                        .font(.pretendard(13, weight: .regular))
+                        .foregroundStyle(OnboardingV3Theme.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(OnboardingV3Theme.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(OnboardingV3Theme.border, lineWidth: 1)
+        }
+        .animation(.easeInOut(duration: 0.2), value: item?.id)
     }
 }
 
-private struct CompactNewsPreviewStrip: View {
-    let items: [OnboardingNewsPreviewItem]
-
-    var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color.brandTintBg)
-                    .frame(width: 34, height: 34)
-
-                Image(systemName: "newspaper")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.brand)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text("선택 기반 미리보기")
-                    .font(.pretendard(11, weight: .semibold))
-                    .foregroundStyle(Color.textTertiary)
-
-                Text(items.first?.title ?? "관심 산업을 선택해주세요")
-                    .font(.pretendard(14, weight: .semibold))
-                    .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 8)
-
-            if items.count > 1 {
-                Text("+\(items.count - 1)")
-                    .font(.pretendard(12, weight: .semibold))
-                    .foregroundStyle(Color.brand)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.brandTintBg, in: Capsule(style: .continuous))
-            }
-        }
-        .padding(.horizontal, 14)
-        .frame(height: 58)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.elevated)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.hairline, lineWidth: 1)
-                }
-        )
+private struct ScalingSelectionButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 

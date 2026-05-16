@@ -168,6 +168,7 @@ struct AuthMockData {
         case .finance: return "KODEX 은행 ETF"
         case .defense: return "ARIRANG K방산Fn"
         case .bio: return "XBI"
+        case .mobility: return "DRIV"
         case .realEstate: return "VNQ"
         case .ev: return "LIT"
         case .ai: return "BOTZ"

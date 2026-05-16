@@ -1,24 +1,6 @@
 import Combine
 import Foundation
 
-enum RebalancingPreferenceStep: Int, CaseIterable, Identifiable {
-    case profile
-    case goalAndHorizon
-    case riskResponse
-    case allocation
-
-    var id: Int { rawValue }
-
-    var title: String {
-        switch self {
-        case .profile: return "투자 성향"
-        case .goalAndHorizon: return "목표와 기간"
-        case .riskResponse: return "손실 대응"
-        case .allocation: return "현금과 방식"
-        }
-    }
-}
-
 nonisolated protocol InvestmentProfileRepositoryProtocol: Sendable {
     func fetchInvestmentProfile(userId: Int64) async throws -> InvestmentProfileResponse
     func updateInvestmentProfile(userId: Int64, profile: InvestmentProfile) async throws -> InvestmentProfileResponse
@@ -85,12 +67,10 @@ final class OnboardingFlowViewModel: ObservableObject {
     @Published private(set) var selectedSectors: Set<InterestSector> = []
     @Published private(set) var selectedStyle: InvestmentStyleOption? = InvestmentProfile.balanced.legacyStyle
     @Published private(set) var rebalancingPreference = OnboardingRebalancingPreference()
-    @Published private(set) var rebalancingStep: RebalancingPreferenceStep = .profile
     @Published private(set) var connectedInstitutionID: String?
     @Published private(set) var isSavingInvestmentProfile = false
     @Published private(set) var investmentProfileSaveError: String?
     @Published private(set) var savedInvestmentProfile: InvestmentProfileResponse?
-    @Published var isOtherBrokerExpanded = false
 
     private let investmentProfileRepository: InvestmentProfileRepositoryProtocol
     private var didLoadRemoteInvestmentProfile = false
@@ -100,7 +80,7 @@ final class OnboardingFlowViewModel: ObservableObject {
     }
 
     var allSectors: [InterestSector] {
-        InterestSector.allCases
+        InterestSector.onboardingOptions
     }
 
     var recommendedInstitution: AccountInstitution {
@@ -109,23 +89,26 @@ final class OnboardingFlowViewModel: ObservableObject {
     }
 
     var brokerageInstitutions: [AccountInstitution] {
-        AuthMockData.brokerageInstitutions
+        let orderedIDs = [
+            AccountInstitution.koreaInvestmentID,
+            "mirae",
+            "kiwoom",
+            "samsung_securities",
+            "nh_invest",
+            "shinhan_invest"
+        ]
+
+        return orderedIDs.compactMap { id in
+            AuthMockData.brokerageInstitutions.first(where: { $0.id == id })
+        }
     }
 
     var connectableInstitutionIDs: Set<String> {
         [AccountInstitution.koreaInvestmentID]
     }
 
-    var otherInstitutions: [AccountInstitution] {
-        AuthMockData.brokerageInstitutions.filter { $0.id != recommendedInstitution.id }
-    }
-
     var canAdvanceFromSectorStep: Bool {
         !selectedSectors.isEmpty
-    }
-
-    var canAdvanceFromStyleStep: Bool {
-        true
     }
 
     var previewItems: [OnboardingNewsPreviewItem] {
@@ -143,7 +126,7 @@ final class OnboardingFlowViewModel: ObservableObject {
             result.append(item)
             seenIDs.insert(item.id)
 
-            if result.count == 2 {
+            if result.count == 1 {
                 break
             }
         }
@@ -180,7 +163,7 @@ final class OnboardingFlowViewModel: ObservableObject {
     }
 
     var selectedTargetCashWeightSummary: String {
-        rebalancingPreference.targetCashWeightOption.title
+        "\(cashWeightPercent)%"
     }
 
     var selectedAssetPreferenceSummary: String {
@@ -200,6 +183,43 @@ final class OnboardingFlowViewModel: ObservableObject {
         return AuthMockData.brokerageInstitutions.first(where: { $0.id == connectedInstitutionID })
     }
 
+    var cashWeightPercent: Int {
+        Int((rebalancingPreference.targetCashWeight * 100).rounded())
+    }
+
+    var cashWeightDescription: String {
+        switch cashWeightPercent {
+        case ...5:
+            return "공격적 운용, 기회 포착에 유리해요"
+        case 6...15:
+            return "기본 현금 완충을 남겨요"
+        default:
+            return "조정 대응 여력이 넉넉히 돼요"
+        }
+    }
+
+    func recommendedHorizon(for goal: InvestmentGoal) -> InvestmentHorizon {
+        switch goal {
+        case .preserve:
+            return .oneToThreeYears
+        case .steadyGrowth:
+            return .threeToFiveYears
+        case .activeReturn:
+            return .overFiveYears
+        }
+    }
+
+    func recommendedRiskSettings(for profile: InvestmentProfile) -> (drawdown: MaxDrawdownTolerance, downturn: DownturnBehavior) {
+        switch profile {
+        case .conservative:
+            return (.withinTen, .reduce)
+        case .balanced:
+            return (.withinTen, .hold)
+        case .aggressive:
+            return (.withinTwenty, .buyMore)
+        }
+    }
+
     func canConnect(_ institution: AccountInstitution) -> Bool {
         connectableInstitutionIDs.contains(institution.id)
     }
@@ -212,27 +232,16 @@ final class OnboardingFlowViewModel: ObservableObject {
         }
     }
 
-    func selectStyle(_ style: InvestmentStyleOption) {
-        selectedStyle = style
-
-        switch style {
-        case .stable:
-            selectInvestmentProfile(.conservative)
-        case .balanced, .growth:
-            selectInvestmentProfile(.balanced)
-        case .aggressive:
-            selectInvestmentProfile(.aggressive)
-        }
-    }
-
     func selectInvestmentProfile(_ profile: InvestmentProfile) {
         rebalancingPreference.investmentProfile = profile
         selectedStyle = profile.legacyStyle
+        applyRecommendedRiskSettings(for: profile)
         investmentProfileSaveError = nil
     }
 
     func selectInvestmentGoal(_ goal: InvestmentGoal) {
         rebalancingPreference.investmentGoal = goal
+        rebalancingPreference.investmentHorizon = recommendedHorizon(for: goal)
     }
 
     func selectInvestmentHorizon(_ horizon: InvestmentHorizon) {
@@ -247,38 +256,18 @@ final class OnboardingFlowViewModel: ObservableObject {
         rebalancingPreference.downturnBehavior = behavior
     }
 
-    func selectTargetCashWeight(_ targetCashWeight: TargetCashWeight) {
-        rebalancingPreference.targetCashWeight = targetCashWeight.rawValue
+    func setTargetCashWeight(percent: Int) {
+        let boundedPercent = min(max(percent, 0), 30)
+        rebalancingPreference.targetCashWeight = Double(boundedPercent) / 100
     }
 
     func selectAssetPreference(_ preference: AssetPreference) {
         rebalancingPreference.assetPreference = preference
     }
 
-    func moveToNextRebalancingStep() -> Bool {
-        let steps = RebalancingPreferenceStep.allCases
-        guard let currentIndex = steps.firstIndex(of: rebalancingStep) else {
-            return true
-        }
-
-        let nextIndex = steps.index(after: currentIndex)
-        guard nextIndex < steps.endIndex else {
-            return true
-        }
-
-        rebalancingStep = steps[nextIndex]
-        return false
-    }
-
-    func moveToPreviousRebalancingStep() -> Bool {
-        let steps = RebalancingPreferenceStep.allCases
-        guard let currentIndex = steps.firstIndex(of: rebalancingStep), currentIndex > steps.startIndex else {
-            return false
-        }
-
-        let previousIndex = steps.index(before: currentIndex)
-        rebalancingStep = steps[previousIndex]
-        return true
+    func resetFundingDefaults() {
+        setTargetCashWeight(percent: 10)
+        selectAssetPreference(.etfAndStocks)
     }
 
     func connectRecommendedBroker() {
@@ -292,6 +281,12 @@ final class OnboardingFlowViewModel: ObservableObject {
 
     func skipBrokerageConnection() {
         connectedInstitutionID = nil
+    }
+
+    private func applyRecommendedRiskSettings(for profile: InvestmentProfile) {
+        let settings = recommendedRiskSettings(for: profile)
+        rebalancingPreference.maxDrawdownTolerance = settings.drawdown
+        rebalancingPreference.downturnBehavior = settings.downturn
     }
 
     func makeOnboardingResult() -> OnboardingResult {
@@ -352,16 +347,6 @@ final class OnboardingFlowViewModel: ObservableObject {
             isSavingInvestmentProfile = false
             return true
         }
-    }
-
-    private static func makeErrorMessage(for error: Error, fallback: String) -> String {
-        if let localizedError = error as? LocalizedError,
-           let description = localizedError.errorDescription,
-           !description.isEmpty {
-            return description
-        }
-
-        return fallback
     }
 
     private func debugLog(_ message: String) {

@@ -207,7 +207,7 @@ enum InvestmentGoal: String, CaseIterable, Identifiable, Codable, Sendable {
         switch self {
         case .preserve: return "안정적으로 지키기"
         case .steadyGrowth: return "꾸준히 불리기"
-        case .activeReturn: return "적극적으로 수익 추구"
+        case .activeReturn: return "적극적으로 추구"
         }
     }
 
@@ -250,7 +250,7 @@ enum InvestmentHorizon: String, CaseIterable, Identifiable, Codable, Sendable {
         case .underOneYear: return "짧은 기간이라 방어 기준을 높여요"
         case .oneToThreeYears: return "현금과 ETF 비중을 함께 조절해요"
         case .threeToFiveYears: return "중기 조정과 성장 기회를 함께 봐요"
-        case .overFiveYears: return "장기 변동성을 더 넓게 허용할 수 있어요"
+        case .overFiveYears: return "장기 복리를 우선해 변동성 허용폭을 넓혀요"
         }
     }
 
@@ -277,7 +277,7 @@ enum MaxDrawdownTolerance: String, CaseIterable, Identifiable, Codable, Sendable
         case .withinFive: return "-5% 이내"
         case .withinTen: return "-10% 이내"
         case .withinTwenty: return "-20% 이내"
-        case .overThirty: return "-30% 이상도 가능"
+        case .overThirty: return "-30% 이상"
         }
     }
 
@@ -309,9 +309,9 @@ enum DownturnBehavior: String, CaseIterable, Identifiable, Codable, Sendable {
 
     var title: String {
         switch self {
-        case .reduce: return "비중을 줄이고 싶어요"
-        case .hold: return "일단 유지하고 싶어요"
-        case .buyMore: return "기회로 보고 추가 매수하고 싶어요"
+        case .reduce: return "비중 줄이기"
+        case .hold: return "일단 유지"
+        case .buyMore: return "기회로 매수"
         }
     }
 
@@ -434,11 +434,16 @@ enum InterestSector: String, CaseIterable, Identifiable, Codable {
     case finance
     case defense
     case bio
+    case mobility
     case realEstate
     case ev
     case ai
 
     var id: String { rawValue }
+
+    static var onboardingOptions: [InterestSector] {
+        [.semiconductor, .energy, .finance, .defense, .bio, .mobility]
+    }
 
     var title: String {
         switch self {
@@ -447,6 +452,7 @@ enum InterestSector: String, CaseIterable, Identifiable, Codable {
         case .finance: return "금융"
         case .defense: return "방산"
         case .bio: return "바이오"
+        case .mobility: return "모빌리티"
         case .realEstate: return "부동산"
         case .ev: return "2차전지"
         case .ai: return "AI·소프트웨어"
@@ -460,6 +466,7 @@ enum InterestSector: String, CaseIterable, Identifiable, Codable {
         case .finance: return "🏦"
         case .defense: return "🛡️"
         case .bio: return "🧬"
+        case .mobility: return "🚗"
         case .realEstate: return "🏠"
         case .ev: return "🔋"
         case .ai: return "🤖"
@@ -473,6 +480,7 @@ enum InterestSector: String, CaseIterable, Identifiable, Codable {
         case .finance: return "3B82F6"
         case .defense: return "EF4444"
         case .bio: return "F59E0B"
+        case .mobility: return "0EA5E9"
         case .realEstate: return "06B6D4"
         case .ev: return "5BBBFF"
         case .ai: return "9F7CFF"
@@ -491,6 +499,8 @@ enum InterestSector: String, CaseIterable, Identifiable, Codable {
             return "예산 확대와 수출 승인 뉴스가 수급에 크게 작동해요"
         case .bio:
             return "임상·허가 정책과 세제 변화 영향을 자주 받아요"
+        case .mobility:
+            return "전기차·물류·운송 정책 변화가 수급에 연결돼요"
         case .realEstate:
             return "대출 규제와 공급 정책이 리츠·건설주에 연결돼요"
         case .ev:
@@ -527,6 +537,11 @@ enum InterestSector: String, CaseIterable, Identifiable, Codable {
                 OnboardingNewsPreviewItem(id: "bio-1", sectorID: id, title: "바이오 특례 상장 요건 개편 검토", summary: "중소형 바이오 변동성 확대 구간 진입 가능성"),
                 OnboardingNewsPreviewItem(id: "bio-2", sectorID: id, title: "혁신 신약 지원 예산 확대 발표", summary: "R&D 중심 바이오 ETF에 긍정 신호")
             ]
+        case .mobility:
+            return [
+                OnboardingNewsPreviewItem(id: "mobility-1", sectorID: id, title: "전기차 보조금 기준 조정 논의", summary: "완성차와 배터리 ETF의 단기 수급 변화 가능성"),
+                OnboardingNewsPreviewItem(id: "mobility-2", sectorID: id, title: "도심 물류 규제 완화 검토", summary: "운송·플랫폼 관련 종목 모멘텀 점검 필요")
+            ]
         case .realEstate:
             return [
                 OnboardingNewsPreviewItem(id: "realestate-1", sectorID: id, title: "주택 공급 로드맵 추가 발표 예고", summary: "건설·리츠 관련 뉴스 해석 우선순위 상승"),
@@ -552,6 +567,7 @@ enum InterestSector: String, CaseIterable, Identifiable, Codable {
         case .finance: return ["KODEX 은행 ETF"]
         case .defense: return ["ARIRANG K방산Fn"]
         case .bio: return ["XBI"]
+        case .mobility: return ["DRIV"]
         case .realEstate: return ["VNQ"]
         case .ev: return ["LIT"]
         case .ai: return ["BOTZ"]
