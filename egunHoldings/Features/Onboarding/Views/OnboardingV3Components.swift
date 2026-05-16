@@ -92,7 +92,7 @@ struct ProgressBar: View {
         .padding(.bottom, usesCollapsedLayout ? 8 : 10)
         .frame(maxWidth: .infinity)
         .frame(height: usesCollapsedLayout ? OnboardingV3Layout.progressCollapsedHeight : OnboardingV3Layout.progressExpandedHeight)
-        .background(OnboardingV3Theme.cardBackground.ignoresSafeArea(edges: .top))
+        .background(OnboardingV3Theme.background.ignoresSafeArea(edges: .top))
         .zIndex(100)
         .onAppear {
             usesCollapsedLayout = isCollapsed
