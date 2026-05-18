@@ -220,16 +220,35 @@ struct AssetRebalanceSection: View {
     }
 
     private var emptyRecommendationView: some View {
-        VStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 28, weight: .semibold))
                 .foregroundStyle(Color.emerald)
 
-            Text("해당 조건의 조정 제안이 없습니다.")
-                .font(.pretendard(13, weight: .semibold))
+            Text("지금은 조정할 필요가 없어요.")
+                .font(.pretendard(16, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
+
+            Text("모든 자산이 목표 비중의 허용 범위 안에 있어요.")
+                .font(.pretendard(12, weight: .medium))
+                .foregroundStyle(Color.mutedForeground)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: onRefresh) {
+                HStack(spacing: 6) {
+                    Text("이번 주 정책 신호 다시 확인")
+                        .font(.pretendard(12, weight: .bold))
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .foregroundStyle(Color.electricBlue)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(Color.electricBlue.opacity(0.09), in: Capsule())
+            }
+            .buttonStyle(.plain)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(24)
         .glassCard()
     }

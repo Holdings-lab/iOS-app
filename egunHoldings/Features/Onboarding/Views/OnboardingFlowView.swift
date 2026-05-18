@@ -2,9 +2,11 @@ import SwiftUI
 
 struct OnboardingFlowView: View {
     private enum OnboardingRoute: Hashable {
-        case investmentStyle
+        case riskProfile
+        case investmentGoal
+        case funds
         case brokerageConnection
-        case brokerageSync
+        case brokerageLoading
         case completion
     }
 
@@ -29,13 +31,25 @@ struct OnboardingFlowView: View {
         NavigationStack(path: $path) {
             OnboardingPage1View(
                 viewModel: onboardingViewModel,
-                onNext: { path.append(.investmentStyle) },
+                onNext: { path.append(.riskProfile) },
                 onBack: onLogout
             )
             .navigationDestination(for: OnboardingRoute.self) { route in
                 switch route {
-                case .investmentStyle:
+                case .riskProfile:
                     OnboardingPage2View(
+                        viewModel: onboardingViewModel,
+                        onBack: navigateBack,
+                        onNext: { path.append(.investmentGoal) }
+                    )
+                case .investmentGoal:
+                    OnboardingGoalView(
+                        viewModel: onboardingViewModel,
+                        onBack: navigateBack,
+                        onNext: { path.append(.funds) }
+                    )
+                case .funds:
+                    OnboardingFundsView(
                         viewModel: onboardingViewModel,
                         onBack: navigateBack,
                         onNext: { path.append(.brokerageConnection) }
@@ -45,18 +59,17 @@ struct OnboardingFlowView: View {
                         viewModel: onboardingViewModel,
                         onBack: navigateBack,
                         onNext: {
-                            if onboardingViewModel.connectedInstitutionID == nil {
-                                path.append(.completion)
-                            } else {
-                                path.append(.brokerageSync)
-                            }
+                            path.append(onboardingViewModel.connectedInstitutionID == nil ? .completion : .brokerageLoading)
                         }
                     )
-                case .brokerageSync:
+                case .brokerageLoading:
                     OnboardingBrokerageLoadingView(
                         viewModel: onboardingViewModel,
-                        onBack: navigateBack,
-                        onNext: { path.append(.completion) }
+                        onSkip: {
+                            onboardingViewModel.skipBrokerageConnection()
+                            path.append(.completion)
+                        },
+                        onComplete: { path.append(.completion) }
                     )
                 case .completion:
                     OnboardingPage4View(

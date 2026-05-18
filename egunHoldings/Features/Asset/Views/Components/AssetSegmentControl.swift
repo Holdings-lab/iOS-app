@@ -5,29 +5,55 @@ struct AssetSegmentControl: View {
     let onSelect: (AssetSegment) -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: PSSpacing.pillGap) {
             ForEach(AssetSegment.allCases) { segment in
                 Button {
                     onSelect(segment)
                 } label: {
                     Text(segment.displayTitle)
-                        .font(.pretendard(12, weight: .semibold))
-                        .foregroundStyle(selectedSegment == segment ? Color.electricBlue : Color.mutedForeground)
+                        .font(PSFont.caption())
+                        .foregroundStyle(selectedSegment == segment ? Color.textPrimary : Color.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(
-                            selectedSegment == segment ? Color.electricBlue.opacity(0.15) : .clear,
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            selectedSegment == segment ? Color.elevated : Color.clear,
+                            in: Capsule(style: .continuous)
+                        )
+                        .shadow(
+                            color: selectedSegment == segment ? Color.cardShadow : Color.clear,
+                            radius: selectedSegment == segment ? 10 : 0,
+                            x: 0,
+                            y: selectedSegment == segment ? 4 : 0
                         )
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(4)
-        .background(Color.muted, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(5)
+        .background(Color.subtle, in: RoundedRectangle(cornerRadius: PSRadius.button, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
+            RoundedRectangle(cornerRadius: PSRadius.button, style: .continuous)
+                .stroke(Color.divider.opacity(0.70), lineWidth: 1)
         }
     }
+}
+
+private struct AssetSegmentControlPreview: View {
+    @State private var selectedSegment: AssetSegment = .overview
+
+    var body: some View {
+        VStack(spacing: 20) {
+            AssetSegmentControl(selectedSegment: $selectedSegment) { segment in
+                selectedSegment = segment
+            }
+
+            AssetSegmentControl(selectedSegment: .constant(.rebalance)) { _ in }
+        }
+        .padding(24)
+        .background(Color.canvas)
+    }
+}
+
+#Preview("AssetSegmentControl") {
+    AssetSegmentControlPreview()
 }

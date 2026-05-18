@@ -5,6 +5,7 @@ import SwiftUI
 final class AssetViewModel: ObservableObject {
     @Published var selectedSegment: AssetSegment = .overview
     @Published var isBrokerConnectionPresented = false
+    @Published var navigationDestination: AssetNavigationDestination?
     @Published var selectedRecommendationFilter: RebalancingRecommendationFilter = .all
     @Published private(set) var rebalancingLoadState: RebalancingLoadState = .idle
     @Published private(set) var rebalancingDashboard: RebalancingDashboard
@@ -37,6 +38,27 @@ final class AssetViewModel: ObservableObject {
         return rebalancingDashboard.recommendations.filter { $0.action == action }
     }
 
+    func account(id: Int) -> AssetAccount? {
+        dashboard.accounts.first { $0.id == id }
+    }
+
+    var weeklyAdjustmentNotice: AssetAdjustmentNotice? {
+        guard rebalancingLoadState != .idle, rebalancingLoadState != .loading else {
+            return nil
+        }
+
+        let tradeCount = rebalancingDashboard.summary.tradeCount
+        guard tradeCount > 0 else { return nil }
+
+        return AssetAdjustmentNotice(
+            id: 1,
+            title: "이번 주 조정 제안 \(tradeCount)건",
+            summary: "전체 자산 기준으로 매수와 현금 확보 조정이 필요해요.",
+            count: tradeCount,
+            color: .electricBlue
+        )
+    }
+
     var rebalancingDataStatusText: String {
         switch rebalancingLoadState {
         case .idle:
@@ -61,13 +83,34 @@ final class AssetViewModel: ObservableObject {
                 ? "실계좌 보유 수량, 현재 가격, 현금을 서버로 보내 계산한 결과입니다."
                 : "서버의 관심자산 기반 예시 포지션으로 계산한 결과입니다."
         case .usingFallback(let message):
-            return message.map { "\($0)" }
-                ?? "서버 연결 전까지 예시 추천을 표시합니다."
+            if message == nil {
+                return "서버 연결 전까지 예시 추천을 표시합니다."
+            }
+
+            return "서버 연결 전까지 예시 추천을 표시합니다."
         }
     }
 
     func selectSegment(_ segment: AssetSegment) {
-        selectedSegment = segment
+        withAnimation(Self.pageTransitionAnimation) {
+            if segment != .overview {
+                navigationDestination = nil
+            }
+
+            selectedSegment = segment
+        }
+    }
+
+    func showOverallPolicyDetail() {
+        navigationDestination = .overallPolicy
+    }
+
+    func selectAssetAccount(_ account: AssetAccount) {
+        navigationDestination = .account(account.id)
+    }
+
+    func closeAssetDrilldown() {
+        navigationDestination = nil
     }
 
     func selectRecommendationFilter(_ filter: RebalancingRecommendationFilter) {
@@ -119,4 +162,6 @@ final class AssetViewModel: ObservableObject {
     private static func errorMessage(for error: Error) -> String {
         AppVocabulary.ErrorMessage.userFacing(for: error)
     }
+
+    private static let pageTransitionAnimation = Animation.easeInOut(duration: 0.28)
 }

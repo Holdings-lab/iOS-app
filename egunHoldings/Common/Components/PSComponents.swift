@@ -29,14 +29,20 @@ struct PSGlassCard<Content: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(bgFill, in: shape)
-            .overlay { shape.stroke(Color.hairline, lineWidth: 1) }
+            .overlay { shape.stroke(Color.divider.opacity(0.55), lineWidth: 1) }
+            .shadow(
+                color: PSShadow.cardColor,
+                radius: PSShadow.cardBlur,
+                x: 0,
+                y: PSShadow.cardYOffset
+            )
     }
 
     private var bgFill: Color {
         switch variant {
         case .primary:       return Color.elevated
-        case .secondary:     return Color.subtle
-        case .tinted(let c): return c.opacity(0.08)
+        case .secondary:     return Color.elevated
+        case .tinted:        return Color.elevated
         }
     }
 }
@@ -47,14 +53,25 @@ struct PSStatusChip: View {
     let label: String
     let color: Color
     var bgOpacity: Double = 0.12
+    var isSelected: Bool = false
 
     var body: some View {
         Text(label)
-            .font(PSFont.semibold(11))
-            .foregroundStyle(color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(color.opacity(bgOpacity), in: RoundedRectangle(cornerRadius: KDXRadius.chip, style: .continuous))
+            .font(PSFont.caption())
+            .foregroundStyle(isSelected ? Color.textOnAccent : Color.textSecondary)
+            .frame(minWidth: 48)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(fill, in: Capsule(style: .continuous))
+            .overlay {
+                Capsule(style: .continuous)
+                    .stroke(isSelected ? Color.clear : Color.divider.opacity(0.70), lineWidth: 1)
+            }
+            .contentShape(Capsule(style: .continuous))
+    }
+
+    private var fill: Color {
+        isSelected ? Color.brand : Color.clear
     }
 }
 
@@ -249,4 +266,28 @@ struct PSGradientButton: View {
         }
         .buttonStyle(PSPressStyle())
     }
+}
+
+#Preview("PSGlassCard + PSStatusChip") {
+    VStack(alignment: .leading, spacing: PSSpacing.sectionGap) {
+        PSGlassCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Portfolio Balance")
+                    .font(PSFont.caption())
+                    .foregroundStyle(PSColor.textSecondary)
+                Text("$97,326.46")
+                    .font(PSFont.display())
+                    .foregroundStyle(PSColor.textPrimary)
+            }
+        }
+
+        HStack(spacing: PSSpacing.pillGap) {
+            PSStatusChip(label: "1D", color: Color.brand)
+            PSStatusChip(label: "1W", color: Color.brand, isSelected: true)
+            PSStatusChip(label: "1M", color: Color.brand)
+            PSStatusChip(label: "1Y", color: Color.brand)
+        }
+    }
+    .padding(24)
+    .background(Color.canvas)
 }

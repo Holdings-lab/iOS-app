@@ -21,15 +21,15 @@ nonisolated struct MockAssetRebalancingRepository: AssetRebalancingRepositoryPro
                 minTradeAmount: 10_000
             ),
             summary: RebalancingSummary(
-                totalAssetValue: 5_000_000,
-                investedValue: 4_000_000,
-                cash: 1_000_000,
-                currentCashWeight: 0.2,
+                totalAssetValue: 38_297_509,
+                investedValue: 36_690_133,
+                cash: 1_607_376,
+                currentCashWeight: 0.042,
                 targetCashWeight: 0.1,
-                targetCashAmount: 500_000,
+                targetCashAmount: 3_829_751,
                 tradeCount: 2,
                 estimatedBuyAmount: 450_000,
-                estimatedSellAmount: 210_000
+                estimatedSellAmount: 2_650_000
             ),
             recommendations: [
                 makeRecommendation(
@@ -54,23 +54,23 @@ nonisolated struct MockAssetRebalancingRepository: AssetRebalancingRepositoryPro
                 ),
                 makeRecommendation(
                     index: 1,
-                    assetName: "고변동성 성장주",
-                    symbol: "TSLA",
-                    assetClass: "SPECULATIVE",
+                    assetName: "엔비디아",
+                    symbol: "NVDA",
+                    assetClass: "SEMICONDUCTOR",
                     action: .sell,
-                    shares: 1,
-                    currentPrice: 210_000,
-                    currentValue: 840_000,
-                    tradeAmount: 210_000,
-                    currentWeight: 0.31,
-                    targetWeight: 0.25,
-                    drift: -0.06,
+                    shares: 2,
+                    currentPrice: 1_325_000,
+                    currentValue: 7_256_929,
+                    tradeAmount: 2_650_000,
+                    currentWeight: 0.24,
+                    targetWeight: 0.17,
+                    drift: -0.07,
                     reasonCodes: [
                         "DRIFT_EXCEEDS_THRESHOLD",
                         "OVER_TARGET_WEIGHT",
                         "EXCEEDS_SINGLE_ASSET_LIMIT"
                     ],
-                    reasonText: "중립형 정책의 단일 자산 최대 비중을 초과해 1주 매도를 제안합니다. 매도 후 목표 비중에 더 가까워집니다."
+                    reasonText: "반도체 노출과 현금 비중을 함께 맞추기 위해 엔비디아 2주 매도를 제안합니다. 매도 후 목표 비중과 현금 비중에 더 가까워집니다."
                 ),
                 makeRecommendation(
                     index: 2,

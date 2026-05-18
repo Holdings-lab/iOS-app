@@ -12,74 +12,91 @@ struct OnboardingPage4View: View {
     ]
 
     var body: some View {
-        VStack(spacing: 12) {
-            FlowProgressHeader(currentStep: 5, totalSteps: 5, stepTitle: "맞춤 설정 · 완료", onBack: onBack)
+        VStack(spacing: 0) {
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 24) {
+                    HStack {
+                        Button(action: onBack) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 19, weight: .semibold))
+                                .foregroundStyle(Color.textPrimary)
+                                .frame(width: 34, height: 34)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("뒤로")
 
-            VStack(spacing: 10) {
-                CompletionCheckAnimationView()
+                        Spacer()
+                    }
 
-                VStack(spacing: 6) {
-                    Text("준비가 끝났어요")
-                        .font(.pretendard(25, weight: .bold))
-                        .foregroundStyle(Color.textPrimary)
+                    VStack(spacing: 12) {
+                        CompletionCheckmarkIcon()
 
-                    Text(completionSubtitle)
-                        .font(.pretendard(13, weight: .medium))
-                        .foregroundStyle(Color.textTertiary)
+                        VStack(spacing: 8) {
+                            Text("준비가 끝났어요")
+                                .font(.pretendard(28, weight: .bold))
+                                .foregroundStyle(Color.textPrimary)
+
+                            Text("선택한 조정 기준으로 홈을 구성해요")
+                                .font(.pretendard(15, weight: .regular))
+                                .foregroundStyle(OnboardingV3Theme.muted)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    completionSummaryCard
+
+                    Text("이 설정은 조정 제안의 유지할 현금 비중, 한 자산 최대 비중, 매수/매도 민감도에 반영됩니다")
+                        .font(.pretendard(13, weight: .regular))
+                        .foregroundStyle(OnboardingV3Theme.muted)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if let errorMessage = viewModel.investmentProfileSaveError {
+                        InlineFeedbackText(message: errorMessage, tone: .error, asBanner: true)
+                    }
                 }
-            }
-            .frame(maxWidth: .infinity)
-
-            completionSummaryCard
-
-            Text("이 설정은 조정 제안의 유지할 현금 비중, 한 자산 최대 비중, 매수/매도 민감도에 반영됩니다.")
-                .font(.pretendard(11, weight: .medium))
-                .foregroundStyle(Color.textTertiary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
+                .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
+                .padding(.top, 16)
+                .padding(.bottom, 112)
+                .frame(maxWidth: OnboardingV3Layout.maxWidth)
                 .frame(maxWidth: .infinity)
-                .fixedSize(horizontal: false, vertical: true)
-
-            if let errorMessage = viewModel.investmentProfileSaveError {
-                InlineFeedbackText(message: errorMessage, tone: .error, asBanner: true)
             }
 
-            Spacer(minLength: 0)
-
-            FlowPrimaryButton(
-                title: viewModel.isSavingInvestmentProfile ? "투자성향 저장 중..." : "저장하고 시작하기",
-                isEnabled: !viewModel.isSavingInvestmentProfile,
-                action: saveAndStart
-            )
+            OnboardingV3BottomBar {
+                OnboardingV3PrimaryButton(
+                    title: viewModel.isSavingInvestmentProfile ? "저장 중..." : "저장하고 시작하기",
+                    isEnabled: !viewModel.isSavingInvestmentProfile,
+                    action: saveAndStart
+                )
+            }
         }
-        .padding(.horizontal, MidnightLayout.horizontal)
-        .padding(.top, 16)
-        .padding(.bottom, 12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(PFGradientBackground())
-        .toolbar(.hidden, for: .navigationBar)
+        .onboardingV3Background()
     }
 
     private var completionSummaryCard: some View {
-        FlowSurfaceCard(padding: 14, cornerRadius: 16) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("설정 요약")
-                    .font(.pretendard(14, weight: .semibold))
-                    .foregroundStyle(Color.textPrimary)
+        VStack(alignment: .leading, spacing: 12) {
+            Text("설정 요약")
+                .font(.pretendard(15, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
 
-                LazyVGrid(columns: summaryColumns, spacing: 8) {
-                    ForEach(summaryItems) { item in
-                        CompletionSummaryTile(item: item)
-                    }
+            LazyVGrid(columns: summaryColumns, spacing: 8) {
+                ForEach(summaryItems) { item in
+                    CompletionSummaryTile(item: item)
                 }
             }
+        }
+        .padding(16)
+        .background(OnboardingV3Theme.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(OnboardingV3Theme.border, lineWidth: 1)
         }
     }
 
     private var summaryItems: [CompletionSummaryItem] {
-        [
+        var items = [
             CompletionSummaryItem(title: "관심 섹터", value: viewModel.selectedSectorSummary),
             CompletionSummaryItem(title: "투자 성향", value: viewModel.selectedStyleSummary),
             CompletionSummaryItem(title: "투자 목적", value: viewModel.selectedInvestmentGoalSummary),
@@ -87,17 +104,14 @@ struct OnboardingPage4View: View {
             CompletionSummaryItem(title: "손실 기준", value: viewModel.selectedDrawdownSummary),
             CompletionSummaryItem(title: "하락 대응", value: viewModel.selectedDownturnBehaviorSummary),
             CompletionSummaryItem(title: "현금 비중", value: viewModel.selectedTargetCashWeightSummary),
-            CompletionSummaryItem(title: "투자 방식", value: viewModel.selectedAssetPreferenceSummary),
-            CompletionSummaryItem(title: "연결 계좌", value: viewModel.connectedInstitutionSummary)
+            CompletionSummaryItem(title: "투자 방식", value: viewModel.selectedAssetPreferenceSummary)
         ]
-    }
 
-    private var completionSubtitle: String {
-        if viewModel.connectedInstitution == nil {
-            return "계좌는 나중에 연결하고, 선택한 조정 기준으로 홈을 구성해요"
+        if viewModel.connectedInstitution != nil {
+            items.append(CompletionSummaryItem(title: "연결 계좌", value: viewModel.connectedInstitutionSummary))
         }
 
-        return "선택한 조정 기준으로 홈을 구성해요"
+        return items
     }
 
     private func saveAndStart() {
@@ -109,9 +123,18 @@ struct OnboardingPage4View: View {
     }
 }
 
-#Preview {
-    OnboardingPage4View(userId: 1, viewModel: OnboardingFlowViewModel(), onBack: {}, onStart: {})
-        .preferredColorScheme(.light)
+private struct CompletionCheckmarkIcon: View {
+    var body: some View {
+        Circle()
+            .fill(OnboardingV3Theme.primary)
+            .frame(width: 48, height: 48)
+            .overlay {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(Color.white)
+            }
+            .shadow(color: OnboardingV3Theme.primary.opacity(0.22), radius: 18, x: 0, y: 8)
+    }
 }
 
 private struct CompletionSummaryItem: Identifiable {
@@ -125,20 +148,25 @@ private struct CompletionSummaryTile: View {
     let item: CompletionSummaryItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 5) {
             Text(item.title)
-                .font(.pretendard(10, weight: .medium))
-                .foregroundStyle(Color.textTertiary)
+                .font(.pretendard(11, weight: .medium))
+                .foregroundStyle(OnboardingV3Theme.muted)
 
             Text(item.value)
-                .font(.pretendard(12, weight: .semibold))
+                .font(.pretendard(15, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(0.72)
         }
-        .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
         .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(Color.subtle, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.vertical, 8)
+        .background(Color(hex: "F8FAFC"), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
+}
+
+#Preview {
+    OnboardingPage4View(userId: 1, viewModel: OnboardingFlowViewModel(), onBack: {}, onStart: {})
+        .preferredColorScheme(.light)
 }

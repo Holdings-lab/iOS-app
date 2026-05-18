@@ -16,7 +16,26 @@ enum AssetSegment: String, CaseIterable, Identifiable {
     }
 }
 
+enum AssetNavigationDestination: Hashable, Identifiable {
+    case overallPolicy
+    case account(Int)
+
+    var id: String {
+        switch self {
+        case .overallPolicy:
+            return "overall-policy"
+        case .account(let accountId):
+            return "account-\(accountId)"
+        }
+    }
+}
+
 struct AssetDashboard {
+    let totalAssetAmount: String
+    let totalProfitSummary: String
+    let totalProfitColor: Color
+    let weeklyAdjustmentNotice: AssetAdjustmentNotice?
+    let accounts: [AssetAccount]
     let exposureMetrics: [AssetExposureMetric]
     let defenseMetrics: [AssetDefenseMetric]
     let holdingRows: [AssetHoldingRow]
@@ -24,6 +43,31 @@ struct AssetDashboard {
     let rebalanceModes: [AssetRebalanceModeRow]
     let constraints: [AssetConstraint]
     let scenarios: [AssetScenarioChange]
+}
+
+struct AssetAdjustmentNotice: Identifiable {
+    let id: Int
+    let title: String
+    let summary: String
+    let count: Int
+    let color: Color
+}
+
+struct AssetAccount: Identifiable {
+    let id: Int
+    let brokerName: String
+    let accountName: String
+    let accountNumber: String
+    let totalAmount: String
+    let cashAmount: String
+    let profitSummary: String
+    let profitColor: Color
+    let symbol: String
+    let tint: Color
+    let policyTags: [AssetPolicyTag]
+    let holdings: [AssetHoldingRow]
+    let exposureMetrics: [AssetExposureMetric]
+    let hiddenBets: [HiddenAssetBet]
 }
 
 struct AssetExposureMetric: Identifiable {
@@ -76,6 +120,26 @@ struct AssetHoldingRow: Identifiable {
     let weight: String
     let amount: String
     let tags: [AssetPolicyTag]
+    let logoURL: String?
+    let sparklinePoints: [Double]
+
+    init(
+        id: Int,
+        name: String,
+        weight: String,
+        amount: String,
+        tags: [AssetPolicyTag],
+        logoURL: String? = nil,
+        sparklinePoints: [Double] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.weight = weight
+        self.amount = amount
+        self.tags = tags
+        self.logoURL = logoURL
+        self.sparklinePoints = sparklinePoints
+    }
 }
 
 struct AssetPolicyTag: Identifiable {
