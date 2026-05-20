@@ -4,7 +4,7 @@ import SwiftUI
 struct Sparkline: View {
     let points: [Double]
     let isUp: Bool
-    var width: CGFloat = 72
+    var width: CGFloat? = 72
     var height: CGFloat = 32
 
     var body: some View {

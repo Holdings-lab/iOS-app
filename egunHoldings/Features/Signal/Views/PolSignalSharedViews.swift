@@ -498,9 +498,10 @@ struct PolSignalCompositionBar: View {
 struct PolSignalTodayBriefingView: View {
     let events: [PolSignalEvent]
     let proposal: PolSignalAdjustmentProposal?
-    let onSignalListTap: () -> Void
     let onEventTap: (PolSignalEvent) -> Void
     let onProposalTap: () -> Void
+
+    @State private var expandedKey: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -513,23 +514,44 @@ struct PolSignalTodayBriefingView: View {
         }
     }
 
+    private func isExpanded(_ key: String) -> Bool {
+        expandedKey == key
+    }
+
+    private func toggle(_ key: String) {
+        withAnimation(.easeInOut(duration: 0.22)) {
+            expandedKey = (expandedKey == key) ? nil : key
+        }
+    }
+
     private var topImpactSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             PolSignalSectionHeader(
                 title: "내 포트폴리오 영향 Top 3",
-                meta: "시그널 전체 ›",
-                onMore: onSignalListTap
+                meta: "\(min(events.count, 3))건"
             )
 
             PolSignalCard(padding: EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16)) {
                 VStack(spacing: 0) {
                     ForEach(Array(events.prefix(3).enumerated()), id: \.element.id) { index, event in
-                        Button {
-                            onEventTap(event)
-                        } label: {
-                            PolSignalVerdictRow(event: event)
+                        let key = "top-\(event.id)"
+                        let expanded = isExpanded(key)
+
+                        VStack(spacing: 0) {
+                            Button {
+                                toggle(key)
+                            } label: {
+                                PolSignalVerdictRow(event: event, isExpanded: expanded)
+                            }
+                            .buttonStyle(.plain)
+
+                            if expanded {
+                                TodayDecisionExpansion(event: event) {
+                                    onEventTap(event)
+                                }
+                                .padding(.bottom, 14)
+                            }
                         }
-                        .buttonStyle(.plain)
 
                         if index < min(events.count, 3) - 1 {
                             Divider()
@@ -548,18 +570,18 @@ struct PolSignalTodayBriefingView: View {
 
             VStack(spacing: 10) {
                 ForEach(events) { event in
-                    Button {
-                        onEventTap(event)
-                    } label: {
-                        PolSignalCard {
+                    let key = "policy-\(event.id)"
+                    let expanded = isExpanded(key)
+
+                    PolSignalCard {
+                        VStack(alignment: .leading, spacing: 14) {
                             VStack(alignment: .leading, spacing: 10) {
                                 HStack(spacing: 8) {
                                     PolSignalBadge(text: event.dDay, style: badgeStyle(for: event), inverted: event.feedTab == .breaking)
                                     PolSignalTag(text: event.category, style: tagStyle(for: event))
                                     Spacer(minLength: 0)
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .bold))
-                                        .foregroundStyle(PSColor.textFaint)
+                                    PolSignalVerdictBadge(kind: event.verdictKind)
+                                    PolSignalExpandChevron(isExpanded: expanded)
                                 }
 
                                 Text(event.title)
@@ -568,14 +590,33 @@ struct PolSignalTodayBriefingView: View {
                                     .lineLimit(2)
                                     .fixedSize(horizontal: false, vertical: true)
 
-                                Text(event.expectedImpact)
-                                    .font(.pretendard(13, weight: .regular))
-                                    .foregroundStyle(PSColor.textSecondary)
-                                    .lineLimit(2)
+                                if !expanded {
+                                    Text(event.reason)
+                                        .font(.pretendard(13, weight: .regular))
+                                        .foregroundStyle(PSColor.textSecondary)
+                                        .lineLimit(2)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                toggle(key)
+                            }
+
+                            if expanded {
+                                TodayDecisionExpansion(event: event) {
+                                    onEventTap(event)
+                                }
                             }
                         }
                     }
-                    .buttonStyle(PressScaleButtonStyle())
+                    .overlay {
+                        if expanded {
+                            RoundedRectangle(cornerRadius: PSRadius.card, style: .continuous)
+                                .stroke(event.verdictKind.accent.opacity(0.35), lineWidth: 1.5)
+                        }
+                    }
                 }
             }
         }
@@ -634,6 +675,7 @@ struct PolSignalTodayBriefingView: View {
 
 private struct PolSignalVerdictRow: View {
     let event: PolSignalEvent
+    let isExpanded: Bool
 
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
@@ -646,7 +688,7 @@ private struct PolSignalVerdictRow: View {
                 .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(event.verdict)
+                Text(event.exposures.first?.ticker ?? event.category)
                     .font(.pretendard(15, weight: .semibold))
                     .foregroundStyle(PSColor.textPrimary)
                     .lineLimit(1)
@@ -659,14 +701,104 @@ private struct PolSignalVerdictRow: View {
 
             Spacer(minLength: 0)
 
-            PolSignalBadge(text: event.feedTab == .breaking ? "위험" : "주의", style: event.feedTab == .breaking ? .danger : .warn)
+            PolSignalVerdictBadge(kind: event.verdictKind)
 
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(PSColor.textFaint)
+            PolSignalExpandChevron(isExpanded: isExpanded)
         }
         .padding(.vertical, 12)
         .contentShape(Rectangle())
+    }
+}
+
+private struct PolSignalVerdictBadge: View {
+    let kind: PolSignalVerdictKind
+
+    var body: some View {
+        Text(kind.label)
+            .font(.pretendard(11, weight: .semibold))
+            .foregroundStyle(kind.accent)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
+            .background(kind.tint, in: RoundedRectangle(cornerRadius: PSRadius.badge, style: .continuous))
+    }
+}
+
+private struct PolSignalExpandChevron: View {
+    let isExpanded: Bool
+
+    var body: some View {
+        Image(systemName: "chevron.down")
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(isExpanded ? PSColor.primary : PSColor.textFaint)
+            .rotationEffect(.degrees(isExpanded ? 180 : 0))
+    }
+}
+
+// 오늘 탭 카드 확장: 1 판정 + 1 액션 + 1 탈출구
+private struct TodayDecisionExpansion: View {
+    let event: PolSignalEvent
+    let onFullAnalysis: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // ① 판정 블록
+            VStack(alignment: .leading, spacing: 6) {
+                Text("왜")
+                    .font(.pretendard(11, weight: .bold))
+                    .foregroundStyle(event.verdictKind.accent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(event.verdictKind.accent.opacity(0.12), in: Capsule(style: .continuous))
+
+                Text(event.expectedImpact)
+                    .font(.pretendard(13, weight: .regular))
+                    .foregroundStyle(PSColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(2)
+            }
+
+            // ② 액션 블록
+            HStack(alignment: .top, spacing: 9) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(event.verdictKind.accent)
+                    .padding(.top, 1)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(event.verdict)
+                        .font(.pretendard(14, weight: .bold))
+                        .foregroundStyle(PSColor.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .lineSpacing(2)
+
+                    if !event.exposureSummary.isEmpty {
+                        Text("현재 노출 \(event.exposureSummary)")
+                            .font(.pretendard(12, weight: .regular))
+                            .foregroundStyle(PSColor.textFaint)
+                    }
+                }
+            }
+
+            // ③ 탈출구
+            Button(action: onFullAnalysis) {
+                HStack(spacing: 4) {
+                    Text("전체 분석 보기")
+                        .font(.pretendard(13, weight: .semibold))
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .foregroundStyle(PSColor.primary)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(13)
+        .background(event.verdictKind.tint.opacity(0.6), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(event.verdictKind.accent.opacity(0.18), lineWidth: 1)
+        }
     }
 }
 

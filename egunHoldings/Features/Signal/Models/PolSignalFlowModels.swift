@@ -14,6 +14,36 @@ enum PolSignalFeedTab: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum PolSignalVerdictKind {
+    case review   // 점검 — 행동 전 확인 필요
+    case watch    // 관망 — 지금은 조치 불필요
+    case adjust   // 조정 — 능동적 리밸런싱 권장
+
+    var label: String {
+        switch self {
+        case .review: return "점검"
+        case .watch:  return "관망"
+        case .adjust: return "조정"
+        }
+    }
+
+    var accent: Color {
+        switch self {
+        case .review: return PSColor.danger
+        case .watch:  return PSColor.warn
+        case .adjust: return PSColor.primary
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .review: return PSColor.dangerBg
+        case .watch:  return PSColor.warnBg
+        case .adjust: return PSColor.primarySoft
+        }
+    }
+}
+
 struct PolSignalExposure: Identifiable {
     let id = UUID()
     let ticker: String
@@ -37,6 +67,7 @@ struct PolSignalEvent: Identifiable {
     let institution: String
     let dDay: String
     let title: String
+    let verdictKind: PolSignalVerdictKind
     let verdict: String
     let reason: String
     let expectedImpact: String

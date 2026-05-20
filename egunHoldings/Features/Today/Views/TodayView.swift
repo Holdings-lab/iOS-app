@@ -52,9 +52,6 @@ struct TodayView: View {
                         PolSignalTodayBriefingView(
                             events: PolSignalFlowMockData.todayTopEvents,
                             proposal: PolSignalFlowMockData.adjustmentProposal,
-                            onSignalListTap: {
-                                onSignalRouteRequested(.list)
-                            },
                             onEventTap: { event in
                                 onSignalRouteRequested(.detail(event.id))
                             },
@@ -743,6 +740,23 @@ private extension TodayPortfolioSummary {
 
     var todayChangeColor: Color {
         todayChange >= 0 ? Color.up : Color.down
+    }
+
+    var weeklySparklinePoints: [Double] {
+        let currentAsset = max(Double(totalAsset), 1)
+        let previousAsset = currentAsset - Double(todayChangeAmt)
+        let delta = currentAsset - previousAsset
+        let direction = todayChange >= 0 ? 1.0 : -1.0
+        let volatility = max(abs(delta) * 0.28, currentAsset * 0.002)
+        let offsets = [-0.34, 0.16, -0.10, 0.30, -0.08, 0.18, 0]
+
+        return offsets.enumerated().map { index, offset in
+            guard index < offsets.count - 1 else { return currentAsset }
+
+            let progress = Double(index) / Double(offsets.count - 1)
+            let trendValue = previousAsset + delta * progress
+            return max(0, trendValue + offset * volatility * direction)
+        }
     }
 }
 
