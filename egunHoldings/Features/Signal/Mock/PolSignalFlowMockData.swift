@@ -82,11 +82,11 @@ enum PolSignalFlowMockData {
         ),
         PolSignalEvent(
             id: 103,
-            feedTab: .breaking,
+            feedTab: .myImpact,
             category: "환율",
             institution: "서울 외환시장",
-            dDay: "오늘",
-            title: "원달러 환율 1,380원 재돌파",
+            dDay: "방금 분석 완료",
+            title: "원/달러 1,490원 돌파",
             verdictKind: .watch,
             verdict: "달러 노출은 유지, 추가 매수는 보류",
             reason: "이미 달러 자산 15%를 들고 있어 환율 급등을 따라 살 필요는 낮아요.",
@@ -195,11 +195,74 @@ enum PolSignalFlowMockData {
         ]
     )
 
+    static let policyReadings: [PolSignalPolicyReading] = [
+        PolSignalPolicyReading(
+            id: 201,
+            dDay: "D-2",
+            institution: "미 상무부",
+            title: "반도체 보조금 2차 배분",
+            keywords: ["반도체", "보조금"],
+            readingLens: "정책 → 수혜 종목 흐름",
+            lensApplication: "CHIPS 보조금은 총액보다 집행 조건을 먼저 봐야 해요. 국내 생산 비중, 반도체 종류, 납기 같은 단서가 실제 수혜 기업을 가릅니다.",
+            whatHappened: "미 상무부가 CHIPS Act 2차 보조금 배분을 발표할 예정이에요. 총액보다 지급 조건과 대상 기업 범위가 시장의 첫 확인 포인트가 됩니다.",
+            typicalFlow: [
+                "발표 직전: ETF에 단기 매수 기대가 미리 붙어요.",
+                "발표 당일: 조건이 우호적이면 수혜 기대가 커지고, 보수적이면 실망 매물이 나올 수 있어요.",
+                "발표 후 1~2주: 누가 실제 수혜 기업인지에 따라 종목별 차별화가 시작돼요."
+            ],
+            readMinutes: 2,
+            relevantKeywords: ["반도체", "환율"]
+        ),
+        PolSignalPolicyReading(
+            id: 202,
+            dDay: "D-5",
+            institution: "한국은행 금통위",
+            title: "한은 금통위 회의",
+            keywords: ["금리", "통화정책"],
+            readingLens: "금리 → 자산군 자금 흐름",
+            lensApplication: "금통위는 결정 자체보다 결정문 문구가 더 중요할 때가 많아요. 물가 경로, 실물 부진 같은 표현이 다음 인하 기대를 움직입니다.",
+            whatHappened: "한국은행 금융통화위원회가 기준금리를 결정할 예정이에요. 시장은 동결을 우세하게 보지만, 결정문 문구가 다음 회의의 단서가 됩니다.",
+            typicalFlow: [
+                "회의 직전: 채권 금리는 예상 경로를 먼저 반영해요.",
+                "발표 직후: 결정문에 새 단어가 들어오면 채권과 리츠가 먼저 반응해요.",
+                "하루~이틀 뒤: 환율과 성장주가 인하 기대 강도를 후행해서 반영해요."
+            ],
+            readMinutes: 3,
+            relevantKeywords: ["금리", "채권"]
+        ),
+        PolSignalPolicyReading(
+            id: 203,
+            dDay: "D-12",
+            institution: "산업부",
+            title: "재생에너지 의무비율 상향",
+            keywords: ["친환경", "재생에너지"],
+            readingLens: "의무비율 → 장기 수요 흐름",
+            lensApplication: "의무비율 정책은 발표 당일보다 몇 년에 걸친 수요 누적이 핵심이에요. 단기 모멘텀보다 누적 설치 용량 가이드를 먼저 읽으면 차분해집니다.",
+            whatHappened: "산업통상자원부가 신재생에너지 공급의무비율을 단계적으로 상향하는 안을 발표할 예정이에요. 발전사가 매입해야 하는 재생에너지 비중이 올라가는 구조입니다.",
+            typicalFlow: [
+                "발표 직후: 태양광과 풍력 ETF에 단기 기대가 붙어요.",
+                "한 달 안: 실제 입찰 일정이 공개되며 공급 가능한 기업이 좁혀져요.",
+                "분기 단위: 의무 이행률 발표 시점마다 기대가 다시 조정돼요."
+            ],
+            readMinutes: 2,
+            relevantKeywords: ["친환경", "태양광"]
+        )
+    ]
+
+    static let latestAnalysisPayload = PolSignalAnalysisPayload(
+        eventId: 103,
+        analysisVersion: "2026-05-20T09:20:00+09:00"
+    )
+
     static var todayTopEvents: [PolSignalEvent] {
-        Array(events.prefix(3))
+        Array(events.filter { $0.verdictKind != .watch }.prefix(3))
     }
 
     static func event(id: Int) -> PolSignalEvent {
         events.first { $0.id == id } ?? events[0]
+    }
+
+    static func policyReading(id: Int) -> PolSignalPolicyReading {
+        policyReadings.first { $0.id == id } ?? policyReadings[0]
     }
 }
