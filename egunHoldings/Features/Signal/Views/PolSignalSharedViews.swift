@@ -735,12 +735,12 @@ private struct PolSignalVerdictRow: View {
                 .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(event.institution)
+                Text(event.title)
                     .font(.pretendard(15, weight: .semibold))
                     .foregroundStyle(PSColor.textPrimary)
                     .lineLimit(1)
 
-                Text(event.reason)
+                Text(event.sourceSummary)
                     .font(.pretendard(13, weight: .regular))
                     .foregroundStyle(PSColor.textSecondary)
                     .lineLimit(1)
@@ -748,7 +748,7 @@ private struct PolSignalVerdictRow: View {
 
             Spacer(minLength: 0)
 
-            PolSignalVerdictBadge(kind: event.verdictKind)
+            PolSignalVerdictBadge(label: event.institution)
 
             PolSignalExpandChevron(isExpanded: isExpanded)
         }
@@ -758,10 +758,10 @@ private struct PolSignalVerdictRow: View {
 }
 
 struct PolSignalVerdictBadge: View {
-    let kind: PolSignalVerdictKind
+    let label: String
 
     var body: some View {
-        Text("확인 필요")
+        Text(label)
             .font(.pretendard(11, weight: .semibold))
             .foregroundStyle(PSColor.primary)
             .padding(.horizontal, 7)
