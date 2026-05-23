@@ -180,6 +180,7 @@ struct TodayPortfolioSummary {
     let overtradeRisk: String
     let topExposures: [TodayExposureItem]
     let riskLevel: String
+    var weeklySparklinePoints: [Double] = []
 }
 
 enum TodayLoadState: Equatable {

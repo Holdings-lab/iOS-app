@@ -459,7 +459,7 @@ private struct TodayAssetSummaryCard: View {
                 }
 
                 Sparkline(
-                    points: portfolio.weeklySparklinePoints,
+                    points: portfolio.sparklineDisplayPoints,
                     isUp: portfolio.todayChange >= 0,
                     width: nil,
                     height: 48
@@ -837,7 +837,11 @@ private extension TodayPortfolioSummary {
         todayChange >= 0 ? Color.up : Color.down
     }
 
-    var weeklySparklinePoints: [Double] {
+    var sparklineDisplayPoints: [Double] {
+        if !weeklySparklinePoints.isEmpty {
+            return weeklySparklinePoints
+        }
+
         let currentAsset = max(Double(totalAsset), 1)
         let previousAsset = currentAsset - Double(todayChangeAmt)
         let delta = currentAsset - previousAsset
