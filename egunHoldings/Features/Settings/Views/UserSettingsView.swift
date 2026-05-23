@@ -192,7 +192,11 @@ struct UserSettingsView: View {
         PolSignalSettingSection(title: "알림") {
             PolSignalToggleRow(title: "정책 이벤트 D-day 알림", isOn: $policyDDayAlert)
             PolSignalSettingsDivider()
-            PolSignalToggleRow(title: "시그널 분석 완료 알림", isOn: $analysisDoneAlert)
+            PolSignalToggleRow(
+                title: "시그널 분석 완료 알림",
+                subtitle: "이벤트 분석이 완료된 시점에만 발송",
+                isOn: $analysisDoneAlert
+            )
             PolSignalSettingsDivider()
             PolSignalToggleRow(title: "위험 신호 알림", isOn: $riskAlert)
             PolSignalSettingsDivider()

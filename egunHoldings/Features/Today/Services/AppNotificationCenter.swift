@@ -22,6 +22,12 @@ final class AppNotificationCenter: ObservableObject {
         notifications.filter { !$0.isRead }.count
     }
 
+    var latestUnreadAnalysisPayload: PolSignalAnalysisPayload? {
+        sortedNotifications
+            .first { !$0.isRead && $0.analysisPayload != nil }?
+            .analysisPayload
+    }
+
     var authorizationStatusText: String {
         switch authorizationStatus {
         case .authorized, .provisional, .ephemeral:
@@ -113,6 +119,15 @@ final class AppNotificationCenter: ObservableObject {
         notifications[index].isRead = true
     }
 
+    func markAnalysisPayloadAsRead(_ payload: PolSignalAnalysisPayload) {
+        notifications = notifications.map { item in
+            guard item.analysisPayload == payload else { return item }
+            var copy = item
+            copy.isRead = true
+            return copy
+        }
+    }
+
     func markAllAsRead() {
         notifications = notifications.map { item in
             var copy = item
@@ -124,6 +139,19 @@ final class AppNotificationCenter: ObservableObject {
     func addInAppNotification(_ item: AppNotificationItem) {
         notifications.append(item)
         notifications.sort { $0.occurredAt > $1.occurredAt }
+    }
+
+    func addCompletedAnalysisNotification(payload: PolSignalAnalysisPayload, event: PolSignalEvent) {
+        let item = AppNotificationItem(
+            kind: .signalAnalysis,
+            title: "\(event.title) 분석 완료",
+            message: "\(event.exposureSummary) 보유 중인 당신, 확인해보세요.",
+            occurredAt: Date(),
+            relatedTitle: event.title,
+            analysisPayload: payload,
+            isRead: false
+        )
+        addInAppNotification(item)
     }
 
     func scheduleTestNotification() async {
@@ -154,7 +182,12 @@ final class AppNotificationCenter: ObservableObject {
         content.title = item.title
         content.body = item.message
         content.sound = .default
-        content.userInfo = ["notificationId": item.id, "kind": item.kind.rawValue]
+        var userInfo: [String: Any] = ["notificationId": item.id, "kind": item.kind.rawValue]
+        if let payload = item.analysisPayload {
+            userInfo["eventId"] = payload.eventId
+            userInfo["analysisVersion"] = payload.analysisVersion
+        }
+        content.userInfo = userInfo
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, delay), repeats: false)
         let request = UNNotificationRequest(identifier: item.id, content: content, trigger: trigger)
@@ -174,6 +207,16 @@ final class AppNotificationCenter: ObservableObject {
         }
 
         return [
+            AppNotificationItem(
+                id: "analysis-usd-103",
+                kind: .signalAnalysis,
+                title: "원/달러 1,490원 돌파 분석 완료",
+                message: "달러 자산 15% 보유 중인 당신, 확인해보세요.",
+                occurredAt: date(minutesAgo: 4),
+                relatedTitle: "eventId 103 · analysisVersion \(PolSignalFlowMockData.latestAnalysisPayload.analysisVersion)",
+                analysisPayload: PolSignalFlowMockData.latestAnalysisPayload,
+                isRead: false
+            ),
             AppNotificationItem(
                 id: "policy-rate-cut",
                 kind: .policy,

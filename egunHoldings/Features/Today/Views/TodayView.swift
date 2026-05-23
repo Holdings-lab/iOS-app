@@ -7,10 +7,12 @@ struct TodayView: View {
     @StateObject private var policyNewsViewModel: PolicyNewsViewModel
     @StateObject private var notificationCenter = AppNotificationCenter.shared
     @ObservedObject private var exchangeRateViewModel: ExchangeRateViewModel
-    @State private var navigationPath: [TodayRoute] = []
+    @State private var navigationPath = NavigationPath()
+    @State private var isPushSlotDismissed = false
     private let userId: Int64?
     private let onAssetTabRequested: () -> Void
     private let onSignalRouteRequested: (PolSignalRoute) -> Void
+    private let onAnalysisNotificationRequested: (PolSignalAnalysisPayload) -> Void
 
     init(
         userId: Int64? = nil,
@@ -19,11 +21,13 @@ struct TodayView: View {
         viewModel: TodayViewModel? = nil,
         exchangeRateViewModel: ExchangeRateViewModel? = nil,
         onAssetTabRequested: @escaping () -> Void = {},
-        onSignalRouteRequested: @escaping (PolSignalRoute) -> Void = { _ in }
+        onSignalRouteRequested: @escaping (PolSignalRoute) -> Void = { _ in },
+        onAnalysisNotificationRequested: @escaping (PolSignalAnalysisPayload) -> Void = { _ in }
     ) {
         self.userId = userId
         self.onAssetTabRequested = onAssetTabRequested
         self.onSignalRouteRequested = onSignalRouteRequested
+        self.onAnalysisNotificationRequested = onAnalysisNotificationRequested
         _viewModel = StateObject(
             wrappedValue: viewModel ?? TodayViewModel(
                 userId: userId,
@@ -44,10 +48,22 @@ struct TodayView: View {
                     LazyVStack(alignment: .leading, spacing: 24) {
                         TodayHeaderSection(
                             name: "투자자",
-                            hasUnreadNotifications: notificationCenter.hasUnreadNotifications,
-                            onNotifications: { navigationPath.append(.notifications) },
-                            onSettings: { navigationPath.append(.settings) }
+                            hasUnreadAnalysis: notificationCenter.latestUnreadAnalysisPayload != nil,
+                            onNotifications: openNotifications,
+                            onSettings: { navigationPath.append(TodayRoute.settings) }
                         )
+
+                        if let payload = notificationCenter.latestUnreadAnalysisPayload, !isPushSlotDismissed {
+                            AnalysisPushSlotCard(
+                                event: PolSignalFlowMockData.event(id: payload.eventId),
+                                onOpen: {
+                                    openAnalysisNotification(payload)
+                                },
+                                onDismiss: {
+                                    isPushSlotDismissed = true
+                                }
+                            )
+                        }
 
                         PolSignalTodayBriefingView(
                             events: PolSignalFlowMockData.todayTopEvents,
@@ -71,13 +87,36 @@ struct TodayView: View {
             .navigationDestination(for: TodayRoute.self) { route in
                 switch route {
                 case .notifications:
-                    NotificationInboxView(notificationCenter: notificationCenter)
+                    NotificationInboxView(
+                        notificationCenter: notificationCenter,
+                        onAnalysisNotification: { payload in
+                            openAnalysisNotification(payload)
+                        }
+                    )
                 case .settings:
                     UserSettingsView(
                         userId: userId,
                         notificationCenter: notificationCenter,
                         connectedBrokerText: viewModel.connectedBrokerStatusText
                     )
+                }
+            }
+            .navigationDestination(for: PolSignalRoute.self) { route in
+                switch route {
+                case .list:
+                    EmptyView()
+                case .detail(let id):
+                    EmptyView()
+                        .onAppear {
+                            onSignalRouteRequested(.detail(id))
+                        }
+                case .adjustment:
+                    EmptyView()
+                        .onAppear {
+                            onSignalRouteRequested(.adjustment)
+                        }
+                case .policyReader(let id):
+                    PolSignalPolicyReaderView(event: PolSignalFlowMockData.policyReading(id: id))
                 }
             }
             .navigationDestination(item: $policyNewsViewModel.presentedItem) { item in
@@ -110,6 +149,19 @@ struct TodayView: View {
             userAssetProfile: viewModel.userAssetProfile,
             mode: .detail
         )
+    }
+
+    private func openNotifications() {
+        if let payload = notificationCenter.latestUnreadAnalysisPayload {
+            openAnalysisNotification(payload)
+        } else {
+            navigationPath.append(TodayRoute.notifications)
+        }
+    }
+
+    private func openAnalysisNotification(_ payload: PolSignalAnalysisPayload) {
+        notificationCenter.markAnalysisPayloadAsRead(payload)
+        onAnalysisNotificationRequested(payload)
     }
 
     private var judgmentState: TodayJudgmentDisplayState {
@@ -176,7 +228,7 @@ struct TodayView: View {
 
 private struct TodayHeaderSection: View {
     let name: String
-    let hasUnreadNotifications: Bool
+    let hasUnreadAnalysis: Bool
     let onNotifications: () -> Void
     let onSettings: () -> Void
 
@@ -197,14 +249,14 @@ private struct TodayHeaderSection: View {
                 HeaderIconButton(
                     iconName: "bell",
                     accessibilityLabel: "알림",
-                    showsUnreadDot: hasUnreadNotifications,
+                    showsUnreadBadge: hasUnreadAnalysis,
                     action: onNotifications
                 )
 
                 HeaderIconButton(
                     iconName: "gearshape",
                     accessibilityLabel: "설정",
-                    showsUnreadDot: false,
+                    showsUnreadBadge: false,
                     action: onSettings
                 )
             }
@@ -233,29 +285,72 @@ private struct TodayHeaderSection: View {
 private struct HeaderIconButton: View {
     let iconName: String
     let accessibilityLabel: String
-    let showsUnreadDot: Bool
+    let showsUnreadBadge: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: iconName)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(PSColor.textSecondary)
-                    .frame(width: 40, height: 40)
-
-                if showsUnreadDot {
-                    Circle()
-                        .fill(Color.up)
-                        .frame(width: 7, height: 7)
-                        .offset(x: -7, y: 8)
-                }
-            }
+            Image(systemName: showsUnreadBadge && iconName == "bell" ? "bell.badge.fill" : iconName)
+                .symbolRenderingMode(showsUnreadBadge && iconName == "bell" ? .palette : .monochrome)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(PSColor.textPrimary, PSColor.danger)
+                .frame(width: 44, height: 44)
             .background(PSColor.surface, in: Circle())
             .overlay { Circle().stroke(PSColor.border, lineWidth: 1) }
         }
         .buttonStyle(PSPressStyle())
         .accessibilityLabel(accessibilityLabel)
+    }
+}
+
+private struct AnalysisPushSlotCard: View {
+    let event: PolSignalEvent
+    let onOpen: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        PolSignalCard {
+            HStack(alignment: .top, spacing: 12) {
+                Button(action: onOpen) {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "bell.badge.fill")
+                            .symbolRenderingMode(.palette)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(PSColor.textPrimary, PSColor.danger)
+                            .frame(width: 36, height: 36)
+                            .background(PSColor.primarySoft, in: Circle())
+
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("푸시 알림")
+                                .font(.pretendard(12, weight: .semibold, relativeTo: .caption))
+                                .foregroundStyle(PSColor.primary)
+
+                            Text("\(event.title) 분석 완료")
+                                .font(.pretendard(15, weight: .bold, relativeTo: .body))
+                                .foregroundStyle(PSColor.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Text("\(event.exposureSummary) 보유 중인 당신, 확인해보세요.")
+                                .font(.pretendard(13, weight: .regular, relativeTo: .footnote))
+                                .foregroundStyle(PSColor.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(PSColor.textSecondary)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("푸시 알림 닫기")
+            }
+        }
     }
 }
 

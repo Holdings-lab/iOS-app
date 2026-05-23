@@ -497,6 +497,7 @@ struct PolSignalCompositionBar: View {
 
 struct PolSignalTodayBriefingView: View {
     let events: [PolSignalEvent]
+    var policyReadings: [PolSignalPolicyReading] = PolSignalFlowMockData.policyReadings
     let proposal: PolSignalAdjustmentProposal?
     let onEventTap: (PolSignalEvent) -> Void
     let onProposalTap: () -> Void
@@ -566,57 +567,14 @@ struct PolSignalTodayBriefingView: View {
 
     private var policyEventSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PolSignalSectionHeader(title: "오늘 점검할 정책 이벤트", meta: "\(events.count)건")
+            PolSignalSectionHeader(title: "오늘 읽을 정책 이벤트", meta: "\(policyReadings.count)건")
 
             VStack(spacing: 10) {
-                ForEach(events) { event in
-                    let key = "policy-\(event.id)"
-                    let expanded = isExpanded(key)
-
-                    PolSignalCard {
-                        VStack(alignment: .leading, spacing: 14) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack(spacing: 8) {
-                                    PolSignalBadge(text: event.dDay, style: badgeStyle(for: event), inverted: event.feedTab == .breaking)
-                                    PolSignalTag(text: event.category, style: tagStyle(for: event))
-                                    Spacer(minLength: 0)
-                                    PolSignalVerdictBadge(kind: event.verdictKind)
-                                    PolSignalExpandChevron(isExpanded: expanded)
-                                }
-
-                                Text(event.title)
-                                    .font(.pretendard(16, weight: .semibold))
-                                    .foregroundStyle(PSColor.textPrimary)
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-
-                                if !expanded {
-                                    Text(event.reason)
-                                        .font(.pretendard(13, weight: .regular))
-                                        .foregroundStyle(PSColor.textSecondary)
-                                        .lineLimit(2)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                toggle(key)
-                            }
-
-                            if expanded {
-                                TodayDecisionExpansion(event: event) {
-                                    onEventTap(event)
-                                }
-                            }
-                        }
+                ForEach(policyReadings) { event in
+                    NavigationLink(value: PolSignalRoute.policyReader(event.id)) {
+                        PolicyReadCard(event: event)
                     }
-                    .overlay {
-                        if expanded {
-                            RoundedRectangle(cornerRadius: PSRadius.card, style: .continuous)
-                                .stroke(event.verdictKind.accent.opacity(0.35), lineWidth: 1.5)
-                        }
-                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -655,21 +613,110 @@ struct PolSignalTodayBriefingView: View {
         }
     }
 
-    private func tagStyle(for event: PolSignalEvent) -> PolSignalTagStyle {
-        switch event.category {
-        case "반도체":
-            return .semi
-        case "정책", "학습":
-            return .policy
-        case "금리", "환율":
-            return .rate
-        default:
-            return .primary
+}
+
+struct PolicyReadCard: View {
+    let event: PolSignalPolicyReading
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            metaRow
+
+            Text(event.title)
+                .font(.pretendard(18, weight: .semibold, relativeTo: .headline))
+                .foregroundStyle(PSColor.textPrimary)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            lensTag
+
+            PolSignalDashedRule()
+                .stroke(PSColor.Reader.border, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                .frame(height: 1)
+                .padding(.vertical, 2)
+
+            HStack(alignment: .center, spacing: 10) {
+                Label("읽기 \(event.readMinutes)분", systemImage: "clock")
+                    .font(.pretendard(13, weight: .medium, relativeTo: .caption))
+                    .foregroundStyle(PSColor.Reader.chipText)
+                    .labelStyle(.titleAndIcon)
+
+                Spacer(minLength: 12)
+
+                HStack(spacing: 4) {
+                    Text("읽으러 가기")
+                        .font(.pretendard(13, weight: .semibold, relativeTo: .caption))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(PSColor.Reader.lensText)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PSColor.Reader.surface, in: RoundedRectangle(cornerRadius: PSRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: PSRadius.card, style: .continuous)
+                .stroke(PSColor.Reader.border, lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityHint("두 번 탭하면 읽기 페이지가 열립니다")
+    }
+
+    private var metaRow: some View {
+        PolSignalFlowLayout(spacing: 6) {
+            ForEach(event.keywords, id: \.self) { keyword in
+                PolSignalReaderKeywordChip(text: "#\(keyword)")
+            }
+
+            Text("· \(event.institution)")
+                .font(.pretendard(12, weight: .medium, relativeTo: .caption))
+                .foregroundStyle(PSColor.textSecondary)
+
+            Text("· \(event.dDay)")
+                .font(.pretendard(12, weight: .medium, relativeTo: .caption))
+                .foregroundStyle(PSColor.textSecondary)
         }
     }
 
-    private func badgeStyle(for event: PolSignalEvent) -> PolSignalBadgeStyle {
-        event.feedTab == .breaking ? .danger : .warn
+    private var lensTag: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "lightbulb")
+                .font(.system(size: 12, weight: .semibold))
+            Text(event.readingLens)
+                .font(.pretendard(12, weight: .semibold, relativeTo: .caption))
+                .lineLimit(1)
+        }
+        .foregroundStyle(PSColor.Reader.lensText)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(PSColor.Reader.lensBg, in: Capsule(style: .continuous))
+        .overlay {
+            Capsule(style: .continuous)
+                .stroke(PSColor.Reader.lensBorder, lineWidth: 1)
+        }
+    }
+}
+
+struct PolSignalReaderKeywordChip: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.pretendard(12, weight: .semibold, relativeTo: .caption))
+            .foregroundStyle(PSColor.Reader.chipText)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(PSColor.Reader.chipBg, in: Capsule(style: .continuous))
+    }
+}
+
+struct PolSignalDashedRule: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        return path
     }
 }
 
@@ -688,12 +735,12 @@ private struct PolSignalVerdictRow: View {
                 .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(event.exposures.first?.ticker ?? event.category)
+                Text(event.title)
                     .font(.pretendard(15, weight: .semibold))
                     .foregroundStyle(PSColor.textPrimary)
                     .lineLimit(1)
 
-                Text(event.reason)
+                Text(event.sourceSummary)
                     .font(.pretendard(13, weight: .regular))
                     .foregroundStyle(PSColor.textSecondary)
                     .lineLimit(1)
@@ -701,7 +748,7 @@ private struct PolSignalVerdictRow: View {
 
             Spacer(minLength: 0)
 
-            PolSignalVerdictBadge(kind: event.verdictKind)
+            PolSignalVerdictBadge(label: event.institution)
 
             PolSignalExpandChevron(isExpanded: isExpanded)
         }
@@ -710,16 +757,16 @@ private struct PolSignalVerdictRow: View {
     }
 }
 
-private struct PolSignalVerdictBadge: View {
-    let kind: PolSignalVerdictKind
+struct PolSignalVerdictBadge: View {
+    let label: String
 
     var body: some View {
-        Text(kind.label)
+        Text(label)
             .font(.pretendard(11, weight: .semibold))
-            .foregroundStyle(kind.accent)
+            .foregroundStyle(PSColor.primary)
             .padding(.horizontal, 7)
             .padding(.vertical, 4)
-            .background(kind.tint, in: RoundedRectangle(cornerRadius: PSRadius.badge, style: .continuous))
+            .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: PSRadius.badge, style: .continuous))
     }
 }
 

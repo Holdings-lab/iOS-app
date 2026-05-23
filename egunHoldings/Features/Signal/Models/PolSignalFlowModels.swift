@@ -1,14 +1,15 @@
+import Combine
 import SwiftUI
 
 enum PolSignalRoute: Hashable {
     case list
     case detail(Int)
     case adjustment
+    case policyReader(Int)
 }
 
 enum PolSignalFeedTab: String, CaseIterable, Identifiable {
     case myImpact = "내 영향"
-    case breaking = "속보"
     case learning = "학습"
 
     var id: String { rawValue }
@@ -81,13 +82,51 @@ struct PolSignalEvent: Identifiable {
     let accentColor: Color
 }
 
+struct PolSignalPolicyReading: Identifiable, Hashable {
+    let id: Int
+    let dDay: String
+    let institution: String
+    let title: String
+    let keywords: [String]
+    let readingLens: String
+    let lensApplication: String
+    let whatHappened: String
+    let typicalFlow: [String]
+    let readMinutes: Int
+    let relevantKeywords: [String]
+}
+
+struct PolSignalAnalysisPayload: Identifiable, Hashable {
+    let eventId: Int
+    let analysisVersion: String
+
+    var id: String {
+        "\(eventId)-\(analysisVersion)"
+    }
+}
+
+extension Notification.Name {
+    static let polSignalAnalysisPayloadReceived = Notification.Name("PolSignalAnalysisPayloadReceived")
+}
+
+@MainActor
+final class PushAnalysisCoordinator: ObservableObject {
+    @Published var presentedAnalysis: PolSignalAnalysisPayload?
+
+    func present(_ payload: PolSignalAnalysisPayload) {
+        presentedAnalysis = payload
+    }
+
+    func dismiss() {
+        presentedAnalysis = nil
+    }
+}
+
 extension PolSignalEvent {
     var timeText: String {
         switch feedTab {
         case .myImpact:
             return "09:20"
-        case .breaking:
-            return "방금 전"
         case .learning:
             return "4분"
         }
@@ -97,8 +136,6 @@ extension PolSignalEvent {
         switch feedTab {
         case .myImpact:
             return "영향 분석 완료"
-        case .breaking:
-            return "영향 분석 중"
         case .learning:
             return "내 노출 없음"
         }
