@@ -720,6 +720,22 @@ struct PolSignalDashedRule: Shape {
     }
 }
 
+/// 초보자용 상태 배지 (지켜봐요 / 조심하세요 / 대응하세요).
+/// 접힌 Top 3 행과 펼친 카드 상단에서 공통으로 사용.
+struct SentimentPill: View {
+    let kind: PolSignalVerdictKind
+
+    var body: some View {
+        Text(kind.sentimentLabel)
+            .font(.pretendard(11, weight: .bold))
+            .foregroundStyle(kind.sentimentForeground)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(kind.sentimentSoft, in: Capsule(style: .continuous))
+            .fixedSize()
+    }
+}
+
 private struct PolSignalVerdictRow: View {
     let event: PolSignalEvent
     let isExpanded: Bool
@@ -748,7 +764,7 @@ private struct PolSignalVerdictRow: View {
 
             Spacer(minLength: 0)
 
-            PolSignalVerdictBadge(label: event.institution)
+            SentimentPill(kind: event.verdictKind)
 
             PolSignalExpandChevron(isExpanded: isExpanded)
         }
@@ -781,71 +797,93 @@ private struct PolSignalExpandChevron: View {
     }
 }
 
-// 오늘 탭 카드 확장: 1 판정 + 1 액션 + 1 탈출구
+// 오늘 탭 카드 확장: 상태 배지 + 상황 요약(평어) + 처방 블록 + Signal 이동 링크
 private struct TodayDecisionExpansion: View {
     let event: PolSignalEvent
     let onFullAnalysis: () -> Void
 
+    private var summary: String { event.prescription?.summary ?? event.expectedImpact }
+    private var action: String { event.prescription?.action ?? event.verdict }
+    private var nowPercent: String? { event.prescription?.nowPercent ?? event.exposures.first?.weightText }
+    private var goalLabel: String? { event.prescription?.goalLabel }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // ① 판정 블록
-            VStack(alignment: .leading, spacing: 6) {
-                Text("왜")
-                    .font(.pretendard(11, weight: .bold))
-                    .foregroundStyle(event.verdictKind.accent)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(event.verdictKind.accent.opacity(0.12), in: Capsule(style: .continuous))
+        VStack(alignment: .leading, spacing: 10) {
+            // ① 상태 배지
+            SentimentPill(kind: event.verdictKind)
 
-                Text(event.expectedImpact)
-                    .font(.pretendard(13, weight: .regular))
-                    .foregroundStyle(PSColor.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .lineSpacing(2)
-            }
+            // ② 상황 한 줄 (평어, 최대 2줄)
+            Text(summary)
+                .font(.pretendard(13, weight: .regular))
+                .foregroundStyle(PSColor.textSecondary)
+                .lineLimit(2)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
 
-            // ② 액션 블록
-            HStack(alignment: .top, spacing: 9) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(event.verdictKind.accent)
-                    .padding(.top, 1)
+            // ③ 처방 블록
+            prescriptionBlock
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(event.verdict)
-                        .font(.pretendard(14, weight: .bold))
-                        .foregroundStyle(PSColor.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .lineSpacing(2)
-
-                    if !event.exposureSummary.isEmpty {
-                        Text("현재 노출 \(event.exposureSummary)")
-                            .font(.pretendard(12, weight: .regular))
-                            .foregroundStyle(PSColor.textFaint)
-                    }
-                }
-            }
-
-            // ③ 탈출구
+            // ④ Signal 탭 이동
             Button(action: onFullAnalysis) {
                 HStack(spacing: 4) {
-                    Text("전체 분석 보기")
+                    Text("왜 그런지 알아보기")
                         .font(.pretendard(13, weight: .semibold))
                     Image(systemName: "arrow.right")
                         .font(.system(size: 11, weight: .bold))
                 }
                 .foregroundStyle(PSColor.primary)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 4)
+                .frame(minHeight: 44, alignment: .leading)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(13)
-        .background(event.verdictKind.tint.opacity(0.6), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(event.verdictKind.sentimentSoft.opacity(0.6), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(event.verdictKind.accent.opacity(0.18), lineWidth: 1)
+                .stroke(event.verdictKind.sentimentForeground.opacity(0.18), lineWidth: 1)
         }
+    }
+
+    private var prescriptionBlock: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(event.verdictKind.prescriptionIconColor)
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text(action)
+                    .font(.pretendard(15, weight: .bold))
+                    .foregroundStyle(PSColor.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .lineSpacing(2)
+
+                if let now = nowPercent {
+                    HStack(spacing: 10) {
+                        Text("지금 \(now)")
+                            .font(.pretendard(12, weight: .medium).monospacedDigit())
+                            .foregroundStyle(PSColor.textSecondary)
+
+                        if let goal = goalLabel {
+                            Text("→")
+                                .font(.pretendard(13, weight: .semibold))
+                                .foregroundStyle(PSColor.textFaint)
+
+                            Text(goal)
+                                .font(.pretendard(12, weight: .semibold).monospacedDigit())
+                                .foregroundStyle(PSColor.primary)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(event.verdictKind.sentimentSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
