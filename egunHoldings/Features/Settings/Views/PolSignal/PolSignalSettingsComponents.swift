@@ -68,13 +68,23 @@ struct PolSignalSettingsListRow: View {
 
 struct PolSignalToggleRow: View {
     let title: String
+    var subtitle: String?
     @Binding var isOn: Bool
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(title)
-                .font(.pretendard(14, weight: .semibold))
-                .foregroundStyle(PSColor.textPrimary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.pretendard(14, weight: .semibold))
+                    .foregroundStyle(PSColor.textPrimary)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.pretendard(12, weight: .regular))
+                        .foregroundStyle(PSColor.textSecondary)
+                        .lineLimit(2)
+                }
+            }
 
             Spacer()
 

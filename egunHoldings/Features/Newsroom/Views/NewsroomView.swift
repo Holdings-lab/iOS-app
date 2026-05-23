@@ -6,7 +6,7 @@ struct NewsroomView: View {
 
     @StateObject private var viewModel: PolicyNewsViewModel
     @State private var feedMode: NewsroomFeedMode = .news
-    @State private var newsFilter: NewsroomNewsFilter = .breaking
+    @State private var newsFilter: NewsroomNewsFilter = .latest
     @State private var selectedMarketTicker: NewsroomMarketTicker?
     @State private var selectedArticleItem: PolicyNewsItem?
 
@@ -21,7 +21,7 @@ struct NewsroomView: View {
 
     private var displayedItems: [PolicyNewsItem] {
         switch newsFilter {
-        case .breaking:
+        case .latest:
             return viewModel.visibleNews.filter { $0.newsroomRelevanceLevel == .high || $0.sentiment == .caution }
         case .holdings:
             return viewModel.visibleNews.filter(isHoldingRelated)

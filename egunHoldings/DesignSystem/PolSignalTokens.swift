@@ -49,6 +49,16 @@ nonisolated enum PSColor {
     static let trendDown = danger
     static let borderStrong = border
     static let divider = rule
+
+    enum Reader {
+        static let surface = Color(hex: "FCFCFA")
+        static let border = Color(hex: "ECEAE3")
+        static let chipBg = Color(hex: "EFEEE8")
+        static let chipText = Color(hex: "4D5566")
+        static let lensBg = Color(hex: "F2F0E8")
+        static let lensText = Color(hex: "56503B")
+        static let lensBorder = Color(hex: "E5E1D2")
+    }
 }
 
 enum PSRadius {

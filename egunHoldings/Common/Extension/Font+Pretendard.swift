@@ -16,6 +16,24 @@ extension Font {
         return .system(size: size, weight: weight, design: .default)
     }
 
+    static func pretendard(
+        _ size: CGFloat,
+        weight: Weight = .regular,
+        relativeTo textStyle: TextStyle
+    ) -> Font {
+        let weightedName = pretendardName(for: weight)
+
+        if UIFont(name: weightedName, size: size) != nil {
+            return .custom(weightedName, size: size, relativeTo: textStyle)
+        }
+
+        if UIFont(name: "Pretendard", size: size) != nil {
+            return .custom("Pretendard", size: size, relativeTo: textStyle)
+        }
+
+        return .system(textStyle, design: .default, weight: weight)
+    }
+
     private static func pretendardName(for weight: Weight) -> String {
         switch weight {
         case .bold, .heavy, .black:

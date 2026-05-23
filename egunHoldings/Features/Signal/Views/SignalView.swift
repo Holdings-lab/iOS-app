@@ -24,6 +24,9 @@ struct SignalView: View {
         case .adjustment:
             _navigationPath = State(initialValue: [])
             _isProposalSheetPresented = State(initialValue: true)
+        case .policyReader(let id):
+            _navigationPath = State(initialValue: [.policyReader(id)])
+            _isProposalSheetPresented = State(initialValue: false)
         case .none:
             _navigationPath = State(initialValue: [])
             _isProposalSheetPresented = State(initialValue: false)
@@ -62,6 +65,8 @@ struct SignalView: View {
                     )
                 case .adjustment:
                     EmptyView()
+                case .policyReader(let id):
+                    PolSignalPolicyReaderView(event: PolSignalFlowMockData.policyReading(id: id))
                 }
             }
             .toolbar(.hidden, for: .navigationBar)
@@ -115,28 +120,13 @@ struct SignalView: View {
     }
 
     private var feedTabs: some View {
-        HStack(spacing: 6) {
+        Picker("시그널 피드", selection: $viewModel.selectedFeedTab) {
             ForEach(PolSignalFeedTab.allCases) { tab in
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        viewModel.selectedFeedTab = tab
-                    }
-                } label: {
-                    Text(tab.rawValue)
-                        .font(.pretendard(13, weight: .semibold))
-                        .foregroundStyle(viewModel.selectedFeedTab == tab ? Color.white : PSColor.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
-                        .background(
-                            viewModel.selectedFeedTab == tab ? PSColor.primary : PSColor.surfaceAlt,
-                            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        )
-                }
-                .buttonStyle(.plain)
+                Text(tab.rawValue).tag(tab)
             }
         }
-        .padding(3)
-        .background(Color(hex: "F1F5F9"), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .pickerStyle(.segmented)
+        .labelsHidden()
     }
 
     @ViewBuilder
@@ -144,8 +134,6 @@ struct SignalView: View {
         switch viewModel.selectedFeedTab {
         case .myImpact:
             impactContent
-        case .breaking:
-            breakingContent
         case .learning:
             learningContent
         }
@@ -153,12 +141,14 @@ struct SignalView: View {
 
     private var impactContent: some View {
         VStack(alignment: .leading, spacing: 20) {
-            if let hero = viewModel.events.first(where: { $0.feedTab == .myImpact }) {
+            let impactEvents = viewModel.events.filter { $0.feedTab == .myImpact }
+
+            if let hero = impactEvents.first {
                 impactHeroCard(hero)
             }
 
             VStack(alignment: .leading, spacing: 12) {
-                let otherEvents = Array(viewModel.events.filter { $0.feedTab != .myImpact }.prefix(3))
+                let otherEvents = Array(impactEvents.dropFirst().prefix(3))
                 PolSignalSectionHeader(title: "다른 시그널", meta: "\(otherEvents.count)건")
 
                 VStack(spacing: 10) {
@@ -245,95 +235,6 @@ struct SignalView: View {
         .onTapGesture {
             openDetail(event)
         }
-    }
-
-    private var breakingContent: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            PolSignalCard(variant: .warn, padding: EdgeInsets(top: 13, leading: 14, bottom: 13, trailing: 14)) {
-                HStack(alignment: .top, spacing: 9) {
-                    Image(systemName: "bolt.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(PSColor.warn)
-                    Text("속보는 내 자산 노출을 계산한 뒤 행동 카드로 전환됩니다.")
-                        .font(.pretendard(13, weight: .regular))
-                        .foregroundStyle(PSColor.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
-            if let live = viewModel.events.first(where: { $0.feedTab == .breaking }) {
-                liveBreakingCard(live)
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                let otherBreaking = viewModel.events.filter { $0.feedTab != .breaking }.prefix(3)
-                PolSignalSectionHeader(title: "다른 속보", meta: "\(otherBreaking.count)건")
-                VStack(spacing: 10) {
-                    ForEach(Array(otherBreaking)) { event in
-                        breakingMiniCard(event)
-                    }
-                }
-            }
-        }
-    }
-
-    private func liveBreakingCard(_ event: PolSignalEvent) -> some View {
-        Button {
-            openDetail(event)
-        } label: {
-            PolSignalCard {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 8) {
-                        HStack(spacing: 5) {
-                            Circle()
-                                .fill(PSColor.danger)
-                                .frame(width: 8, height: 8)
-                            Text("LIVE")
-                                .font(.pretendard(11, weight: .semibold))
-                                .foregroundStyle(PSColor.danger)
-                        }
-                        PolSignalBadge(text: "LIVE", style: .danger, inverted: true)
-                        PolSignalTag(text: event.category, style: .rate)
-                        Spacer(minLength: 0)
-                        Text(event.timeText)
-                            .font(.pretendard(12, weight: .medium))
-                            .foregroundStyle(PSColor.textSecondary)
-                    }
-
-                    Text(event.title)
-                        .font(.pretendard(18, weight: .bold))
-                        .foregroundStyle(PSColor.textPrimary)
-                        .lineLimit(2)
-
-                    Text(event.reason)
-                        .font(.pretendard(14, weight: .regular))
-                        .foregroundStyle(PSColor.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    HStack {
-                        Text("내 노출 검토 중")
-                            .font(.pretendard(12, weight: .medium))
-                            .foregroundStyle(PSColor.textFaint)
-                        Spacer()
-                        PolSignalBadge(text: "위험", style: .danger)
-                    }
-
-                    HStack(spacing: 8) {
-                        PolSignalButton("원문 보기", style: .secondary, isSmall: true) {
-                            openDetail(event)
-                        }
-                        PolSignalButton("분석 알림 받기", style: .primary, isSmall: true) {}
-                    }
-                }
-                .overlay(alignment: .leading) {
-                    Rectangle()
-                        .fill(PSColor.danger)
-                        .frame(width: 4)
-                        .offset(x: -16)
-                }
-            }
-        }
-        .buttonStyle(PressScaleButtonStyle())
     }
 
     private var learningContent: some View {
@@ -468,9 +369,9 @@ struct SignalView: View {
                         PolSignalTag(text: event.category, style: tagStyle(for: event))
                         Text(event.timeText)
                             .font(.pretendard(12, weight: .medium))
-                            .foregroundStyle(PSColor.textSecondary)
+                        .foregroundStyle(PSColor.textSecondary)
                         Spacer()
-                        PolSignalBadge(text: event.feedTab == .breaking ? "속보" : "확인", style: event.feedTab == .breaking ? .danger : .primary)
+                        PolSignalBadge(text: "확인", style: .primary)
                     }
 
                     Text(event.verdict)
@@ -485,40 +386,6 @@ struct SignalView: View {
 
                     Text("내 노출 · \(event.exposureSummary)")
                         .font(.pretendard(12, weight: .medium))
-                        .foregroundStyle(PSColor.textFaint)
-                }
-            }
-        }
-        .buttonStyle(PressScaleButtonStyle())
-    }
-
-    private func breakingMiniCard(_ event: PolSignalEvent) -> some View {
-        Button {
-            openDetail(event)
-        } label: {
-            PolSignalCard {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        PolSignalTag(text: event.category, style: tagStyle(for: event))
-                        Text(event.timeText)
-                            .font(.pretendard(12, weight: .medium))
-                            .foregroundStyle(PSColor.textSecondary)
-                        Spacer()
-                        PolSignalBadge(text: event.feedTab == .breaking ? "주의" : "완료", style: event.feedTab == .breaking ? .warn : .success)
-                    }
-
-                    Text(event.title)
-                        .font(.pretendard(15, weight: .semibold))
-                        .foregroundStyle(PSColor.textPrimary)
-                        .lineLimit(2)
-
-                    Text(event.reason)
-                        .font(.pretendard(13, weight: .regular))
-                        .foregroundStyle(PSColor.textSecondary)
-                        .lineLimit(2)
-
-                    Text(event.analysisState)
-                        .font(.pretendard(11, weight: .medium))
                         .foregroundStyle(PSColor.textFaint)
                 }
             }
@@ -556,6 +423,8 @@ struct SignalView: View {
             navigationPath = [route]
         case .adjustment:
             isProposalSheetPresented = true
+        case .policyReader:
+            navigationPath = [route]
         }
         externalRoute = nil
     }

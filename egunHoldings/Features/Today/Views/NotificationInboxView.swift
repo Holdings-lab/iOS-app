@@ -2,6 +2,7 @@ import SwiftUI
 
 struct NotificationInboxView: View {
     @ObservedObject var notificationCenter: AppNotificationCenter
+    var onAnalysisNotification: (PolSignalAnalysisPayload) -> Void = { _ in }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -84,6 +85,9 @@ struct NotificationInboxView: View {
                 ForEach(group.items) { item in
                     NotificationInboxRow(item: item) {
                         notificationCenter.markAsRead(item)
+                        if let payload = item.analysisPayload {
+                            onAnalysisNotification(payload)
+                        }
                     }
                 }
             }

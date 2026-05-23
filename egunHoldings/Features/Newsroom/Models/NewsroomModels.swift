@@ -68,14 +68,14 @@ enum NewsroomFeedMode: String, CaseIterable, Identifiable {
 }
 
 enum NewsroomNewsFilter: String, CaseIterable, Identifiable {
-    case breaking
+    case latest
     case holdings
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .breaking:
+        case .latest:
             return "실시간 속보"
         case .holdings:
             return "보유 종목 뉴스"

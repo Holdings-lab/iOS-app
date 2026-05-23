@@ -15,6 +15,7 @@ struct RootTabView: View {
     @State private var signalRoute: PolSignalRoute?
     @State private var signalViewIdentity = UUID()
     @StateObject private var exchangeRateViewModel = ExchangeRateViewModel()
+    @StateObject private var pushAnalysisCoordinator = PushAnalysisCoordinator()
 
     init(
         userId: Int64? = nil,
@@ -41,6 +42,9 @@ struct RootTabView: View {
                 },
                 onSignalRouteRequested: { route in
                     openSignal(route)
+                },
+                onAnalysisNotificationRequested: { payload in
+                    pushAnalysisCoordinator.present(payload)
                 }
             )
             .id(portfolioSnapshot)
@@ -74,6 +78,19 @@ struct RootTabView: View {
         }
         .tint(Color.brand)
         .preferredColorScheme(.light)
+        .onReceive(NotificationCenter.default.publisher(for: .polSignalAnalysisPayloadReceived)) { notification in
+            guard let payload = notification.object as? PolSignalAnalysisPayload else { return }
+            pushAnalysisCoordinator.present(payload)
+        }
+        .sheet(item: $pushAnalysisCoordinator.presentedAnalysis) { payload in
+            PolSignalAnalysisSheet(payload: payload) { eventId in
+                pushAnalysisCoordinator.dismiss()
+                openSignal(.detail(eventId))
+            }
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(PSColor.surface)
+        }
     }
 
     private func openSignal(_ route: PolSignalRoute) {

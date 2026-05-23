@@ -7,6 +7,7 @@ enum TodayRoute: Hashable {
 }
 
 enum AppNotificationKind: String, CaseIterable, Hashable, Identifiable {
+    case signalAnalysis
     case policy
     case news
     case volatility
@@ -16,6 +17,8 @@ enum AppNotificationKind: String, CaseIterable, Hashable, Identifiable {
 
     var title: String {
         switch self {
+        case .signalAnalysis:
+            return "분석 완료"
         case .policy:
             return "정책 업데이트"
         case .news:
@@ -29,6 +32,8 @@ enum AppNotificationKind: String, CaseIterable, Hashable, Identifiable {
 
     var iconName: String {
         switch self {
+        case .signalAnalysis:
+            return "bell.badge.fill"
         case .policy:
             return "building.columns.fill"
         case .news:
@@ -42,6 +47,8 @@ enum AppNotificationKind: String, CaseIterable, Hashable, Identifiable {
 
     var tintColor: Color {
         switch self {
+        case .signalAnalysis:
+            return Color.brand
         case .policy:
             return Color.brand
         case .news:
@@ -61,6 +68,7 @@ struct AppNotificationItem: Identifiable, Hashable {
     let message: String
     let occurredAt: Date
     let relatedTitle: String?
+    let analysisPayload: PolSignalAnalysisPayload?
     var isRead: Bool
 
     init(
@@ -70,6 +78,7 @@ struct AppNotificationItem: Identifiable, Hashable {
         message: String,
         occurredAt: Date,
         relatedTitle: String? = nil,
+        analysisPayload: PolSignalAnalysisPayload? = nil,
         isRead: Bool = false
     ) {
         self.id = id
@@ -78,6 +87,7 @@ struct AppNotificationItem: Identifiable, Hashable {
         self.message = message
         self.occurredAt = occurredAt
         self.relatedTitle = relatedTitle
+        self.analysisPayload = analysisPayload
         self.isRead = isRead
     }
 }
