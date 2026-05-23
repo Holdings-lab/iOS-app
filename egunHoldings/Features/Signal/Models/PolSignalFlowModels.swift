@@ -43,6 +43,54 @@ enum PolSignalVerdictKind {
         case .adjust: return PSColor.primarySoft
         }
     }
+
+    var sentimentLabel: String {
+        switch self {
+        case .review: return "조심하세요"
+        case .watch:  return "지켜봐요"
+        case .adjust: return "대응하세요"
+        }
+    }
+
+    /// Today Top 3 처방 카드 전용 색.
+    /// 초보자 시그널 의미(파랑=차분 / 주황=주의 / 빨강=대응)에 맞춰
+    /// 다른 화면용 accent·tint와 의도적으로 다르게 매핑합니다.
+    var sentimentForeground: Color {
+        switch self {
+        case .watch:  return PSColor.primary
+        case .review: return PSColor.warn
+        case .adjust: return PSColor.danger
+        }
+    }
+
+    var sentimentSoft: Color {
+        switch self {
+        case .watch:  return PSColor.primarySoft
+        case .review: return PSColor.warnBg
+        case .adjust: return PSColor.dangerBg
+        }
+    }
+
+    /// 처방 블록 아이콘 색. 대응(.adjust)은 행동 유도를 위해 의도적으로 success(green).
+    var prescriptionIconColor: Color {
+        switch self {
+        case .watch:  return PSColor.primary
+        case .review: return PSColor.warn
+        case .adjust: return PSColor.success
+        }
+    }
+}
+
+/// Today Top 3 펼침 카드의 처방 데이터 (금융 초보자용 평어 카피).
+struct TodayDecisionPrescription: Equatable {
+    /// 평이한 말로 쓴 상황 요약 (티커·전문용어 금지, 최대 2줄).
+    let summary: String
+    /// 동사형 액션 한 문장. (예: "반도체 비중을 줄이세요")
+    let action: String
+    /// "지금 N%" 표시용 현재 비중. nil이면 delta 행 숨김.
+    let nowPercent: String?
+    /// "목표 N%" / "권장 N%" / "유지 N%" 등 자유 텍스트.
+    let goalLabel: String?
 }
 
 struct PolSignalExposure: Identifiable {
@@ -80,6 +128,7 @@ struct PolSignalEvent: Identifiable {
     let sourceSummary: String
     let checkSchedule: String
     let accentColor: Color
+    let prescription: TodayDecisionPrescription?
 }
 
 struct PolSignalPolicyReading: Identifiable, Hashable {

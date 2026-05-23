@@ -50,7 +50,13 @@ enum PolSignalFlowMockData {
             weakeningCondition: "발표 총액이 예상치를 넘고 집행 일정이 30일 이내로 확정되면 축소 판단은 약해져요.",
             sourceSummary: "상무부는 첨단 패키징과 생산 설비 투자 조건을 함께 공개할 예정입니다. 시장은 총액보다 지급 속도와 대상 기업 범위를 확인하고 있습니다.",
             checkSchedule: "5월 16일 22:30 발표 확인",
-            accentColor: PSColor.tagSemi
+            accentColor: PSColor.tagSemi,
+            prescription: TodayDecisionPrescription(
+                summary: "반도체 관련 주식이 잠시 크게 흔들릴 수 있어요. 발표 결과에 따라 가격이 빠르게 움직일 수 있는 시점이에요.",
+                action: "반도체 비중을 줄이세요",
+                nowPercent: "12%",
+                goalLabel: "목표 9%"
+            )
         ),
         PolSignalEvent(
             id: 102,
@@ -78,7 +84,13 @@ enum PolSignalFlowMockData {
             weakeningCondition: "의사록에서 고용 둔화와 인하 논의가 동시에 확인되면 달러 방어 판단은 약해져요.",
             sourceSummary: "시장 참여자는 의사록의 물가 표현, 고용 둔화 언급, 6월 정책 경로 힌트를 함께 보고 있습니다.",
             checkSchedule: "5월 17일 03:00 의사록 공개",
-            accentColor: PSColor.primary
+            accentColor: PSColor.primary,
+            prescription: TodayDecisionPrescription(
+                summary: "달러와 성장주가 한꺼번에 출렁일 수 있어요. 큰 변화는 아직 없지만 한 번 점검할 시점이에요.",
+                action: "달러와 성장주를 점검하세요",
+                nowPercent: "15%",
+                goalLabel: "권장 13%"
+            )
         ),
         PolSignalEvent(
             id: 103,
@@ -105,7 +117,13 @@ enum PolSignalFlowMockData {
             weakeningCondition: "외환 당국 구두 개입과 미국 금리 하락이 동시에 나오면 환율 상승 판단은 약해져요.",
             sourceSummary: "원달러 환율은 미국 금리 경계와 국내 수급 영향으로 상승했습니다. 시장은 1,380원 안착 여부를 보고 있습니다.",
             checkSchedule: "오늘 장 마감 환율 확인",
-            accentColor: PSColor.warn
+            accentColor: PSColor.warn,
+            prescription: TodayDecisionPrescription(
+                summary: "환율이 올라 달러 자산은 든든해졌어요. 지금 당장 더 살 필요는 없는 시점이에요.",
+                action: "지금은 비중을 그대로 두세요",
+                nowPercent: "15%",
+                goalLabel: "유지 15%"
+            )
         ),
         PolSignalEvent(
             id: 104,
@@ -131,7 +149,8 @@ enum PolSignalFlowMockData {
             weakeningCondition: "내 보유 자산과 티커 연결이 없으면 행동 제안은 생성하지 않아요.",
             sourceSummary: "정책 신호는 키워드가 아니라 보유 자산과의 연결 강도, 비중, 변동성으로 다시 계산됩니다.",
             checkSchedule: "상시 학습 콘텐츠",
-            accentColor: PSColor.success
+            accentColor: PSColor.success,
+            prescription: nil
         )
     ]
 
