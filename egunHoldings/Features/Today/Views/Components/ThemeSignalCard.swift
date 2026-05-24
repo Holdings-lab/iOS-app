@@ -4,13 +4,11 @@ import SwiftUI
 
 /// Today 탭 "내 포트폴리오 영향 Top 3" 섹션.
 /// 섹션 헤더 + ThemeSignalCard 목록을 조합하며,
-/// 아코디언 방식(한 번에 하나만 열림)으로 확장 상태를 관리한다.
+/// 카드별 독립 확장 상태를 관리한다.
 struct ThemeSignalSection: View {
     let signals: [PortfolioThemeSignal]
     /// 카드 내 "왜 그런지 알아보기" 탭 시 호출. eventId 전달.
     let onFullAnalysis: (Int) -> Void
-
-    @State private var expandedId: UUID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -18,14 +16,8 @@ struct ThemeSignalSection: View {
 
             VStack(spacing: 10) {
                 ForEach(signals) { signal in
-                    ThemeSignalCard(
+                    ThemeSignalCardWrapper(
                         signal: signal,
-                        isExpanded: expandedId == signal.id,
-                        onTap: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                                expandedId = (expandedId == signal.id) ? nil : signal.id
-                            }
-                        },
                         onFullAnalysis: {
                             if let eventId = signal.relatedEventId {
                                 onFullAnalysis(eventId)
@@ -52,6 +44,27 @@ struct ThemeSignalSection: View {
                 .padding(.vertical, 4)
                 .background(PSColor.surfaceAlt, in: Capsule(style: .continuous))
         }
+    }
+}
+
+/// 각 카드가 자체 확장 상태를 갖도록 감싸는 private wrapper.
+private struct ThemeSignalCardWrapper: View {
+    let signal: PortfolioThemeSignal
+    let onFullAnalysis: () -> Void
+
+    @State private var isExpanded = false
+
+    var body: some View {
+        ThemeSignalCard(
+            signal: signal,
+            isExpanded: isExpanded,
+            onTap: {
+                withAnimation(.spring(response: 0.40, dampingFraction: 0.86)) {
+                    isExpanded.toggle()
+                }
+            },
+            onFullAnalysis: onFullAnalysis
+        )
     }
 }
 
@@ -85,6 +98,8 @@ struct ThemeSignalCard: View {
                 ThemeExpansionContent(
                     verdict: verdict,
                     prescription: prescription,
+                    narrativeState: .idle,
+                    onRetry: {},
                     onFullAnalysis: onFullAnalysis
                 )
                 .transition(
@@ -141,7 +156,7 @@ struct ThemeSignalCard: View {
                     .foregroundStyle(isExpanded ? verdict.sentimentForeground : PSColor.textFaint)
                     .rotationEffect(.degrees(isExpanded ? 180 : 0))
                     .animation(
-                        reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.8),
+                        reduceMotion ? .none : .spring(response: 0.40, dampingFraction: 0.86),
                         value: isExpanded
                     )
             }
@@ -182,6 +197,8 @@ struct ThemeSignalCard: View {
 private struct ThemeExpansionContent: View {
     let verdict: PolSignalVerdictKind
     let prescription: TodayDecisionPrescription
+    let narrativeState: NarrativeLoadState
+    let onRetry: () -> Void
     let onFullAnalysis: () -> Void
 
     var body: some View {
@@ -201,7 +218,14 @@ private struct ThemeExpansionContent: View {
             // ③ 처방 블록
             prescriptionBlock
 
-            // ④ Signal 탭 이동 링크
+            // ④ 백엔드 내러티브
+            NarrativeContentView(
+                narrative: prescription.narrative,
+                loadState: narrativeState,
+                onRetry: onRetry
+            )
+
+            // ⑤ Signal 탭 이동 링크
             Button(action: onFullAnalysis) {
                 HStack(spacing: 4) {
                     Text("왜 그런지 알아보기")
@@ -318,6 +342,102 @@ private struct ThemeEmptyStateBlock: View {
         .padding(.horizontal, 12)
         .padding(.bottom, 14)
         .padding(.top, 6)
+    }
+}
+
+// MARK: - NarrativeContentView
+
+/// 백엔드에서 받은 내러티브 텍스트를 상태에 따라 렌더링한다.
+/// 로딩 중: shimmer 3줄 / 완료: 텍스트 fade-in / 실패: 재시도 버튼
+private struct NarrativeContentView: View {
+    let narrative: String?
+    let loadState: NarrativeLoadState
+    let onRetry: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        switch loadState {
+        case .idle:
+            EmptyView()
+
+        case .loading:
+            VStack(alignment: .leading, spacing: 8) {
+                shimmerLine(fraction: 1.0)
+                shimmerLine(fraction: 1.0)
+                shimmerLine(fraction: 0.55)
+            }
+            .padding(.top, 4)
+
+        case .loaded:
+            if let text = narrative {
+                Text(text)
+                    .font(.pretendard(13, weight: .regular, relativeTo: .footnote))
+                    .foregroundStyle(PSColor.textSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(
+                        reduceMotion
+                            ? .opacity
+                            : .opacity.combined(with: .move(edge: .bottom))
+                    )
+                    .padding(.top, 4)
+            }
+
+        case .error:
+            Button(action: onRetry) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("다시 불러오기")
+                        .font(.pretendard(12, weight: .semibold, relativeTo: .caption))
+                }
+                .foregroundStyle(PSColor.textSecondary)
+                .padding(.vertical, 8)
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+    }
+
+    @ViewBuilder
+    private func shimmerLine(fraction: CGFloat) -> some View {
+        GeometryReader { geo in
+            ShimmerView()
+                .frame(width: geo.size.width * fraction, height: 12)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .frame(height: 12)
+    }
+}
+
+// MARK: - ShimmerView
+
+private struct ShimmerView: View {
+    @State private var phase: CGFloat = -1
+
+    var body: some View {
+        GeometryReader { geo in
+            LinearGradient(
+                stops: [
+                    .init(color: PSColor.rule, location: 0.0),
+                    .init(color: PSColor.surfaceAlt, location: 0.4),
+                    .init(color: PSColor.rule, location: 0.6),
+                    .init(color: PSColor.rule, location: 1.0)
+                ],
+                startPoint: UnitPoint(x: phase, y: 0),
+                endPoint: UnitPoint(x: phase + 1, y: 0)
+            )
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .onAppear {
+            withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) {
+                phase = 1
+            }
+        }
     }
 }
 

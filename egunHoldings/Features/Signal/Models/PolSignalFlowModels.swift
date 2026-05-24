@@ -91,6 +91,17 @@ struct TodayDecisionPrescription: Equatable {
     let nowPercent: String?
     /// "목표 N%" / "권장 N%" / "유지 N%" 등 자유 텍스트.
     let goalLabel: String?
+    /// 백엔드가 LLM으로 생성한 설명 텍스트.
+    /// nil = 아직 로드 전(skeleton 상태).
+    let narrative: String?
+}
+
+/// ThemeExpansionContent 내 내러티브 로딩 상태.
+enum NarrativeLoadState: Equatable {
+    case idle       // 요청 전
+    case loading    // 백엔드 응답 대기 중
+    case loaded     // 수신 완료
+    case error      // 수신 실패 — 재시도 버튼 표시
 }
 
 struct PolSignalExposure: Identifiable {
@@ -238,25 +249,39 @@ struct PolSignalAdjustmentProposal {
 struct PortfolioThemeSignal: Identifiable {
 
     enum Theme: String {
-        case techSemiconductor = "기술·반도체"
-        case ratesDollar       = "금리·달러"
-        case greenEnergy       = "친환경"
-        case policy            = "정책·규제"
+        case bigTech       = "빅테크"
+        case semiconductor = "반도체"
+        case financials    = "금융"
+        case greenEnergy   = "친환경"
 
         var displayName: String { rawValue }
 
         var sfSymbol: String {
             switch self {
-            case .techSemiconductor: return "cpu.fill"
-            case .ratesDollar:       return "banknote.fill"
-            case .greenEnergy:       return "leaf.fill"
-            case .policy:            return "building.columns.fill"
+            case .bigTech:       return "desktopcomputer"
+            case .semiconductor: return "cpu.fill"
+            case .financials:    return "banknote.fill"
+            case .greenEnergy:   return "leaf.fill"
             }
         }
 
-        /// leaf(친환경)만 success 컬러, 나머지는 textSecondary.
         var iconColor: Color {
-            self == .greenEnergy ? PSColor.success : PSColor.textSecondary
+            switch self {
+            case .bigTech:       return PSColor.primary
+            case .semiconductor: return PSColor.tagSemi
+            case .financials:    return PSColor.warn
+            case .greenEnergy:   return PSColor.success
+            }
+        }
+
+        /// 백엔드 API 요청 및 캐시 키 생성에 사용.
+        var tickerId: String {
+            switch self {
+            case .bigTech:       return "QQQ"
+            case .semiconductor: return "SOXX"
+            case .financials:    return "XLF"
+            case .greenEnergy:   return "ICLN"
+            }
         }
     }
 

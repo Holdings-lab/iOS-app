@@ -307,7 +307,8 @@ struct TodayMockData {
             TodayExposureItem(theme: "반도체", pct: 28, color: PSColor.purple),
             TodayExposureItem(theme: "달러", pct: 24, color: PSColor.yellow)
         ],
-        riskLevel: "주의"
+        riskLevel: "주의",
+        weeklySparklinePoints: [128.4, 130.1, 129.6, 131.8, 133.2, 132.5, 134.8]
     )
 
     nonisolated static let newsItems: [TodayNewsItem] = [

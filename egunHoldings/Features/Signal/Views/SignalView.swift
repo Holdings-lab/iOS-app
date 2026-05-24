@@ -33,10 +33,6 @@ struct SignalView: View {
         }
     }
 
-    init(viewModel: SignalViewModel) {
-        self.init()
-    }
-
     var body: some View {
         NavigationStack(path: $navigationPath) {
             PFContentScrollView(
