@@ -66,10 +66,10 @@ struct TodayView: View {
                         }
 
                         PolSignalTodayBriefingView(
-                            events: PolSignalFlowMockData.todayTopEvents,
+                            themeSignals: PolSignalFlowMockData.todayThemeSignals,
                             proposal: PolSignalFlowMockData.adjustmentProposal,
-                            onEventTap: { event in
-                                onSignalRouteRequested(.detail(event.id))
+                            onSignalTap: { eventId in
+                                onSignalRouteRequested(.detail(eventId))
                             },
                             onProposalTap: {
                                 onSignalRouteRequested(.adjustment)

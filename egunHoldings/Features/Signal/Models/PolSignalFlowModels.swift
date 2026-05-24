@@ -231,6 +231,51 @@ struct PolSignalAdjustmentProposal {
     let helperText: String
 }
 
+// MARK: - PortfolioThemeSignal
+
+/// Today 탭 Top 3에서 카드 단위로 쓰이는 포트폴리오 테마 신호.
+/// 기존 PolSignalEvent(이벤트 단위)와 달리, 테마 수준 집계 값을 담는다.
+struct PortfolioThemeSignal: Identifiable {
+
+    enum Theme: String {
+        case techSemiconductor = "기술·반도체"
+        case ratesDollar       = "금리·달러"
+        case greenEnergy       = "친환경"
+        case policy            = "정책·규제"
+
+        var displayName: String { rawValue }
+
+        var sfSymbol: String {
+            switch self {
+            case .techSemiconductor: return "cpu.fill"
+            case .ratesDollar:       return "banknote.fill"
+            case .greenEnergy:       return "leaf.fill"
+            case .policy:            return "building.columns.fill"
+            }
+        }
+
+        /// leaf(친환경)만 success 컬러, 나머지는 textSecondary.
+        var iconColor: Color {
+            self == .greenEnergy ? PSColor.success : PSColor.textSecondary
+        }
+    }
+
+    let id: UUID
+    let theme: Theme
+    /// 사용자의 현재 테마 비중 (퍼센트 정수).
+    let myExposurePercent: Int
+    /// nil이면 이번 주 신호 없음 상태.
+    let verdictKind: PolSignalVerdictKind?
+    /// 초보자용 처방 카피. verdictKind != nil 일 때만 존재.
+    let prescription: TodayDecisionPrescription?
+    /// 신호 없음 상태에서 표시할 다음 예정 이벤트 레이블.
+    let nextEventLabel: String?
+    /// "왜 그런지 알아보기" 탭 시 Signal 탭으로 이동할 eventId.
+    let relatedEventId: Int?
+}
+
+// MARK: -
+
 struct PolSignalRiskAlert: Identifiable {
     enum Severity {
         case red
