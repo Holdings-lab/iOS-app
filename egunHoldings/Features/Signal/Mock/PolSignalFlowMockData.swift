@@ -268,6 +268,48 @@ enum PolSignalFlowMockData {
         )
     ]
 
+    // MARK: - Today Top 3 Theme Signals
+
+    static let todayThemeSignals: [PortfolioThemeSignal] = [
+        PortfolioThemeSignal(
+            id: UUID(),
+            theme: .techSemiconductor,
+            myExposurePercent: 12,
+            verdictKind: .adjust,
+            prescription: TodayDecisionPrescription(
+                summary: "반도체 관련 주식이 잠시 크게 흔들릴 수 있어요. 발표 결과에 따라 가격이 빠르게 움직일 수 있는 시점이에요.",
+                action: "반도체 비중을 줄이세요",
+                nowPercent: "12%",
+                goalLabel: "목표 9%"
+            ),
+            nextEventLabel: nil,
+            relatedEventId: 101
+        ),
+        PortfolioThemeSignal(
+            id: UUID(),
+            theme: .ratesDollar,
+            myExposurePercent: 15,
+            verdictKind: .review,
+            prescription: TodayDecisionPrescription(
+                summary: "달러와 성장주가 한꺼번에 출렁일 수 있어요. 큰 변화는 아직 없지만 한 번 점검할 시점이에요.",
+                action: "달러와 성장주를 점검하세요",
+                nowPercent: "15%",
+                goalLabel: "권장 13%"
+            ),
+            nextEventLabel: nil,
+            relatedEventId: 102
+        ),
+        PortfolioThemeSignal(
+            id: UUID(),
+            theme: .greenEnergy,
+            myExposurePercent: 8,
+            verdictKind: nil,
+            prescription: nil,
+            nextEventLabel: "6/2 IEA 에너지 보고",
+            relatedEventId: nil
+        )
+    ]
+
     static let latestAnalysisPayload = PolSignalAnalysisPayload(
         eventId: 103,
         analysisVersion: "2026-05-20T09:20:00+09:00"

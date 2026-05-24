@@ -496,71 +496,23 @@ struct PolSignalCompositionBar: View {
 }
 
 struct PolSignalTodayBriefingView: View {
-    let events: [PolSignalEvent]
+    let themeSignals: [PortfolioThemeSignal]
     var policyReadings: [PolSignalPolicyReading] = PolSignalFlowMockData.policyReadings
     let proposal: PolSignalAdjustmentProposal?
-    let onEventTap: (PolSignalEvent) -> Void
+    /// "왜 그런지 알아보기" 탭 시 Signal 탭으로 이동. eventId 전달.
+    let onSignalTap: (Int) -> Void
     let onProposalTap: () -> Void
-
-    @State private var expandedKey: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
-            topImpactSection
+            ThemeSignalSection(
+                signals: themeSignals,
+                onFullAnalysis: onSignalTap
+            )
             policyEventSection
 
             if let proposal {
                 pendingProposalCard(proposal)
-            }
-        }
-    }
-
-    private func isExpanded(_ key: String) -> Bool {
-        expandedKey == key
-    }
-
-    private func toggle(_ key: String) {
-        withAnimation(.easeInOut(duration: 0.22)) {
-            expandedKey = (expandedKey == key) ? nil : key
-        }
-    }
-
-    private var topImpactSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PolSignalSectionHeader(
-                title: "내 포트폴리오 영향 Top 3",
-                meta: "\(min(events.count, 3))건"
-            )
-
-            PolSignalCard(padding: EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16)) {
-                VStack(spacing: 0) {
-                    ForEach(Array(events.prefix(3).enumerated()), id: \.element.id) { index, event in
-                        let key = "top-\(event.id)"
-                        let expanded = isExpanded(key)
-
-                        VStack(spacing: 0) {
-                            Button {
-                                toggle(key)
-                            } label: {
-                                PolSignalVerdictRow(event: event, isExpanded: expanded)
-                            }
-                            .buttonStyle(.plain)
-
-                            if expanded {
-                                TodayDecisionExpansion(event: event) {
-                                    onEventTap(event)
-                                }
-                                .padding(.bottom, 14)
-                            }
-                        }
-
-                        if index < min(events.count, 3) - 1 {
-                            Divider()
-                                .background(PSColor.rule)
-                                .padding(.leading, 56)
-                        }
-                    }
-                }
             }
         }
     }
