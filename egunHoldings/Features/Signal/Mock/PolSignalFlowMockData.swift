@@ -55,7 +55,8 @@ enum PolSignalFlowMockData {
                 summary: "반도체 관련 주식이 잠시 크게 흔들릴 수 있어요. 발표 결과에 따라 가격이 빠르게 움직일 수 있는 시점이에요.",
                 action: "반도체 비중을 줄이세요",
                 nowPercent: "12%",
-                goalLabel: "목표 9%"
+                goalLabel: "목표 9%",
+                narrative: nil
             )
         ),
         PolSignalEvent(
@@ -89,7 +90,8 @@ enum PolSignalFlowMockData {
                 summary: "달러와 성장주가 한꺼번에 출렁일 수 있어요. 큰 변화는 아직 없지만 한 번 점검할 시점이에요.",
                 action: "달러와 성장주를 점검하세요",
                 nowPercent: "15%",
-                goalLabel: "권장 13%"
+                goalLabel: "권장 13%",
+                narrative: nil
             )
         ),
         PolSignalEvent(
@@ -122,7 +124,8 @@ enum PolSignalFlowMockData {
                 summary: "환율이 올라 달러 자산은 든든해졌어요. 지금 당장 더 살 필요는 없는 시점이에요.",
                 action: "지금은 비중을 그대로 두세요",
                 nowPercent: "15%",
-                goalLabel: "유지 15%"
+                goalLabel: "유지 15%",
+                narrative: nil
             )
         ),
         PolSignalEvent(
@@ -271,34 +274,55 @@ enum PolSignalFlowMockData {
     // MARK: - Today Top 3 Theme Signals
 
     static let todayThemeSignals: [PortfolioThemeSignal] = [
+        // QQQ — 빅테크 — fall+cluster → review(조심하세요)
         PortfolioThemeSignal(
             id: UUID(),
-            theme: .techSemiconductor,
-            myExposurePercent: 12,
-            verdictKind: .adjust,
+            theme: .bigTech,
+            myExposurePercent: 22,
+            verdictKind: .review,
             prescription: TodayDecisionPrescription(
-                summary: "반도체 관련 주식이 잠시 크게 흔들릴 수 있어요. 발표 결과에 따라 가격이 빠르게 움직일 수 있는 시점이에요.",
-                action: "반도체 비중을 줄이세요",
-                nowPercent: "12%",
-                goalLabel: "목표 9%"
+                summary: "빅테크 주식들이 이번 주 출렁일 가능성이 있어요. FOMC 발언 방향에 따라 달라질 수 있는 시점이에요.",
+                action: "빅테크 비중을 점검하세요",
+                nowPercent: "22%",
+                goalLabel: "권장 18%",
+                narrative: nil
             ),
             nextEventLabel: nil,
             relatedEventId: 101
         ),
+        // SOXX — 반도체 — adjust(대응하세요)
         PortfolioThemeSignal(
             id: UUID(),
-            theme: .ratesDollar,
-            myExposurePercent: 15,
-            verdictKind: .review,
+            theme: .semiconductor,
+            myExposurePercent: 14,
+            verdictKind: .adjust,
             prescription: TodayDecisionPrescription(
-                summary: "달러와 성장주가 한꺼번에 출렁일 수 있어요. 큰 변화는 아직 없지만 한 번 점검할 시점이에요.",
-                action: "달러와 성장주를 점검하세요",
-                nowPercent: "15%",
-                goalLabel: "권장 13%"
+                summary: "반도체 보조금 발표 결과에 따라 가격이 빠르게 움직일 수 있어요. 비중이 높아 직접 영향을 받아요.",
+                action: "반도체 비중을 줄이세요",
+                nowPercent: "14%",
+                goalLabel: "목표 11%",
+                narrative: nil
             ),
             nextEventLabel: nil,
             relatedEventId: 102
         ),
+        // XLF — 금융 — watch(지켜봐요)
+        PortfolioThemeSignal(
+            id: UUID(),
+            theme: .financials,
+            myExposurePercent: 10,
+            verdictKind: .watch,
+            prescription: TodayDecisionPrescription(
+                summary: "금융주는 지금 특별히 행동할 필요 없어요. 다음 BIS 회의 결과를 지켜봐도 충분해요.",
+                action: "현재 비중을 유지하세요",
+                nowPercent: "10%",
+                goalLabel: "유지 10%",
+                narrative: nil
+            ),
+            nextEventLabel: nil,
+            relatedEventId: 103
+        ),
+        // ICLN — 친환경 — 신호 없음
         PortfolioThemeSignal(
             id: UUID(),
             theme: .greenEnergy,
