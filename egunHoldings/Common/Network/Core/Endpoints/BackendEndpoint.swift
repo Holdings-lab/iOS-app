@@ -157,6 +157,19 @@ nonisolated enum BackendEndpoint {
         Endpoint(baseURL: baseURL, path: "/api/signals/\(escapedPathComponent(id))", authorizationRequirement: .bearerToken)
     }
 
+    static func signalThemes() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/signals/themes", authorizationRequirement: .bearerToken)
+    }
+
+    static func signalCards(theme: String) -> Endpoint {
+        Endpoint(
+            baseURL: baseURL,
+            path: "/api/signals/cards",
+            queryItems: [URLQueryItem(name: "theme", value: theme)],
+            authorizationRequirement: .bearerToken
+        )
+    }
+
     static func heatmap(marketScope: String = "all", country: String = "all") -> Endpoint {
         Endpoint(
             baseURL: baseURL,

@@ -1,967 +1,1056 @@
 import SwiftUI
 
 struct SignalView: View {
-    @StateObject private var viewModel: PolSignalFlowViewModel
     @Binding private var externalRoute: PolSignalRoute?
-    @State private var navigationPath: [PolSignalRoute]
-    @State private var isProposalSheetPresented: Bool
-    @State private var expandedAIEventID: Int?
+    @State private var snapshot: SignalSectorDetailSnapshot
 
     init(
         initialRoute: PolSignalRoute? = nil,
         externalRoute: Binding<PolSignalRoute?> = .constant(nil),
-        viewModel: PolSignalFlowViewModel = PolSignalFlowViewModel()
+        viewModel: PolSignalFlowViewModel? = nil
     ) {
-        _viewModel = StateObject(wrappedValue: viewModel)
         _externalRoute = externalRoute
-        switch initialRoute {
-        case .list:
-            _navigationPath = State(initialValue: [])
-            _isProposalSheetPresented = State(initialValue: false)
-        case .detail(let id):
-            _navigationPath = State(initialValue: [.detail(id)])
-            _isProposalSheetPresented = State(initialValue: false)
-        case .adjustment:
-            _navigationPath = State(initialValue: [])
-            _isProposalSheetPresented = State(initialValue: true)
-        case .policyReader(let id):
-            _navigationPath = State(initialValue: [.policyReader(id)])
-            _isProposalSheetPresented = State(initialValue: false)
-        case .none:
-            _navigationPath = State(initialValue: [])
-            _isProposalSheetPresented = State(initialValue: false)
+        _snapshot = State(initialValue: SignalSectorDetailSnapshot.fixture(for: initialRoute))
+        _ = viewModel
+    }
+
+    var body: some View {
+        SignalSectorDetailView(snapshot: snapshot)
+            .onChange(of: externalRoute) { _, route in
+                guard let route else { return }
+                snapshot = SignalSectorDetailSnapshot.fixture(for: route)
+                externalRoute = nil
+            }
+    }
+}
+
+// MARK: - Detail View
+
+struct SignalSectorDetailView: View {
+    let snapshot: SignalSectorDetailSnapshot
+    var state: SignalSectorDetailLoadState = .loaded
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            navigationBar
+
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    ForecastCard(snapshot: snapshot)
+
+                    switch state {
+                    case .loaded:
+                        signalSection
+                        TimelineCard(points: snapshot.timeline)
+
+                        if snapshot.checkpoints.isEmpty == false {
+                            checkpointSection
+                        }
+                    case .loading:
+                        SignalSkeletonStack()
+                    case .error(let message):
+                        SignalErrorMessage(message: message)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 32)
+            }
+        }
+        .background(SignalDetailToken.bgScreen.ignoresSafeArea())
+        .toolbar(.hidden, for: .navigationBar)
+    }
+
+    private var navigationBar: some View {
+        HStack(spacing: 0) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(SignalDetailToken.textPrimary)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("뒤로")
+
+            Text(snapshot.sector.displayName)
+                .font(.pretendard(22, weight: .bold, relativeTo: .title2))
+                .foregroundStyle(SignalDetailToken.textPrimary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("이번 주 기준")
+                .font(.pretendard(12, weight: .medium, relativeTo: .caption))
+                .foregroundStyle(SignalDetailToken.textTertiary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(SignalDetailToken.bgSubtle, in: Capsule(style: .continuous))
+                .overlay {
+                    Capsule(style: .continuous)
+                        .stroke(SignalDetailToken.rule, lineWidth: 1)
+                }
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 56)
+        .background(SignalDetailToken.bgScreen)
+    }
+
+    private var signalSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SignalDetailSectionTitle("이번 주 눈에 띄는 신호")
+
+            LazyVStack(spacing: 8) {
+                let cards = snapshot.visibleSignalCards
+
+                if cards.isEmpty {
+                    EmptyIntensityCard(sectorName: snapshot.sector.displayName)
+                } else {
+                    ForEach(cards) { card in
+                        IntensityCard(card: card)
+                    }
+                }
+            }
+        }
+    }
+
+    private var checkpointSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SignalDetailSectionTitle("다음에 볼 이벤트")
+            CheckpointCard(events: Array(snapshot.checkpoints.prefix(2)))
+        }
+    }
+}
+
+// MARK: - Data
+
+enum SignalSectorDetailLoadState {
+    case loaded
+    case loading
+    case error(String)
+}
+
+struct SignalSectorDetailSnapshot: Identifiable {
+    let id = UUID()
+    let sector: PortfolioThemeSignal.Theme
+    let judgment: SignalDetailJudgment
+    let forecastReturnPercent: Double
+    let currentPrice: String?
+    let expectedPrice: String?
+    let priceDelta: String?
+    let signalCards: [SignalCard]
+    let timeline: [SignalTimelinePoint?]
+    let checkpoints: [SignalCheckpointEvent]
+
+    var visibleSignalCards: [SignalCard] {
+        Array(
+            signalCards
+                .filter { $0.shouldDisplay }
+                .sorted { lhs, rhs in
+                    if lhs.intensity.sortPriority == rhs.intensity.sortPriority {
+                        return lhs.title < rhs.title
+                    }
+                    return lhs.intensity.sortPriority > rhs.intensity.sortPriority
+                }
+                .prefix(3)
+        )
+    }
+
+    var direction: SignalForecastDirection {
+        SignalForecastDirection(value: forecastReturnPercent)
+    }
+
+    static func fixture(for route: PolSignalRoute?) -> SignalSectorDetailSnapshot {
+        guard case .detail(let id) = route else {
+            return .main
+        }
+        return fixture(forEventId: id)
+    }
+
+    static func fixture(forEventId id: Int) -> SignalSectorDetailSnapshot {
+        // TODO: wire to real VM and map sector ID from backend payload.
+        switch id {
+        case 102:
+            return .strongWarning
+        case 103:
+            return .noEvent
+        case 104:
+            return .calm
+        case 105:
+            return .newUser
+        default:
+            return .main
+        }
+    }
+}
+
+enum SignalDetailJudgment {
+    case caution
+    case action
+    case watch
+
+    var label: String {
+        switch self {
+        case .caution:
+            return "조심하세요"
+        case .action:
+            return "대응하세요"
+        case .watch:
+            return "지켜봐요"
+        }
+    }
+
+    var foreground: Color {
+        switch self {
+        case .caution:
+            return SignalDetailToken.badgeWarnFg
+        case .action:
+            return SignalDetailToken.badgeActFg
+        case .watch:
+            return SignalDetailToken.badgeWatchFg
+        }
+    }
+
+    var background: Color {
+        switch self {
+        case .caution:
+            return SignalDetailToken.badgeWarnBg
+        case .action:
+            return SignalDetailToken.badgeActBg
+        case .watch:
+            return SignalDetailToken.badgeWatchBg
+        }
+    }
+}
+
+struct SignalTimelinePoint: Identifiable {
+    let id = UUID()
+    let weekLabel: String
+    let returnPercent: Double
+    let judgment: SignalDetailJudgment
+
+    var direction: SignalForecastDirection {
+        SignalForecastDirection(value: returnPercent)
+    }
+}
+
+struct SignalCheckpointEvent: Identifiable {
+    let id = UUID()
+    let dateText: String
+    let title: String
+    let description: String
+}
+
+enum SignalForecastDirection {
+    case up
+    case down
+    case flat
+
+    init(value: Double) {
+        if abs(value) < 0.1 {
+            self = .flat
+        } else if value > 0 {
+            self = .up
+        } else {
+            self = .down
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .up:
+            return "▲"
+        case .down:
+            return "▼"
+        case .flat:
+            return "●"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .up:
+            return SignalDetailToken.directionUp
+        case .down:
+            return SignalDetailToken.directionDown
+        case .flat:
+            return SignalDetailToken.directionFlat
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .up:
+            return "상승 예상"
+        case .down:
+            return "하락 예상"
+        case .flat:
+            return "횡보 예상"
+        }
+    }
+}
+
+// MARK: - Forecast
+
+private struct ForecastCard: View {
+    let snapshot: SignalSectorDetailSnapshot
+
+    var body: some View {
+        SignalDetailCard(padding: 24) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top, spacing: 12) {
+                    sectorIcon
+
+                    Text(snapshot.sector.displayName)
+                        .font(.pretendard(22, weight: .bold, relativeTo: .title2))
+                        .foregroundStyle(SignalDetailToken.textPrimary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer(minLength: 12)
+
+                    SignalJudgmentPill(judgment: snapshot.judgment)
+                }
+
+                Divider()
+                    .overlay(SignalDetailToken.rule)
+                    .padding(.vertical, 16)
+
+                Text("5거래일 후")
+                    .font(.pretendard(12, weight: .medium, relativeTo: .caption))
+                    .foregroundStyle(SignalDetailToken.textTertiary)
+                    .monospacedDigit()
+
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(snapshot.direction.symbol)
+                        .font(.pretendard(22, weight: .bold, relativeTo: .title2))
+                    Text(snapshot.forecastReturnText)
+                        .font(.pretendard(34, weight: .bold, relativeTo: .largeTitle))
+                        .monospacedDigit()
+                }
+                .foregroundStyle(snapshot.direction.color)
+                .padding(.top, 6)
+
+                Text(snapshot.direction.label)
+                    .font(.pretendard(15, weight: .medium, relativeTo: .body))
+                    .foregroundStyle(SignalDetailToken.textSecondary)
+                    .padding(.top, 8)
+
+                if snapshot.hasPriceBox {
+                    priceBox
+                        .padding(.top, 12)
+                }
+            }
+        }
+    }
+
+    private var sectorIcon: some View {
+        Image(systemName: snapshot.sector.sfSymbol)
+            .font(.system(size: 20, weight: .semibold))
+            .foregroundStyle(snapshot.sector.detailForeground)
+            .frame(width: 40, height: 40)
+            .background(snapshot.sector.detailBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .accessibilityHidden(true)
+    }
+
+    private var priceBox: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text("예상 가격")
+                .font(.pretendard(12, weight: .medium, relativeTo: .caption))
+                .foregroundStyle(SignalDetailToken.textTertiary)
+
+            Spacer(minLength: 8)
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(snapshot.currentPrice ?? "") → \(snapshot.expectedPrice ?? "")")
+                    .foregroundStyle(SignalDetailToken.textPrimary)
+
+                Text("(\(snapshot.priceDelta ?? ""))")
+                    .foregroundStyle(snapshot.direction.color)
+            }
+            .font(.pretendard(14, weight: .semibold, relativeTo: .footnote))
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.78)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(SignalDetailToken.bgSubtle, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+}
+
+// MARK: - Intensity
+
+private struct IntensityCard: View {
+    let card: SignalCard
+
+    var body: some View {
+        SignalDetailCard(padding: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top, spacing: 12) {
+                    Circle()
+                        .fill(card.intensity.dotColor)
+                        .frame(width: 8, height: 8)
+                        .padding(.top, 7)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .top, spacing: 8) {
+                            Text(card.title)
+                                .font(.pretendard(16, weight: .semibold, relativeTo: .subheadline))
+                                .foregroundStyle(SignalDetailToken.textPrimary)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Spacer(minLength: 8)
+
+                            Text(card.intensity.label)
+                                .font(.pretendard(11, weight: .medium, relativeTo: .caption2))
+                                .foregroundStyle(card.intensity.labelColor)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+
+                        Text(card.description)
+                            .font(.pretendard(14, weight: .regular, relativeTo: .footnote))
+                            .foregroundStyle(SignalDetailToken.textSecondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                if let newsTitle = card.newsTitle {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Divider()
+                            .overlay(SignalDetailToken.rule)
+
+                        HStack(spacing: 8) {
+                            Image(systemName: "newspaper")
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundStyle(SignalDetailToken.textTertiary)
+                                .frame(width: 14, height: 14)
+
+                            Text(newsTitle)
+                                .font(.pretendard(12, weight: .medium, relativeTo: .caption))
+                                .foregroundStyle(SignalDetailToken.textSecondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                        .padding(.leading, 20)
+                    }
+                    .padding(.top, 12)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var accessibilityLabel: String {
+        let news = card.newsTitle.map { ", 관련 뉴스 \($0)" } ?? ""
+        return "\(card.intensity.label) 강도 신호, \(card.title), \(card.description)\(news)"
+    }
+}
+
+private struct EmptyIntensityCard: View {
+    let sectorName: String
+
+    var body: some View {
+        SignalDetailCard(padding: 0) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: "minus.circle")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundStyle(SignalDetailToken.textTertiary)
+                    .frame(width: 20, height: 20)
+                    .padding(.top, 1)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("이번 주는 조용한 한 주예요")
+                        .font(.pretendard(16, weight: .semibold, relativeTo: .subheadline))
+                        .foregroundStyle(SignalDetailToken.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("\(sectorName) 관련 특이 신호가 감지되지 않았어요.")
+                        .font(.pretendard(14, weight: .regular, relativeTo: .footnote))
+                        .foregroundStyle(SignalDetailToken.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Timeline
+
+private struct TimelineCard: View {
+    let points: [SignalTimelinePoint?]
+
+    private var normalizedPoints: [SignalTimelinePoint?] {
+        (0..<4).map { index in
+            points.indices.contains(index) ? points[index] : nil
         }
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            PFContentScrollView(
-                alignment: .leading,
-                spacing: 20,
-                horizontalPadding: PSSpacing.screenHorizontal,
-                topPadding: 12,
-                bottomPadding: 112,
-                scrollsToTopOnAppear: true,
-                locksHorizontalOverflow: true
-            ) {
-                header
-                feedTabs
-                selectedFeedContent
-            }
-            .background(PSColor.background.ignoresSafeArea())
-            .navigationDestination(for: PolSignalRoute.self) { route in
-                switch route {
-                case .list:
-                    EmptyView()
-                case .detail(let eventId):
-                    PolSignalDetailView(
-                        event: viewModel.event(id: eventId),
-                        proposal: viewModel.adjustmentProposal,
-                        onAdjustmentTap: openProposalSheet
-                    )
-                case .adjustment:
-                    EmptyView()
-                case .policyReader(let id):
-                    PolSignalPolicyReaderView(event: PolSignalFlowMockData.policyReading(id: id))
-                }
-            }
-            .toolbar(.hidden, for: .navigationBar)
-        }
-        .sheet(isPresented: $isProposalSheetPresented) {
-            PolSignalAdjustmentProposalSheetView(proposal: viewModel.adjustmentProposal)
-                .presentationDetents([.fraction(0.92)])
-                .presentationDragIndicator(.visible)
-                .presentationCornerRadius(24)
-                .presentationBackground(PSColor.surface)
-        }
-        .onAppear {
-            consumeExternalRoute()
-        }
-        .onChange(of: externalRoute) { _, _ in
-            consumeExternalRoute()
-        }
-    }
+        VStack(alignment: .leading, spacing: 12) {
+            SignalDetailSectionTitle("최근 4주 신호 흐름")
 
-    private var header: some View {
-        HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("이벤트 큐")
-                    .font(.pretendard(13, weight: .regular))
-                    .foregroundStyle(PSColor.textSecondary)
-
-                Text("시그널")
-                    .font(.pretendard(28, weight: .bold))
-                    .foregroundStyle(PSColor.textPrimary)
-            }
-
-            Spacer(minLength: 0)
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("VIX")
-                    .font(.pretendard(11, weight: .semibold))
-                    .foregroundStyle(PSColor.textFaint)
-
-                HStack(spacing: 4) {
-                    Text(viewModel.vixText)
-                        .font(.pretendard(18, weight: .bold))
-                        .foregroundStyle(PSColor.textPrimary)
-                        .monospacedDigit()
-
-                    Image(systemName: "arrow.up.right")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(PSColor.danger)
-                }
-            }
-        }
-    }
-
-    private var feedTabs: some View {
-        Picker("시그널 피드", selection: $viewModel.selectedFeedTab) {
-            ForEach(PolSignalFeedTab.allCases) { tab in
-                Text(tab.rawValue).tag(tab)
-            }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-    }
-
-    @ViewBuilder
-    private var selectedFeedContent: some View {
-        switch viewModel.selectedFeedTab {
-        case .myImpact:
-            impactContent
-        case .learning:
-            learningContent
-        }
-    }
-
-    private var impactContent: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            let impactEvents = viewModel.events.filter { $0.feedTab == .myImpact }
-
-            if let hero = impactEvents.first {
-                impactHeroCard(hero)
-            }
-
-            VStack(alignment: .leading, spacing: 12) {
-                let otherEvents = Array(impactEvents.dropFirst().prefix(3))
-                PolSignalSectionHeader(title: "다른 시그널", meta: "\(otherEvents.count)건")
-
-                VStack(spacing: 10) {
-                    ForEach(otherEvents) { event in
-                        signalMiniCard(event)
+            SignalDetailCard(padding: 20) {
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(Array(normalizedPoints.enumerated()), id: \.offset) { index, point in
+                        TimelineColumn(point: point, isCurrentWeek: index == 3)
+                            .frame(maxWidth: .infinity)
                     }
                 }
+                .frame(height: 120)
             }
         }
     }
+}
 
-    private func impactHeroCard(_ event: PolSignalEvent) -> some View {
-        PolSignalCard {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 8) {
-                    PolSignalTag(text: event.category, style: .semi)
-                    PolSignalTag(text: "정책", style: .policy)
-                    Spacer(minLength: 0)
-                    PolSignalBadge(text: event.dDay, style: .warn)
-                }
+private struct TimelineColumn: View {
+    let point: SignalTimelinePoint?
+    let isCurrentWeek: Bool
 
-                Text(event.title)
-                    .font(.pretendard(19, weight: .bold))
-                    .foregroundStyle(PSColor.textPrimary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+    var body: some View {
+        VStack(spacing: 12) {
+            Text(point?.weekLabel ?? placeholderWeekLabel)
+                .font(.pretendard(12, weight: .medium, relativeTo: .caption))
+                .foregroundStyle(SignalDetailToken.textTertiary)
+                .lineLimit(1)
 
-                VStack(alignment: .leading, spacing: 7) {
-                    Text("내 노출")
-                        .font(.pretendard(12, weight: .semibold))
-                        .foregroundStyle(PSColor.textFaint)
-                    PolSignalFlowLayout(spacing: 6) {
-                        ForEach(event.exposures) { exposure in
-                            PolSignalChip(text: "\(exposure.ticker) \(exposure.weightText)", color: exposure.color)
+            ZStack {
+                if let point {
+                    Circle()
+                        .fill(point.judgment.foreground)
+                        .frame(width: isCurrentWeek ? 16 : 12, height: isCurrentWeek ? 16 : 12)
+                        .overlay {
+                            if isCurrentWeek {
+                                Circle()
+                                    .stroke(SignalDetailToken.textPrimary, lineWidth: 2)
+                            }
                         }
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("예상 영향")
-                        .font(.pretendard(12, weight: .medium))
-                        .foregroundStyle(PSColor.textFaint)
-                    Text(event.expectedImpact)
-                        .font(.pretendard(14, weight: .regular))
-                        .foregroundStyle(PSColor.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                PolSignalAIBlock(
-                    text: event.aiSummary,
-                    isExpanded: expandedAIEventID == event.id,
-                    onTap: {
-                        withAnimation(.easeInOut(duration: 0.18)) {
-                            expandedAIEventID = expandedAIEventID == event.id ? nil : event.id
-                        }
-                    }
-                )
-
-                VStack(spacing: 8) {
-                    PolSignalButton("영향 분석 보기", iconName: "arrow.right", style: .primary) {
-                        openDetail(event)
-                    }
-
-                    HStack(spacing: 8) {
-                        PolSignalButton("시나리오 보기", style: .secondary, isSmall: true) {
-                            openDetail(event)
-                        }
-
-                        PolSignalButton("조정 제안 보기", style: .secondary, isSmall: true) {
-                            openProposalSheet()
-                        }
-                    }
+                } else {
+                    Circle()
+                        .fill(SignalDetailToken.rule)
+                        .frame(width: 12, height: 12)
                 }
             }
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(PSColor.primary)
-                    .frame(height: 3)
-                    .clipShape(RoundedRectangle(cornerRadius: 2, style: .continuous))
-                    .offset(y: -16)
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            openDetail(event)
-        }
-    }
+            .frame(height: 20)
 
-    private var learningContent: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            continueLearningCard
-
-            VStack(alignment: .leading, spacing: 12) {
-                PolSignalSectionHeader(title: "지금 시그널과 연결된 개념")
-                VStack(spacing: 10) {
-                    ForEach(viewModel.events.filter { $0.feedTab == .learning || $0.feedTab == .myImpact }.prefix(3)) { event in
-                        conceptCard(event)
-                    }
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                PolSignalSectionHeader(title: "개념 모아보기")
-                PolSignalFlowLayout(spacing: 8) {
-                    ForEach(["#반도체 12", "#금리 8", "#환율 6", "#ETF 5", "#정책 9"], id: \.self) { chip in
-                        PolSignalTag(text: chip, style: .neutral)
-                    }
-                }
-            }
-
-            learningStatsCard
-        }
-    }
-
-    private var continueLearningCard: some View {
-        PolSignalCard(variant: .tinted) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    PolSignalTag(text: "이어보기", style: .primary)
-                    Spacer()
-                    Text("3/5")
-                        .font(.pretendard(12, weight: .medium))
-                        .foregroundStyle(PSColor.textSecondary)
-                }
-
-                Text("정책 신호가 ETF 비중으로 번역되는 방식")
-                    .font(.pretendard(18, weight: .bold))
-                    .foregroundStyle(PSColor.textPrimary)
-
-                Text("정책 · 포트폴리오 영향")
-                    .font(.pretendard(13, weight: .regular))
-                    .foregroundStyle(PSColor.textSecondary)
-
-                GeometryReader { proxy in
-                    ZStack(alignment: .leading) {
-                        Capsule().fill(Color(hex: "DBEAFE"))
-                        Capsule().fill(PSColor.primary).frame(width: proxy.size.width * 0.6)
-                    }
-                }
-                .frame(height: 6)
-
-                HStack {
-                    Text("남은 시간 4분")
-                    Spacer()
-                    Text("+2 학습 점수")
-                }
-                .font(.pretendard(12, weight: .medium))
-                .foregroundStyle(PSColor.textSecondary)
-
-                PolSignalButton("이어보기", iconName: "arrow.right", style: .primary) {}
-            }
-        }
-    }
-
-    private var learningStatsCard: some View {
-        PolSignalCard(variant: .surfaceAlt) {
-            HStack(spacing: 0) {
-                statColumn(title: "이번 주 점수", value: "22", color: PSColor.primary)
-                Divider().background(PSColor.rule)
-                statColumn(title: "완료 콘텐츠", value: "7", color: PSColor.textPrimary)
-                Divider().background(PSColor.rule)
-                statColumn(title: "연속 학습", value: "4일", color: PSColor.textPrimary)
-            }
-        }
-    }
-
-    private func statColumn(title: String, value: String, color: Color) -> some View {
-        VStack(spacing: 5) {
-            Text(value)
-                .font(.pretendard(title == "이번 주 점수" ? 22 : 18, weight: .bold))
-                .foregroundStyle(color)
+            Text(point?.returnText ?? "—")
+                .font(.pretendard(15, weight: .semibold, relativeTo: .body))
+                .foregroundStyle(point?.direction.color ?? SignalDetailToken.textTertiary)
                 .monospacedDigit()
-            Text(title)
-                .font(.pretendard(11, weight: .medium))
-                .foregroundStyle(PSColor.textFaint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+
+            if let point {
+                Text(point.judgment.label)
+                    .font(.pretendard(11, weight: .medium, relativeTo: .caption2))
+                    .foregroundStyle(point.judgment.foreground)
+                    .lineLimit(1)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(point.judgment.background, in: Capsule(style: .continuous))
+            } else {
+                Text("—")
+                    .font(.pretendard(11, weight: .medium, relativeTo: .caption2))
+                    .foregroundStyle(SignalDetailToken.textTertiary)
+            }
         }
         .frame(maxWidth: .infinity)
     }
 
-    private func conceptCard(_ event: PolSignalEvent) -> some View {
-        PolSignalCard {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(PSColor.primary)
-                    .frame(width: 44, height: 44)
-                    .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
-                        PolSignalTag(text: event.category, style: event.category == "반도체" ? .semi : .rate)
-                        Text("4분")
-                            .font(.pretendard(12, weight: .medium))
-                            .foregroundStyle(PSColor.textFaint)
-                    }
-
-                    Text(event.title)
-                        .font(.pretendard(15, weight: .semibold))
-                        .foregroundStyle(PSColor.textPrimary)
-                        .lineLimit(2)
-
-                    Text("↳ \(event.reason)")
-                        .font(.pretendard(12, weight: .regular))
-                        .foregroundStyle(PSColor.primary)
-                        .lineLimit(2)
-                }
-            }
-        }
-    }
-
-    private func signalMiniCard(_ event: PolSignalEvent) -> some View {
-        Button {
-            openDetail(event)
-        } label: {
-            PolSignalCard {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        PolSignalTag(text: event.category, style: tagStyle(for: event))
-                        Text(event.timeText)
-                            .font(.pretendard(12, weight: .medium))
-                        .foregroundStyle(PSColor.textSecondary)
-                        Spacer()
-                        PolSignalBadge(text: "확인", style: .primary)
-                    }
-
-                    Text(event.verdict)
-                        .font(.pretendard(15, weight: .semibold))
-                        .foregroundStyle(PSColor.textPrimary)
-                        .lineLimit(2)
-
-                    Text(event.reason)
-                        .font(.pretendard(13, weight: .regular))
-                        .foregroundStyle(PSColor.textSecondary)
-                        .lineLimit(2)
-
-                    Text("내 노출 · \(event.exposureSummary)")
-                        .font(.pretendard(12, weight: .medium))
-                        .foregroundStyle(PSColor.textFaint)
-                }
-            }
-        }
-        .buttonStyle(PressScaleButtonStyle())
-    }
-
-    private func tagStyle(for event: PolSignalEvent) -> PolSignalTagStyle {
-        switch event.category {
-        case "반도체":
-            return .semi
-        case "정책", "학습":
-            return .policy
-        case "환율", "금리":
-            return .rate
-        default:
-            return .primary
-        }
-    }
-
-    private func openDetail(_ event: PolSignalEvent) {
-        navigationPath.append(.detail(event.id))
-    }
-
-    private func openProposalSheet() {
-        isProposalSheetPresented = true
-    }
-
-    private func consumeExternalRoute() {
-        guard let route = externalRoute else { return }
-        switch route {
-        case .list:
-            navigationPath = []
-        case .detail:
-            navigationPath = [route]
-        case .adjustment:
-            isProposalSheetPresented = true
-        case .policyReader:
-            navigationPath = [route]
-        }
-        externalRoute = nil
+    private var placeholderWeekLabel: String {
+        isCurrentWeek ? "이번 주" : "—"
     }
 }
 
-private struct PolSignalDetailView: View {
-    let event: PolSignalEvent
-    let proposal: PolSignalAdjustmentProposal
-    let onAdjustmentTap: () -> Void
+// MARK: - Checkpoints
 
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedScenarioID: UUID?
-    @State private var isSourceExpanded = false
+private struct CheckpointCard: View {
+    let events: [SignalCheckpointEvent]
 
     var body: some View {
-        VStack(spacing: 0) {
-            navBar
+        SignalDetailCard(padding: 20) {
+            VStack(spacing: 0) {
+                ForEach(Array(events.enumerated()), id: \.element.id) { index, event in
+                    CheckpointRow(event: event)
 
-            PFContentScrollView(
-                alignment: .leading,
-                spacing: 20,
-                horizontalPadding: PSSpacing.screenHorizontal,
-                topPadding: 12,
-                bottomPadding: 24,
-                scrollsToTopOnAppear: true,
-                locksHorizontalOverflow: true
-            ) {
-                detailHeader
-                exposureSection
-                expectedImpactSection
-                PolSignalAIBlock(text: event.aiSummary)
-                scenarioSection
-                sourceSummarySection
-                scheduleSection
-            }
-
-            bottomCTA
-        }
-        .background(PSColor.background.ignoresSafeArea())
-        .toolbar(.hidden, for: .navigationBar)
-        .onAppear {
-            selectedScenarioID = selectedScenarioID ?? event.scenarios.first?.id
-        }
-    }
-
-    private var navBar: some View {
-        HStack {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "arrow.left")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(PSColor.textPrimary)
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-
-            Text("시그널 상세")
-                .font(.pretendard(17, weight: .semibold))
-                .foregroundStyle(PSColor.textPrimary)
-
-            Spacer()
-
-            Button {} label: {
-                Image(systemName: "bookmark")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(PSColor.textPrimary)
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 16)
-        .frame(height: 48)
-        .background(PSColor.background)
-    }
-
-    private var detailHeader: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            PolSignalFlowLayout(spacing: 8) {
-                PolSignalTag(text: event.category, style: event.category == "반도체" ? .semi : .rate)
-                PolSignalTag(text: "정책", style: .policy)
-                PolSignalTag(text: "발표 대기", style: .primary)
-                Text(event.institution)
-                    .font(.pretendard(12, weight: .regular))
-                    .foregroundStyle(PSColor.textSecondary)
-                PolSignalBadge(text: event.dDay, style: .warn)
-            }
-
-            Text(event.title)
-                .font(.pretendard(28, weight: .bold))
-                .foregroundStyle(PSColor.textPrimary)
-                .lineSpacing(1)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var exposureSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            PolSignalSectionHeader(title: "내 노출")
-
-            PolSignalCard {
-                PolSignalFlowLayout(spacing: 7) {
-                    ForEach(event.exposures) { exposure in
-                        PolSignalChip(text: "\(exposure.ticker) \(exposure.weightText)", color: exposure.color)
-                    }
-                }
-            }
-        }
-    }
-
-    private var expectedImpactSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            PolSignalSectionHeader(title: "예상 영향")
-
-            Text(event.expectedImpact)
-                .font(.pretendard(15, weight: .regular))
-                .foregroundStyle(PSColor.textPrimary)
-                .lineSpacing(4)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-
-    private var scenarioSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PolSignalSectionHeader(title: "시나리오", meta: "확률 기반")
-
-            HStack(spacing: 6) {
-                ForEach(event.scenarios) { scenario in
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            selectedScenarioID = scenario.id
-                        }
-                    } label: {
-                        VStack(spacing: 4) {
-                            Text(scenario.code)
-                                .font(.pretendard(12, weight: .semibold))
-                            Text("\(scenario.probability)%")
-                                .font(.pretendard(16, weight: .bold))
-                                .monospacedDigit()
-                        }
-                        .foregroundStyle(selectedScenarioID == scenario.id ? Color.white : PSColor.textFaint)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(
-                            selectedScenarioID == scenario.id ? PSColor.primary : PSColor.surface,
-                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        )
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(selectedScenarioID == scenario.id ? PSColor.primary : PSColor.border, lineWidth: 1)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            if let scenario = selectedScenario {
-                PolSignalCard(variant: scenarioVariant(scenario)) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Text(scenario.title)
-                                .font(.pretendard(16, weight: .bold))
-                                .foregroundStyle(PSColor.textPrimary)
-                            Spacer()
-                            PolSignalBadge(text: scenario.outcome, style: scenarioBadgeStyle(scenario))
-                        }
-
-                        Text(scenario.note)
-                            .font(.pretendard(14, weight: .regular))
-                            .foregroundStyle(PSColor.textSecondary)
-                            .lineSpacing(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-
-            PolSignalCallout(title: "판단 약화 조건", message: event.weakeningCondition, tone: .danger)
-        }
-    }
-
-    private var sourceSummarySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PolSignalSectionHeader(title: "원문 요약", meta: "\(event.institution) · \(event.timeText)")
-
-            PolSignalCard {
-                VStack(alignment: .leading, spacing: 0) {
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isSourceExpanded.toggle()
-                        }
-                    } label: {
-                        HStack(spacing: 10) {
-                            Text(event.sourceHeadline)
-                                .font(.pretendard(14, weight: .medium))
-                                .foregroundStyle(PSColor.textPrimary)
-                                .multilineTextAlignment(.leading)
-                            Spacer(minLength: 0)
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(PSColor.textSecondary)
-                                .rotationEffect(.degrees(isSourceExpanded ? 180 : 0))
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    if isSourceExpanded {
+                    if index < events.count - 1 {
                         Divider()
-                            .background(PSColor.rule)
-                            .padding(.top, 12)
-                        Text(event.sourceSummary)
-                            .font(.pretendard(13, weight: .regular))
-                            .foregroundStyle(PSColor.textSecondary)
-                            .lineSpacing(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.top, 12)
+                            .overlay(SignalDetailToken.rule)
+                            .padding(.vertical, 16)
                     }
                 }
             }
         }
     }
+}
 
-    private var scheduleSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PolSignalSectionHeader(title: "점검 일정")
+private struct CheckpointRow: View {
+    let event: SignalCheckpointEvent
 
-            PolSignalCard(padding: EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16)) {
-                VStack(spacing: 0) {
-                    scheduleRow(title: "발표 확인", value: event.checkSchedule)
-                    Divider().background(PSColor.rule)
-                    scheduleRow(title: "다시 보기", value: "5월 16일 23:00")
-                }
-            }
-
-            PolSignalButton("+ 캘린더 추가 · 알림", style: .secondary) {}
-        }
-    }
-
-    private func scheduleRow(title: String, value: String) -> some View {
-        HStack(spacing: 10) {
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
             Image(systemName: "calendar")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(PSColor.primary)
-                .frame(width: 28, height: 28)
+                .font(.system(size: 20, weight: .regular))
+                .foregroundStyle(SignalDetailToken.textTertiary)
+                .frame(width: 24, height: 24)
+                .padding(.top, 2)
 
-            Text(title)
-                .font(.pretendard(14, weight: .regular))
-                .foregroundStyle(PSColor.textPrimary)
-
-            Spacer()
-
-            Text(value)
-                .font(.pretendard(14, weight: .semibold))
-                .foregroundStyle(PSColor.primary)
-                .multilineTextAlignment(.trailing)
-        }
-        .padding(.vertical, 12)
-    }
-
-    private var bottomCTA: some View {
-        PolSignalButton("조정 제안 보기", iconName: "arrow.right", style: .primary, action: onAdjustmentTap)
-            .padding(.horizontal, PSSpacing.screenHorizontal)
-            .padding(.top, 10)
-            .padding(.bottom, 16)
-            .background(PSColor.background)
-    }
-
-    private var selectedScenario: PolSignalScenario? {
-        event.scenarios.first { $0.id == selectedScenarioID } ?? event.scenarios.first
-    }
-
-    private func scenarioVariant(_ scenario: PolSignalScenario) -> PolSignalCardVariant {
-        switch scenario.code {
-        case "A":
-            return .surfaceAlt
-        case "B":
-            return .surfaceAlt
-        default:
-            return .danger
-        }
-    }
-
-    private func scenarioBadgeStyle(_ scenario: PolSignalScenario) -> PolSignalBadgeStyle {
-        switch scenario.code {
-        case "A":
-            return .success
-        case "B":
-            return .rate
-        default:
-            return .danger
-        }
-    }
-}
-
-private struct PolSignalAdjustmentProposalSheetView: View {
-    let proposal: PolSignalAdjustmentProposal
-    @Environment(\.dismiss) private var dismiss
-    @State private var recorded: String?
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Capsule(style: .continuous)
-                .fill(Color(hex: "CBD5E1"))
-                .frame(width: 36, height: 5)
-                .padding(.top, 10)
-
-            sheetHeader
-
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 20) {
-                    statusTags
-                    proposalCard
-                    reasonSection
-                    effectSection
-                    actionArea
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .padding(.bottom, 24)
-            }
-        }
-        .background(PSColor.surface.ignoresSafeArea())
-    }
-
-    private var sheetHeader: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("조정 제안")
-                    .font(.pretendard(17, weight: .semibold))
-                    .foregroundStyle(PSColor.textPrimary)
-                Text(proposal.indexText + " ›")
-                    .font(.pretendard(13, weight: .regular))
-                    .foregroundStyle(PSColor.textSecondary)
-            }
-
-            Spacer()
-
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(PSColor.textSecondary)
-                    .frame(width: 30, height: 30)
-                    .background(PSColor.surfaceAlt, in: Circle())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
-    }
-
-    private var statusTags: some View {
-        HStack(spacing: 8) {
-            PolSignalTag(text: proposal.badgeText, style: .primary)
-            PolSignalTag(text: "정답 아님", style: .neutral)
-        }
-    }
-
-    private var proposalCard: some View {
-        PolSignalCard(variant: .tinted) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Text(proposal.currentLabel)
-                        .font(.pretendard(14, weight: .semibold))
-                        .foregroundStyle(PSColor.textPrimary)
-                    Spacer()
-                    Text(proposal.allocationChanges.joined(separator: " · "))
-                        .font(.pretendard(12, weight: .regular))
-                        .foregroundStyle(PSColor.textSecondary)
-                }
-
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    Text("\(Int(proposal.currentWeight))%")
-                        .font(.pretendard(32, weight: .bold))
-                        .foregroundStyle(PSColor.textPrimary)
-                        .monospacedDigit()
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(PSColor.textFaint)
-                    Text("\(Int(proposal.proposedWeight))%")
-                        .font(.pretendard(32, weight: .bold))
-                        .foregroundStyle(PSColor.danger)
-                        .monospacedDigit()
-                }
-
-                VStack(spacing: 10) {
-                    ProposalWeightBar(title: "현재", value: proposal.currentWeight, color: PSColor.primary)
-                    ProposalWeightBar(title: "제안 후", value: proposal.proposedWeight, color: PSColor.primary)
-                }
-            }
-        }
-    }
-
-    private var reasonSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PolSignalSectionHeader(title: "조정 근거", meta: "\(proposal.reasons.count)가지")
-
-            VStack(spacing: 8) {
-                ForEach(proposal.reasons) { reason in
-                    HStack(alignment: .center, spacing: 12) {
-                        Image(systemName: reason.iconName)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(PSColor.primary)
-                            .frame(width: 32, height: 32)
-                            .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-                        Text(reason.title)
-                            .font(.pretendard(14, weight: .regular))
-                            .foregroundStyle(PSColor.textPrimary)
-                            .lineSpacing(2)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Spacer(minLength: 0)
-
-                        Text("근거 ›")
-                            .font(.pretendard(13, weight: .semibold))
-                            .foregroundStyle(PSColor.primary)
-                    }
-                    .padding(12)
-                    .background(PSColor.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(PSColor.border, lineWidth: 1)
-                    }
-                }
-            }
-        }
-    }
-
-    private var effectSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PolSignalSectionHeader(title: "예상 효과")
-
-            PolSignalCard(padding: EdgeInsets(top: 14, leading: 0, bottom: 14, trailing: 0)) {
-                HStack(spacing: 0) {
-                    ForEach(Array(proposal.effects.enumerated()), id: \.element.id) { index, effect in
-                        VStack(spacing: 5) {
-                            Text(effect.title)
-                                .font(.pretendard(11, weight: .medium))
-                                .foregroundStyle(PSColor.textFaint)
-                            Text(effect.value)
-                                .font(.pretendard(18, weight: .bold))
-                                .foregroundStyle(effect.color)
-                                .monospacedDigit()
-                        }
-                        .frame(maxWidth: .infinity)
-
-                        if index < proposal.effects.count - 1 {
-                            Divider().background(PSColor.rule)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var actionArea: some View {
-        if let recorded {
-            VStack(spacing: 10) {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(Color.white)
-                    .frame(width: 44, height: 44)
-                    .background(PSColor.success, in: Circle())
-
-                Text("기록됐어요")
-                    .font(.pretendard(17, weight: .bold))
-                    .foregroundStyle(PSColor.success)
-
-                Text("\(recorded) 상태로 남겼습니다. 실제 주문은 실행되지 않았어요.")
-                    .font(.pretendard(13, weight: .regular))
-                    .foregroundStyle(PSColor.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(18)
-            .background(PSColor.successBg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        } else {
-            VStack(spacing: 10) {
-                HStack(spacing: 10) {
-                    PolSignalButton("대기 기록", style: .secondary) {
-                        record("대기")
-                    }
-                    PolSignalButton("대응 기록", style: .primary) {
-                        record("대응")
-                    }
-                }
-
-                Text(proposal.helperText)
-                    .font(.pretendard(12, weight: .regular))
-                    .foregroundStyle(PSColor.textFaint)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-        }
-    }
-
-    private func record(_ value: String) {
-        withAnimation(.easeInOut(duration: 0.28)) {
-            recorded = value
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            dismiss()
-        }
-    }
-}
-
-private struct ProposalWeightBar: View {
-    let title: String
-    let value: Double
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack {
-                Text(title)
-                    .font(.pretendard(12, weight: .medium))
-                    .foregroundStyle(PSColor.textSecondary)
-                Spacer()
-                Text("\(Int(value))%")
-                    .font(.pretendard(12, weight: .semibold))
-                    .foregroundStyle(color)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(event.dateText)
+                    .font(.pretendard(12, weight: .medium, relativeTo: .caption))
+                    .foregroundStyle(SignalDetailToken.textTertiary)
                     .monospacedDigit()
-            }
 
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(PSColor.rule)
-                    Capsule()
-                        .fill(color)
-                        .frame(width: max(0, proxy.size.width * value / 100))
+                Text(event.title)
+                    .font(.pretendard(16, weight: .semibold, relativeTo: .subheadline))
+                    .foregroundStyle(SignalDetailToken.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(event.description)
+                    .font(.pretendard(14, weight: .regular, relativeTo: .footnote))
+                    .foregroundStyle(SignalDetailToken.textSecondary)
+                    .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Support Views
+
+private struct SignalDetailCard<Content: View>: View {
+    let padding: CGFloat
+    let content: Content
+
+    init(padding: CGFloat, @ViewBuilder content: () -> Content) {
+        self.padding = padding
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(padding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(SignalDetailToken.bgCard, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+    }
+}
+
+private struct SignalDetailSectionTitle: View {
+    let title: String
+
+    init(_ title: String) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.pretendard(18, weight: .bold, relativeTo: .headline))
+            .foregroundStyle(SignalDetailToken.textPrimary)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 4)
+    }
+}
+
+private struct SignalJudgmentPill: View {
+    let judgment: SignalDetailJudgment
+
+    var body: some View {
+        Text(judgment.label)
+            .font(.pretendard(12, weight: .semibold, relativeTo: .caption))
+            .foregroundStyle(judgment.foreground)
+            .lineLimit(1)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(judgment.background, in: Capsule(style: .continuous))
+    }
+}
+
+private struct SignalSkeletonStack: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            ForEach(0..<3, id: \.self) { _ in
+                SignalDetailCard(padding: 20) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(SignalDetailToken.rule)
+                            .frame(width: 160, height: 18)
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(SignalDetailToken.rule)
+                            .frame(height: 14)
+                        RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .fill(SignalDetailToken.rule)
+                            .frame(width: 220, height: 14)
+                    }
                 }
             }
-            .frame(height: 8)
+        }
+        .redacted(reason: .placeholder)
+    }
+}
+
+private struct SignalErrorMessage: View {
+    let message: String
+
+    var body: some View {
+        Text(message)
+            .font(.pretendard(14, weight: .regular, relativeTo: .footnote))
+            .foregroundStyle(SignalDetailToken.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 4)
+            .accessibilityLabel(message)
+    }
+}
+
+// MARK: - Tokens
+
+private enum SignalDetailToken {
+    static let bgScreen = Color(hex: "F5F6F8")
+    static let bgCard = Color(hex: "FFFFFF")
+    static let bgSubtle = Color(hex: "FAFBFC")
+    static let textPrimary = Color(hex: "1A1D29")
+    static let textSecondary = Color(hex: "5A6072")
+    static let textTertiary = Color(hex: "9DA3B4")
+    static let directionDown = Color(hex: "E84A4A")
+    static let directionUp = Color(hex: "16A571")
+    static let directionFlat = Color(hex: "9DA3B4")
+    static let badgeWarnBg = Color(hex: "FFF4D6")
+    static let badgeWarnFg = Color(hex: "C68A00")
+    static let badgeActBg = Color(hex: "FDE2E4")
+    static let badgeActFg = Color(hex: "C0392B")
+    static let badgeWatchBg = Color(hex: "E3EDFD")
+    static let badgeWatchFg = Color(hex: "2E5BBA")
+    static let intensityHigh = Color(hex: "E84A4A")
+    static let intensityMid = Color(hex: "F39C12")
+    static let intensityLow = Color(hex: "F4C842")
+    static let sectorTechBg = Color(hex: "E8EDFB")
+    static let sectorTechFg = Color(hex: "4A6FE8")
+    static let sectorFinanceBg = Color(hex: "FDF0DC")
+    static let sectorFinanceFg = Color(hex: "F39C12")
+    static let sectorGreenBg = Color(hex: "DCF5E8")
+    static let sectorGreenFg = Color(hex: "16A571")
+    static let rule = Color(hex: "EDEFF3")
+}
+
+// MARK: - Mapping
+
+private extension SignalCard {
+    var shouldDisplay: Bool {
+        true
+    }
+}
+
+private extension SignalCard.Intensity {
+    var label: String {
+        switch self {
+        case .veryHigh:
+            return "매우 높음"
+        case .high:
+            return "높음"
+        case .medium:
+            return "보통"
+        }
+    }
+
+    var sortPriority: Int {
+        switch self {
+        case .veryHigh:
+            return 3
+        case .high:
+            return 2
+        case .medium:
+            return 1
+        }
+    }
+
+    var dotColor: Color {
+        switch self {
+        case .veryHigh:
+            return SignalDetailToken.intensityHigh
+        case .high:
+            return SignalDetailToken.intensityMid
+        case .medium:
+            return SignalDetailToken.intensityLow
+        }
+    }
+
+    var labelColor: Color {
+        switch self {
+        case .veryHigh:
+            return SignalDetailToken.intensityHigh
+        case .high:
+            return SignalDetailToken.intensityMid
+        case .medium:
+            return SignalDetailToken.badgeWarnFg
         }
     }
 }
 
-#Preview {
-    SignalView()
+private extension PortfolioThemeSignal.Theme {
+    var detailBackground: Color {
+        switch self {
+        case .bigTech, .semiconductor:
+            return SignalDetailToken.sectorTechBg
+        case .financials:
+            return SignalDetailToken.sectorFinanceBg
+        case .greenEnergy:
+            return SignalDetailToken.sectorGreenBg
+        }
+    }
+
+    var detailForeground: Color {
+        switch self {
+        case .bigTech, .semiconductor:
+            return SignalDetailToken.sectorTechFg
+        case .financials:
+            return SignalDetailToken.sectorFinanceFg
+        case .greenEnergy:
+            return SignalDetailToken.sectorGreenFg
+        }
+    }
+}
+
+private extension SignalSectorDetailSnapshot {
+    var forecastReturnText: String {
+        switch direction {
+        case .up:
+            return String(format: "+%.1f%%", forecastReturnPercent)
+        case .down:
+            return String(format: "%.1f%%", forecastReturnPercent)
+        case .flat:
+            return "0.0%"
+        }
+    }
+
+    var hasPriceBox: Bool {
+        currentPrice != nil && expectedPrice != nil && priceDelta != nil
+    }
+}
+
+private extension SignalTimelinePoint {
+    var returnText: String {
+        switch direction {
+        case .up:
+            return String(format: "+%.1f%%", returnPercent)
+        case .down:
+            return String(format: "%.1f%%", returnPercent)
+        case .flat:
+            return "0.0%"
+        }
+    }
+}
+
+// MARK: - Fixtures
+
+extension SignalSectorDetailSnapshot {
+    static let main = SignalSectorDetailSnapshot(
+        sector: .bigTech,
+        judgment: .caution,
+        forecastReturnPercent: -0.8,
+        currentPrice: "$456.20",
+        expectedPrice: "$452.30",
+        priceDelta: "-3.90",
+        signalCards: [
+            SignalCard(
+                id: UUID(),
+                intensity: .veryHigh,
+                title: "금리 결정이 빅테크 방향을 가를 수 있어요",
+                description: "이번 주 FOMC 금리 발표가 예정돼 있어요.",
+                newsTitle: "Fed, 금리 결정 앞두고 불확실성 고조"
+            ),
+            SignalCard(
+                id: UUID(),
+                intensity: .high,
+                title: "부정적 뉴스가 평소보다 빠르게 쌓이고 있어요",
+                description: "최근 5일간 빅테크 관련 부정 뉴스가 평소의 2배예요.",
+                newsTitle: "관세 리스크에 애플·엔비디아 동반 하락"
+            ),
+            SignalCard(
+                id: UUID(),
+                intensity: .medium,
+                title: "시장은 버티는데 뉴스는 흔들리고 있어요",
+                description: "가격 흐름과 뉴스 분위기가 반대 방향이에요. 방향이 정해지면 빠르게 움직일 수 있어요.",
+                newsTitle: "MS·알파벳 실적 앞두고 성장주 변동성 확대"
+            )
+        ],
+        timeline: [
+            SignalTimelinePoint(weekLabel: "3주 전", returnPercent: 0.2, judgment: .watch),
+            SignalTimelinePoint(weekLabel: "2주 전", returnPercent: -0.1, judgment: .watch),
+            SignalTimelinePoint(weekLabel: "지난 주", returnPercent: -0.4, judgment: .caution),
+            SignalTimelinePoint(weekLabel: "이번 주", returnPercent: -0.8, judgment: .caution)
+        ],
+        checkpoints: [
+            SignalCheckpointEvent(
+                dateText: "5/28 (수)",
+                title: "FOMC 금리 결정",
+                description: "금리 경로 표현이 빅테크 밸류에이션에 영향을 줄 수 있어요."
+            )
+        ]
+    )
+
+    static let calm = SignalSectorDetailSnapshot(
+        sector: .greenEnergy,
+        judgment: .watch,
+        forecastReturnPercent: 0.1,
+        currentPrice: "$28.40",
+        expectedPrice: "$28.43",
+        priceDelta: "+0.03",
+        signalCards: [],
+        timeline: [
+            SignalTimelinePoint(weekLabel: "3주 전", returnPercent: 0.0, judgment: .watch),
+            SignalTimelinePoint(weekLabel: "2주 전", returnPercent: 0.1, judgment: .watch),
+            SignalTimelinePoint(weekLabel: "지난 주", returnPercent: 0.0, judgment: .watch),
+            SignalTimelinePoint(weekLabel: "이번 주", returnPercent: 0.1, judgment: .watch)
+        ],
+        checkpoints: [
+            SignalCheckpointEvent(
+                dateText: "6/2 (화)",
+                title: "IEA 에너지 보고",
+                description: "재생에너지 수요 전망이 친환경 테마 흐름을 바꿀 수 있어요."
+            )
+        ]
+    )
+
+    static let strongWarning = SignalSectorDetailSnapshot(
+        sector: .semiconductor,
+        judgment: .action,
+        forecastReturnPercent: -2.1,
+        currentPrice: "$238.60",
+        expectedPrice: "$233.59",
+        priceDelta: "-5.01",
+        signalCards: [
+            SignalCard(
+                id: UUID(),
+                intensity: .veryHigh,
+                title: "보조금 발표 결과에 따라 반도체가 크게 움직일 수 있어요",
+                description: "CHIPS 2차 배분 발표가 이번 주 예정돼 있어요.",
+                newsTitle: "미 상무부, 반도체 보조금 2차 배분 임박"
+            ),
+            SignalCard(
+                id: UUID(),
+                intensity: .veryHigh,
+                title: "실적 기대가 높아져 작은 실망에도 흔들릴 수 있어요",
+                description: "최근 5일간 실적 관련 기대 뉴스가 평소의 3배 이상이에요.",
+                newsTitle: "NVDA 실적 발표 앞두고 옵션 변동성 확대"
+            ),
+            SignalCard(
+                id: UUID(),
+                intensity: .veryHigh,
+                title: "수출 규제 뉴스가 다시 가격에 반영되고 있어요",
+                description: "정책 리스크 언급이 평소보다 빠르게 늘고 있어요.",
+                newsTitle: "AI 칩 수출 규제 논의에 반도체주 압박"
+            )
+        ],
+        timeline: [
+            SignalTimelinePoint(weekLabel: "3주 전", returnPercent: 0.3, judgment: .watch),
+            SignalTimelinePoint(weekLabel: "2주 전", returnPercent: -0.6, judgment: .caution),
+            SignalTimelinePoint(weekLabel: "지난 주", returnPercent: -1.2, judgment: .caution),
+            SignalTimelinePoint(weekLabel: "이번 주", returnPercent: -2.1, judgment: .action)
+        ],
+        checkpoints: [
+            SignalCheckpointEvent(
+                dateText: "5/30 (금)",
+                title: "NVDA 실적 발표",
+                description: "AI 수요 가이던스와 마진 전망이 반도체 흐름의 핵심이에요."
+            )
+        ]
+    )
+
+    static let noEvent = SignalSectorDetailSnapshot(
+        sector: .financials,
+        judgment: .caution,
+        forecastReturnPercent: -0.4,
+        currentPrice: "$41.20",
+        expectedPrice: "$41.04",
+        priceDelta: "-0.16",
+        signalCards: [
+            SignalCard(
+                id: UUID(),
+                intensity: .high,
+                title: "금리 기대가 금융주 방향을 천천히 누르고 있어요",
+                description: "최근 금리 인하 기대가 약해지며 은행주 뉴스 분위기가 흔들렸어요.",
+                newsTitle: "장기금리 반등에 은행주 상승폭 축소"
+            ),
+            SignalCard(
+                id: UUID(),
+                intensity: .medium,
+                title: "대출 수요 회복은 아직 뚜렷하지 않아요",
+                description: "신용 수요 관련 뉴스가 평소보다 많아요.",
+                newsTitle: "미 은행권, 대출 성장 둔화 우려 지속"
+            )
+        ],
+        timeline: [
+            SignalTimelinePoint(weekLabel: "3주 전", returnPercent: 0.1, judgment: .watch),
+            SignalTimelinePoint(weekLabel: "2주 전", returnPercent: -0.1, judgment: .watch),
+            SignalTimelinePoint(weekLabel: "지난 주", returnPercent: -0.2, judgment: .caution),
+            SignalTimelinePoint(weekLabel: "이번 주", returnPercent: -0.4, judgment: .caution)
+        ],
+        checkpoints: []
+    )
+
+    static let newUser = SignalSectorDetailSnapshot(
+        sector: .bigTech,
+        judgment: .watch,
+        forecastReturnPercent: 0.0,
+        currentPrice: "$456.20",
+        expectedPrice: "$456.20",
+        priceDelta: "0.00",
+        signalCards: [
+            SignalCard(
+                id: UUID(),
+                intensity: .medium,
+                title: "첫 데이터에서는 방향보다 기준선을 잡는 게 중요해요",
+                description: "이번 주 빅테크 관련 신호는 아직 한 가지예요.",
+                newsTitle: "FOMC 앞두고 빅테크 관망세 지속"
+            )
+        ],
+        timeline: [
+            nil,
+            nil,
+            nil,
+            SignalTimelinePoint(weekLabel: "이번 주", returnPercent: 0.0, judgment: .watch)
+        ],
+        checkpoints: [
+            SignalCheckpointEvent(
+                dateText: "5/28 (수)",
+                title: "FOMC 금리 결정",
+                description: "첫 비교 기준이 될 이벤트라 발표 후 다시 확인하면 좋아요."
+            )
+        ]
+    )
+}
+
+// MARK: - Previews
+
+#Preview("A · 메인") {
+    SignalSectorDetailView(snapshot: .main)
+}
+
+#Preview("B · 평온") {
+    SignalSectorDetailView(snapshot: .calm)
+}
+
+#Preview("C · 강한 경고") {
+    SignalSectorDetailView(snapshot: .strongWarning)
+}
+
+#Preview("D · 이벤트 없음") {
+    SignalSectorDetailView(snapshot: .noEvent)
+}
+
+#Preview("E · 신규 사용자") {
+    SignalSectorDetailView(snapshot: .newUser)
 }

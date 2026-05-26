@@ -69,7 +69,7 @@ struct TodayView: View {
                             themeSignals: PolSignalFlowMockData.todayThemeSignals,
                             proposal: PolSignalFlowMockData.adjustmentProposal,
                             onSignalTap: { eventId in
-                                onSignalRouteRequested(.detail(eventId))
+                                navigationPath.append(PolSignalRoute.detail(eventId))
                             },
                             onProposalTap: {
                                 onSignalRouteRequested(.adjustment)
@@ -106,10 +106,7 @@ struct TodayView: View {
                 case .list:
                     EmptyView()
                 case .detail(let id):
-                    EmptyView()
-                        .onAppear {
-                            onSignalRouteRequested(.detail(id))
-                        }
+                    SignalSectorDetailView(snapshot: SignalSectorDetailSnapshot.fixture(forEventId: id))
                 case .adjustment:
                     EmptyView()
                         .onAppear {
