@@ -82,19 +82,19 @@ nonisolated enum BackendEndpoint {
     }
 
     static func home(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/home/\(userId)", authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/home", authorizationRequirement: .bearerToken)
     }
 
     static func todayDashboard(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/home/\(userId)", authorizationRequirement: .bearerToken)
+        homeBriefing(userId: userId)
     }
 
     static func homeBriefing(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/home/\(userId)/briefing", authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/home/briefing", authorizationRequirement: .bearerToken)
     }
 
     static func homeSection(userId: Int64, _ sectionPath: HomeSectionPath) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/home/\(userId)/\(sectionPath.rawValue)", authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/home/\(sectionPath.rawValue)", authorizationRequirement: .bearerToken)
     }
 
     static func policyFeed(
@@ -106,8 +106,9 @@ nonisolated enum BackendEndpoint {
     ) -> Endpoint {
         Endpoint(
             baseURL: baseURL,
-            path: "/api/content/\(userId)/policy-feed",
-            queryItems: policyFeedQuery(limit: limit, category: category, dateFrom: dateFrom, dateTo: dateTo),
+            path: "/api/feeds/policy",
+            queryItems: [URLQueryItem(name: "userId", value: String(userId))]
+                + policyFeedQuery(limit: limit, category: category, dateFrom: dateFrom, dateTo: dateTo),
             authorizationRequirement: .bearerToken
         )
     }
@@ -126,8 +127,8 @@ nonisolated enum BackendEndpoint {
 
         return Endpoint(
             baseURL: baseURL,
-            path: "/api/content/\(userId)/policy-feed/\(sectionPath.rawValue)",
-            queryItems: queryItems,
+            path: "/api/feeds/policy/\(sectionPath.rawValue)",
+            queryItems: [URLQueryItem(name: "userId", value: String(userId))] + queryItems,
             authorizationRequirement: .bearerToken
         )
     }
@@ -135,14 +136,14 @@ nonisolated enum BackendEndpoint {
     static func events(userId: Int64, dateSegment: String = "all", category: String = "all") -> Endpoint {
         Endpoint(
             baseURL: baseURL,
-            path: "/api/events/\(userId)",
+            path: "/api/users/\(userId)/events",
             queryItems: eventQuery(dateSegment: dateSegment, category: category),
             authorizationRequirement: .bearerToken
         )
     }
 
     static func updateEventAlert(eventId: Int64, userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/events/\(userId)/\(eventId)/alerts", method: .post, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/events/\(eventId)/alerts", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func eventSection(userId: Int64, _ sectionPath: EventSectionPath, dateSegment: String = "all", category: String = "all") -> Endpoint {
@@ -150,7 +151,7 @@ nonisolated enum BackendEndpoint {
             ? eventQuery(dateSegment: dateSegment, category: category)
             : []
 
-        return Endpoint(baseURL: baseURL, path: "/api/events/\(userId)/\(sectionPath.rawValue)", queryItems: queryItems, authorizationRequirement: .bearerToken)
+        return Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/events/\(sectionPath.rawValue)", queryItems: queryItems, authorizationRequirement: .bearerToken)
     }
 
     static func signalDetail(id: String) -> Endpoint {
@@ -298,14 +299,14 @@ nonisolated enum BackendEndpoint {
 }
 
 nonisolated enum HomeSectionPath: String {
-    case checkpointTab = "checkpoint-tab"
-    case detailTabs = "detail-tabs"
+    case checkpointTab = "tabs/checkpoints"
+    case detailTabs = "tabs/details"
     case disclaimer
-    case featuredCard = "featured-card"
+    case featuredCard = "cards/featured"
     case header
-    case portfolioCard = "portfolio-card"
-    case quickInterpretation = "quick-interpretation"
-    case secondarySignals = "secondary-signals"
+    case portfolioCard = "cards/portfolio"
+    case quickInterpretation = "interpretations/quick"
+    case secondarySignals = "signals/secondary"
 }
 
 nonisolated enum PolicyFeedSectionPath: String {

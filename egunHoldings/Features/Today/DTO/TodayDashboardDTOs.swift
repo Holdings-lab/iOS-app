@@ -2,6 +2,16 @@ import Foundation
 import SwiftUI
 
 nonisolated struct TodayDashboardResponseDTO: Decodable {
+    let homeHeader: TodayHomeHeaderDTO?
+    let featuredCard: TodayFeaturedSignalCardDTO?
+    let portfolioCard: TodayHomePortfolioCardDTO?
+    let secondarySignals: [TodaySecondarySignalItemDTO]?
+    let quickInterpretation: TodayQuickInterpretationDTO?
+    let detailTabs: TodayDetailTabsDTO?
+    let checkpointTab: TodayCheckpointTabDTO?
+    let briefingHeadline: String?
+    let briefingParagraphs: [String]?
+    let disclaimer: String?
     let updatedAt: String?
     let dataStatus: TodayDataStatusDTO?
     let portfolioSnapshot: PortfolioSnapshotDTO?
@@ -14,7 +24,11 @@ nonisolated struct TodayDashboardResponseDTO: Decodable {
     let primaryCheckpointText: String?
     let checkpoints: [TodayCheckpointDTO]?
 
-    func toDomain(fallback: TodayDashboard) -> TodayDashboard {
+    func toDomain(
+        fallback: TodayDashboard,
+        userId: Int64?,
+        eventResponse: TodayEventsResponseDTO? = nil
+    ) -> TodayDashboard {
         let nextSnapshot = portfolioSnapshot?.toDomain(fallback: fallback.portfolioSnapshot)
             ?? fallback.portfolioSnapshot
 
@@ -27,6 +41,7 @@ nonisolated struct TodayDashboardResponseDTO: Decodable {
         }.nonEmpty ?? fallback.holdings
 
         let nextPortfolio = portfolio?.toDomain(fallback: fallback.portfolio)
+            ?? portfolioCard?.toDomain(fallback: fallback.portfolio)
             ?? TodayDashboardBuilder.makePortfolioSummary(
                 from: nextSnapshot,
                 userAssetProfile: fallback.userAssetProfile,
@@ -34,7 +49,16 @@ nonisolated struct TodayDashboardResponseDTO: Decodable {
             )
 
         let nextJudgment = judgment?.toDomain(fallback: fallback.judgment)
+            ?? makeJudgment(fallback: fallback.judgment)
             ?? fallback.judgment
+        let nextThemeSignals = makeThemeSignals(fallback: fallback.themeSignals)
+        let nextPolicyReadings = eventResponse?.toPolicyReadings(fallback: fallback.policyReadings)
+            ?? fallback.policyReadings
+        let homeBriefingConnected = featuredCard != nil
+            || secondarySignals?.isEmpty == false
+            || quickInterpretation != nil
+            || detailTabs != nil
+        let eventsConnected = eventResponse?.items?.isEmpty == false
 
         return TodayDashboard(
             userAssetProfile: fallback.userAssetProfile,
@@ -47,11 +71,135 @@ nonisolated struct TodayDashboardResponseDTO: Decodable {
             noActionWatchCondition: noActionWatchCondition ?? fallback.noActionWatchCondition,
             primaryCheckpointText: primaryCheckpointText
                 ?? checkpoints?.first?.text
+                ?? checkpointTab?.primaryCheckpointText
                 ?? fallback.primaryCheckpointText,
-            dataUpdatedAt: dataStatus?.updatedAt ?? updatedAt ?? fallback.dataUpdatedAt,
-            dataSources: dataStatus?.sources?.nonEmpty ?? fallback.dataSources,
-            aiSummaryStatus: dataStatus?.aiSummaryStatus ?? fallback.aiSummaryStatus
+            dataUpdatedAt: dataStatus?.updatedAt
+                ?? updatedAt
+                ?? checkpointTab?.reflectionStatus?.updatedAt
+                ?? fallback.dataUpdatedAt,
+            dataSources: dataStatus?.sources?.nonEmpty
+                ?? checkpointTab?.reflectionStatus?.sources?.nonEmpty
+                ?? fallback.dataSources,
+            aiSummaryStatus: dataStatus?.aiSummaryStatus
+                ?? checkpointTab?.reflectionStatus?.reviewStatus
+                ?? fallback.aiSummaryStatus,
+            themeSignals: nextThemeSignals,
+            policyReadings: nextPolicyReadings,
+            adjustmentProposal: fallback.adjustmentProposal,
+            apiConnectionStatuses: Self.connectionStatuses(
+                userId: userId,
+                homeBriefingConnected: homeBriefingConnected,
+                eventsConnected: eventsConnected
+            )
         )
+    }
+
+    private func makeJudgment(fallback: TodayJudgment) -> TodayJudgment? {
+        guard quickInterpretation != nil || detailTabs != nil || featuredCard != nil else {
+            return nil
+        }
+
+        let summaryTab = detailTabs?.summaryTab
+        let evidenceTab = detailTabs?.evidenceTab
+        let quick = quickInterpretation
+        let featured = featuredCard
+        let impactPath = evidenceTab?.impactPaths?
+            .map { [$0.title, $0.description].compactMap { $0 }.joined(separator: ": ") }
+            .filter { !$0.isEmpty }
+            .joined(separator: " -> ")
+
+        return TodayJudgment(
+            title: featured?.recommendedAction
+                ?? summaryTab?.oneLineSummary
+                ?? quick?.judgementBadge?.text
+                ?? fallback.title,
+            type: TodayDTOMapper.judgmentType(
+                from: featured?.judgement ?? summaryTab?.judgement ?? quick?.judgementBadge?.displayType,
+                fallback: fallback.type
+            ),
+            myExposure: featured?.myAssetExposurePercent ?? summaryTab?.exposurePercent ?? fallback.myExposure,
+            validUntil: quick?.revisitTime ?? fallback.validUntil,
+            invalidationCondition: quick?.weakenCondition
+                ?? evidenceTab?.invalidationConditions?.first
+                ?? fallback.invalidationCondition,
+            forEvidence: evidenceTab?.coreEvidences?.nonEmpty
+                ?? [quick?.coreReason, quick?.myAssetImpact, summaryTab?.oneLineSummary].compactMap { $0 }.nonEmpty
+                ?? fallback.forEvidence,
+            againstEvidence: evidenceTab?.counterEvidences?.nonEmpty ?? fallback.againstEvidence,
+            deliveryPath: impactPath?.nonEmptyString ?? fallback.deliveryPath
+        )
+    }
+
+    private func makeThemeSignals(fallback: [PortfolioThemeSignal]) -> [PortfolioThemeSignal] {
+        var signals: [PortfolioThemeSignal] = []
+
+        if let featuredCard {
+            let fallbackTheme = fallback.first?.theme ?? .bigTech
+            signals.append(
+                featuredCard.toThemeSignal(
+                    fallbackTheme: fallbackTheme,
+                    narrative: briefingParagraphs?.joined(separator: "\n")
+                )
+            )
+        }
+
+        for (index, signal) in (secondarySignals ?? []).enumerated() {
+            signals.append(
+                signal.toThemeSignal(
+                    fallbackTheme: fallback[safe: min(index + 1, max(fallback.count - 1, 0))]?.theme ?? .semiconductor
+                )
+            )
+        }
+
+        var seenThemes: Set<String> = []
+        let deduped = signals.filter { signal in
+            let key = signal.theme.rawValue
+            guard !seenThemes.contains(key) else { return false }
+            seenThemes.insert(key)
+            return true
+        }
+
+        if deduped.isEmpty {
+            return fallback
+        }
+
+        let fallbackRemainder = fallback.filter { signal in
+            !seenThemes.contains(signal.theme.rawValue)
+        }
+
+        return Array((deduped + fallbackRemainder).prefix(4))
+    }
+
+    private static func connectionStatuses(
+        userId: Int64?,
+        homeBriefingConnected: Bool,
+        eventsConnected: Bool
+    ) -> [TodayAPIConnectionStatus] {
+        let userScoped = userId.map(String.init) ?? "{userId}"
+
+        return [
+            TodayAPIConnectionStatus(
+                id: "theme-signals",
+                title: "내 포트폴리오 영향 Top 3",
+                endpoint: "GET /api/users/\(userScoped)/home/briefing",
+                detail: homeBriefingConnected ? "featuredCard/secondarySignals 매핑" : "응답 필드 없음, Mock 유지",
+                kind: homeBriefingConnected ? .connected : .fallback
+            ),
+            TodayAPIConnectionStatus(
+                id: "policy-readings",
+                title: "오늘 읽을 정책 이벤트",
+                endpoint: "GET /api/users/\(userScoped)/events",
+                detail: eventsConnected ? "events.items 매핑" : "응답 필드 없음, Mock 유지",
+                kind: eventsConnected ? .connected : .fallback
+            ),
+            TodayAPIConnectionStatus(
+                id: "adjustment-proposal",
+                title: "대응 대기 중",
+                endpoint: "백엔드 모델 필요",
+                detail: "리밸런싱 제안 모델이 Today 브리핑에 아직 없음",
+                kind: .pending
+            )
+        ]
     }
 }
 
@@ -59,6 +207,192 @@ nonisolated struct TodayDataStatusDTO: Decodable {
     let updatedAt: String?
     let sources: [String]?
     let aiSummaryStatus: String?
+}
+
+nonisolated struct TodayHomeHeaderDTO: Decodable {
+    let greeting: String?
+    let userName: String?
+    let profileInitial: String?
+}
+
+nonisolated struct TodayFeaturedSignalCardDTO: Decodable {
+    let signalTitle: String?
+    let myAssetExposurePercent: Int?
+    let recommendedAction: String?
+    let judgement: String?
+    let upsideProbability: Int?
+    let downsideProbability: Int?
+    let volatility: Int?
+    let confidence: Int?
+    let coreReason: String?
+
+    func toThemeSignal(
+        fallbackTheme: PortfolioThemeSignal.Theme,
+        narrative: String?
+    ) -> PortfolioThemeSignal {
+        let theme = TodayDTOMapper.theme(from: signalTitle) ?? fallbackTheme
+        let exposure = myAssetExposurePercent ?? 0
+
+        return PortfolioThemeSignal(
+            id: UUID(),
+            theme: theme,
+            myExposurePercent: exposure,
+            verdictKind: TodayDTOMapper.verdictKind(from: judgement ?? recommendedAction),
+            prescription: TodayDecisionPrescription(
+                summary: coreReason ?? signalTitle ?? "서버 브리핑을 기준으로 정책 영향을 점검합니다.",
+                action: recommendedAction ?? judgement ?? "정책 영향을 확인하세요",
+                nowPercent: "\(exposure)%",
+                goalLabel: nil,
+                narrative: narrative
+            ),
+            nextEventLabel: nil,
+            relatedEventId: nil
+        )
+    }
+}
+
+nonisolated struct TodayHomePortfolioCardDTO: Decodable {
+    let totalAsset: String?
+    let returnRate: String?
+    let currentRiskLabel: String?
+    let currentRiskSummary: String?
+    let themeExposureBars: [TodayThemeExposureBarDTO]?
+
+    func toDomain(fallback: TodayPortfolioSummary) -> TodayPortfolioSummary {
+        TodayPortfolioSummary(
+            totalAsset: TodayDTOMapper.parseCurrency(totalAsset) ?? fallback.totalAsset,
+            todayChange: TodayDTOMapper.parsePercent(returnRate) ?? fallback.todayChange,
+            todayChangeAmt: fallback.todayChangeAmt,
+            cashDefense: fallback.cashDefense,
+            dollarDefense: fallback.dollarDefense,
+            overtradeRisk: currentRiskSummary ?? fallback.overtradeRisk,
+            topExposures: themeExposureBars?.enumerated().map { index, dto in
+                dto.toDomain(fallback: fallback.topExposures[safe: index])
+            }.nonEmpty ?? fallback.topExposures,
+            riskLevel: currentRiskLabel ?? fallback.riskLevel,
+            weeklySparklinePoints: fallback.weeklySparklinePoints
+        )
+    }
+}
+
+nonisolated struct TodayThemeExposureBarDTO: Decodable {
+    let theme: String?
+    let exposurePercent: Int?
+
+    func toDomain(fallback: TodayExposureItem?) -> TodayExposureItem {
+        let fallback = fallback ?? TodayExposureItem(theme: theme ?? "정책", pct: 0, color: PSColor.electricBlue)
+
+        return TodayExposureItem(
+            theme: theme ?? fallback.theme,
+            pct: exposurePercent ?? fallback.pct,
+            color: TodayDTOMapper.color(hex: nil, token: theme, fallback: fallback.color)
+        )
+    }
+}
+
+nonisolated struct TodaySecondarySignalItemDTO: Decodable {
+    let title: String?
+    let shortJudgement: String?
+    let exposurePercent: Int?
+    let oneLineReason: String?
+
+    func toThemeSignal(fallbackTheme: PortfolioThemeSignal.Theme) -> PortfolioThemeSignal {
+        let theme = TodayDTOMapper.theme(from: title) ?? fallbackTheme
+        let exposure = exposurePercent ?? 0
+
+        return PortfolioThemeSignal(
+            id: UUID(),
+            theme: theme,
+            myExposurePercent: exposure,
+            verdictKind: TodayDTOMapper.verdictKind(from: shortJudgement),
+            prescription: TodayDecisionPrescription(
+                summary: oneLineReason ?? title ?? "서버 보조 신호를 기준으로 점검합니다.",
+                action: shortJudgement ?? "흐름을 확인하세요",
+                nowPercent: "\(exposure)%",
+                goalLabel: nil,
+                narrative: nil
+            ),
+            nextEventLabel: nil,
+            relatedEventId: nil
+        )
+    }
+}
+
+nonisolated struct TodayQuickInterpretationDTO: Decodable {
+    let judgementBadge: TodayJudgementBadgeDTO?
+    let myAssetImpact: String?
+    let coreReason: String?
+    let keyNumbers: [TodayKeyNumberItemDTO]?
+    let revisitTime: String?
+    let weakenCondition: String?
+    let tip: String?
+}
+
+nonisolated struct TodayJudgementBadgeDTO: Decodable {
+    let text: String?
+    let color: String?
+    let displayType: String?
+}
+
+nonisolated struct TodayKeyNumberItemDTO: Decodable {
+    let label: String?
+    let baseline: String?
+    let description: String?
+}
+
+nonisolated struct TodayDetailTabsDTO: Decodable {
+    let summaryTab: TodaySummaryTabDTO?
+    let evidenceTab: TodayEvidenceTabDTO?
+}
+
+nonisolated struct TodaySummaryTabDTO: Decodable {
+    let judgement: String?
+    let exposurePercent: Int?
+    let oneLineSummary: String?
+}
+
+nonisolated struct TodayEvidenceTabDTO: Decodable {
+    let impactPaths: [TodayImpactPathItemDTO]?
+    let coreEvidences: [String]?
+    let counterEvidences: [String]?
+    let invalidationConditions: [String]?
+}
+
+nonisolated struct TodayImpactPathItemDTO: Decodable {
+    let icon: String?
+    let title: String?
+    let description: String?
+}
+
+nonisolated struct TodayCheckpointTabDTO: Decodable {
+    let policyCheckpoints: [TodayBriefingCheckpointDTO]?
+    let marketCheckpoints: [TodayBriefingCheckpointDTO]?
+    let revisitAlert: String?
+    let reflectionStatus: TodayReflectionStatusDTO?
+
+    var primaryCheckpointText: String? {
+        policyCheckpoints?.first?.displayText
+            ?? marketCheckpoints?.first?.displayText
+            ?? revisitAlert
+    }
+}
+
+nonisolated struct TodayBriefingCheckpointDTO: Decodable {
+    let title: String?
+    let threshold: String?
+    let reason: String?
+
+    var displayText: String {
+        [title, threshold, reason]
+            .compactMap { $0?.nonEmptyString }
+            .joined(separator: " · ")
+    }
+}
+
+nonisolated struct TodayReflectionStatusDTO: Decodable {
+    let updatedAt: String?
+    let sources: [String]?
+    let reviewStatus: String?
 }
 
 nonisolated struct PortfolioSnapshotDTO: Decodable {
@@ -245,6 +579,57 @@ nonisolated struct TodayCheckpointDTO: Decodable {
     let text: String?
 }
 
+nonisolated struct TodayEventsResponseDTO: Decodable {
+    let dateSegments: [String]?
+    let categories: [String]?
+    let items: [TodayEventItemDTO]?
+
+    func toPolicyReadings(fallback: [PolSignalPolicyReading]) -> [PolSignalPolicyReading] {
+        let mapped = (items ?? []).enumerated().map { index, item in
+            item.toPolicyReading(index: index)
+        }
+
+        return mapped.nonEmpty ?? fallback
+    }
+}
+
+nonisolated struct TodayEventItemDTO: Decodable {
+    let eventId: Int?
+    let timeText: String?
+    let title: String?
+    let statusText: String?
+    let tags: [String]?
+    let importanceStars: Int?
+    let countdownText: String?
+    let relatedAssets: [String]?
+    let alertEnabled: Bool?
+
+    func toPolicyReading(index: Int) -> PolSignalPolicyReading {
+        let keywords = (tags?.nonEmpty ?? relatedAssets?.nonEmpty ?? ["정책"])
+            .prefix(3)
+            .map { $0 }
+        let relatedAssetText = relatedAssets?.joined(separator: ", ") ?? "관련 자산 분석 대기"
+
+        return PolSignalPolicyReading(
+            id: eventId ?? index + 1,
+            dDay: countdownText ?? timeText ?? "오늘",
+            institution: tags?.first ?? "정책 이벤트",
+            title: title ?? "정책 이벤트",
+            keywords: Array(keywords),
+            readingLens: statusText ?? "정책 일정 확인",
+            lensApplication: "서버 이벤트 목록에서 받은 일정입니다. 상세 읽기 설명은 백엔드 모델 연결 전까지 보조 문장으로 표시합니다.",
+            whatHappened: "관련 자산: \(relatedAssetText)",
+            typicalFlow: [
+                "발표 전: 일정과 관련 자산을 먼저 확인합니다.",
+                "발표 직후: 영향 방향과 변동성 점수를 다시 점검합니다.",
+                "이후: 실제 보유 비중에 맞춰 행동 필요 여부를 판단합니다."
+            ],
+            readMinutes: max(1, min(5, importanceStars ?? 2)),
+            relevantKeywords: Array(keywords)
+        )
+    }
+}
+
 nonisolated private enum TodayDTOMapper {
     static func judgmentType(from value: String?, fallback: JudgmentType) -> JudgmentType {
         switch normalized(value) {
@@ -302,6 +687,93 @@ nonisolated private enum TodayDTOMapper {
         }
     }
 
+    static func verdictKind(from value: String?) -> PolSignalVerdictKind? {
+        let key = normalized(value)
+
+        if key.contains("adjust")
+            || key.contains("defend")
+            || key.contains("대응")
+            || key.contains("조정")
+            || key.contains("줄이")
+            || key.contains("방어") {
+            return .adjust
+        }
+
+        if key.contains("review")
+            || key.contains("confirm")
+            || key.contains("check")
+            || key.contains("점검")
+            || key.contains("확인")
+            || key.contains("주의") {
+            return .review
+        }
+
+        if key.contains("watch")
+            || key.contains("hold")
+            || key.contains("wait")
+            || key.contains("관망")
+            || key.contains("유지")
+            || key.contains("대기") {
+            return .watch
+        }
+
+        return nil
+    }
+
+    static func theme(from value: String?) -> PortfolioThemeSignal.Theme? {
+        let key = normalized(value)
+
+        if key.contains("semi")
+            || key.contains("chip")
+            || key.contains("반도체")
+            || key.contains("soxx") {
+            return .semiconductor
+        }
+
+        if key.contains("finance")
+            || key.contains("bank")
+            || key.contains("rate")
+            || key.contains("금융")
+            || key.contains("금리")
+            || key.contains("은행") {
+            return .financials
+        }
+
+        if key.contains("green")
+            || key.contains("energy")
+            || key.contains("친환경")
+            || key.contains("에너지")
+            || key.contains("재생") {
+            return .greenEnergy
+        }
+
+        if key.contains("tech")
+            || key.contains("qqq")
+            || key.contains("ai")
+            || key.contains("빅테크") {
+            return .bigTech
+        }
+
+        return nil
+    }
+
+    static func parseCurrency(_ text: String?) -> Int? {
+        guard let text else { return nil }
+        let digits = text.filter(\.isNumber)
+        return Int(digits)
+    }
+
+    static func parsePercent(_ text: String?) -> Double? {
+        guard let text else { return nil }
+        let normalized = text
+            .replacingOccurrences(of: "%", with: "")
+            .replacingOccurrences(of: "+", with: "")
+            .replacingOccurrences(of: ",", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return Double(normalized)
+    }
+
     static func color(hex: String?, token: String?, fallback: Color) -> Color {
         if let hex, !hex.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return Color(hex: hex)
@@ -343,5 +815,12 @@ private extension Array {
 
     nonisolated var nonEmpty: Self? {
         isEmpty ? nil : self
+    }
+}
+
+private extension String {
+    nonisolated var nonEmptyString: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

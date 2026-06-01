@@ -65,9 +65,17 @@ struct TodayView: View {
                             )
                         }
 
+                        TodayAPIConnectionSection(
+                            statuses: viewModel.apiConnectionStatuses,
+                            onStatusTap: {
+                                viewModel.present(.dataStatus)
+                            }
+                        )
+
                         PolSignalTodayBriefingView(
-                            themeSignals: PolSignalFlowMockData.todayThemeSignals,
-                            proposal: PolSignalFlowMockData.adjustmentProposal,
+                            themeSignals: viewModel.themeSignals,
+                            policyReadings: viewModel.policyReadings,
+                            proposal: viewModel.adjustmentProposal,
                             onSignalTap: { eventId in
                                 navigationPath.append(PolSignalRoute.detail(eventId))
                             },
@@ -347,6 +355,88 @@ private struct AnalysisPushSlotCard: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("푸시 알림 닫기")
             }
+        }
+    }
+}
+
+private struct TodayAPIConnectionSection: View {
+    let statuses: [TodayAPIConnectionStatus]
+    let onStatusTap: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 10) {
+                Text("API 대응")
+                    .font(.pretendard(16, weight: .bold))
+                    .foregroundStyle(PSColor.textPrimary)
+
+                Spacer(minLength: 8)
+
+                Button(action: onStatusTap) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(PSColor.textSecondary)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("데이터 상태 보기")
+            }
+
+            VStack(spacing: 8) {
+                ForEach(statuses) { status in
+                    TodayAPIConnectionRow(status: status)
+                }
+            }
+        }
+    }
+}
+
+private struct TodayAPIConnectionRow: View {
+    let status: TodayAPIConnectionStatus
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(status.kind.color)
+                .frame(width: 8, height: 8)
+                .padding(.top, 6)
+
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(status.title)
+                        .font(.pretendard(13, weight: .semibold))
+                        .foregroundStyle(PSColor.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+
+                    Spacer(minLength: 6)
+
+                    Text(status.kind.label)
+                        .font(.pretendard(10, weight: .bold))
+                        .foregroundStyle(status.kind.color)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(status.kind.color.opacity(0.12), in: Capsule(style: .continuous))
+                }
+
+                Text(status.endpoint)
+                    .font(.pretendard(11, weight: .medium))
+                    .foregroundStyle(PSColor.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+
+                Text(status.detail)
+                    .font(.pretendard(11, weight: .regular))
+                    .foregroundStyle(PSColor.textFaint)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PSColor.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(PSColor.border, lineWidth: 1)
         }
     }
 }
