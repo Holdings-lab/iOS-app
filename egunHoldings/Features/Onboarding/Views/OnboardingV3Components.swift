@@ -56,19 +56,20 @@ struct OnboardingV3BackButton: View {
 
 struct ProgressBar: View {
     let step: Int
+    let totalSteps: Int
     let isCollapsed: Bool
 
     @State private var showsLabel = true
     @State private var usesCollapsedLayout = false
 
     private var progress: CGFloat {
-        CGFloat(step) / 4
+        CGFloat(step) / CGFloat(max(totalSteps, 1))
     }
 
     var body: some View {
         VStack(alignment: .trailing, spacing: usesCollapsedLayout ? 0 : 6) {
             if !usesCollapsedLayout {
-                Text("맞춤 설정 · \(step)/4")
+                Text("맞춤 설정 · \(step)/\(totalSteps)")
                     .font(.pretendard(11, weight: .medium))
                     .foregroundStyle(OnboardingV3Theme.muted)
                     .opacity(showsLabel ? 1 : 0)
@@ -298,9 +299,9 @@ extension View {
             }
     }
 
-    func onboardingProgressOverlay(step: Int, isCollapsed: Bool) -> some View {
+    func onboardingProgressOverlay(step: Int, totalSteps: Int = 2, isCollapsed: Bool) -> some View {
         overlay(alignment: .top) {
-            ProgressBar(step: step, isCollapsed: isCollapsed)
+            ProgressBar(step: step, totalSteps: totalSteps, isCollapsed: isCollapsed)
                 .padding(.top, OnboardingV3Layout.progressTop)
         }
     }

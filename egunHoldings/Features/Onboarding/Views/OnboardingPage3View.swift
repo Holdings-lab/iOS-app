@@ -4,6 +4,7 @@ struct OnboardingPage3View: View {
     @ObservedObject var viewModel: OnboardingFlowViewModel
     let onBack: () -> Void
     let onNext: () -> Void
+    let onSkip: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
     @State private var isSkipConfirmationPresented = false
@@ -53,7 +54,7 @@ struct OnboardingPage3View: View {
             .frame(maxWidth: .infinity)
         }
         .trackOnboardingProgressScroll(isCollapsed: $isProgressCollapsed)
-        .onboardingProgressOverlay(step: 4, isCollapsed: isProgressCollapsed)
+        .onboardingProgressOverlay(step: 2, isCollapsed: isProgressCollapsed)
         .safeAreaInset(edge: .bottom) {
             OnboardingV3BottomBar {
                 VStack(spacing: 10) {
@@ -64,7 +65,7 @@ struct OnboardingPage3View: View {
                         onNext()
                     }
 
-                    OnboardingV3SecondaryButton(title: "나중에 설정하기") {
+                    OnboardingV3SecondaryButton(title: "건너뛰기") {
                         isSkipConfirmationPresented = true
                     }
                 }
@@ -77,7 +78,7 @@ struct OnboardingPage3View: View {
         ) {
             Button("지금은 건너뛸게요") {
                 viewModel.skipBrokerageConnection()
-                onNext()
+                onSkip()
             }
 
             Button("계좌 연결하기", role: .cancel) {}
@@ -295,6 +296,6 @@ private extension AccountInstitution {
 }
 
 #Preview {
-    OnboardingPage3View(viewModel: OnboardingFlowViewModel(), onBack: {}, onNext: {})
+    OnboardingPage3View(viewModel: OnboardingFlowViewModel(), onBack: {}, onNext: {}, onSkip: {})
         .preferredColorScheme(.light)
 }

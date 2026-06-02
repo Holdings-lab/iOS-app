@@ -19,7 +19,6 @@ struct AppRootView: View {
                 AuthContainerView(onLoginSuccess: router.handleLoginSuccess)
             case .onboarding:
                 OnboardingFlowView(
-                    userId: router.session?.userId,
                     onLogout: router.logout,
                     onComplete: router.completeOnboarding
                 )
