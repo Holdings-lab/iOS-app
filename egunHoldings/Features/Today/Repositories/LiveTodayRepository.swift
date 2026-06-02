@@ -31,7 +31,11 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
             BackendEndpoint.todayDashboard(userId: userId),
             as: TodayDashboardResponseDTO.self
         )
+        let eventResponse = try? await apiClient.requestResult(
+            BackendEndpoint.events(userId: userId, dateSegment: "today", category: "all"),
+            as: TodayEventsResponseDTO.self
+        )
 
-        return response.toDomain(fallback: fallback)
+        return response.toDomain(fallback: fallback, userId: userId, eventResponse: eventResponse)
     }
 }

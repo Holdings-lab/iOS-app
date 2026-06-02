@@ -18,6 +18,10 @@ final class TodayViewModel: ObservableObject {
     @Published private(set) var dataUpdatedAt: String
     @Published private(set) var dataSources: [String]
     @Published private(set) var aiSummaryStatus: String
+    @Published private(set) var themeSignals: [PortfolioThemeSignal]
+    @Published private(set) var policyReadings: [PolSignalPolicyReading]
+    @Published private(set) var adjustmentProposal: PolSignalAdjustmentProposal?
+    @Published private(set) var apiConnectionStatuses: [TodayAPIConnectionStatus]
 
     private let userId: Int64?
     private let repository: TodayRepositoryProtocol
@@ -33,6 +37,7 @@ final class TodayViewModel: ObservableObject {
         repository: TodayRepositoryProtocol? = nil
     ) {
         let dashboard = MockTodayRepository.makeDashboard(
+            userId: userId,
             userAssetProfile: userAssetProfile,
             portfolioSnapshot: portfolioSnapshot,
             policyEvents: policyEvents,
@@ -56,6 +61,10 @@ final class TodayViewModel: ObservableObject {
         self.dataUpdatedAt = dashboard.dataUpdatedAt
         self.dataSources = dashboard.dataSources
         self.aiSummaryStatus = dashboard.aiSummaryStatus
+        self.themeSignals = dashboard.themeSignals
+        self.policyReadings = dashboard.policyReadings
+        self.adjustmentProposal = dashboard.adjustmentProposal
+        self.apiConnectionStatuses = dashboard.apiConnectionStatuses
     }
 
     var connectedBrokerStatusText: String {
@@ -106,6 +115,7 @@ final class TodayViewModel: ObservableObject {
 
     func refresh() async {
         guard userId != nil else {
+            apiConnectionStatuses = MockTodayRepository.mockConnectionStatuses(userId: nil)
             loadState = .usingFallback(message: nil)
             return
         }
@@ -121,6 +131,7 @@ final class TodayViewModel: ObservableObject {
             apply(dashboard)
             loadState = .loaded
         } catch {
+            apiConnectionStatuses = MockTodayRepository.mockConnectionStatuses(userId: userId)
             loadState = .usingFallback(message: Self.errorMessage(for: error))
         }
     }
@@ -154,6 +165,10 @@ final class TodayViewModel: ObservableObject {
         dataUpdatedAt = dashboard.dataUpdatedAt
         dataSources = dashboard.dataSources
         aiSummaryStatus = dashboard.aiSummaryStatus
+        themeSignals = dashboard.themeSignals
+        policyReadings = dashboard.policyReadings
+        adjustmentProposal = dashboard.adjustmentProposal
+        apiConnectionStatuses = dashboard.apiConnectionStatuses
     }
 
     private static func errorMessage(for error: Error) -> String {

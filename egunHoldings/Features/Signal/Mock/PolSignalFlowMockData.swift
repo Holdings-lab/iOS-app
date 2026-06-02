@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum PolSignalFlowMockData {
+nonisolated enum PolSignalFlowMockData {
     static let vixText = "18.7"
     static let vixChangeText = "+2.1"
     static let vixCaption = "변동성 경계. 반도체 발표 전 포지션을 먼저 확인하세요."
@@ -340,7 +340,18 @@ enum PolSignalFlowMockData {
     )
 
     static var todayTopEvents: [PolSignalEvent] {
-        Array(events.filter { $0.verdictKind != .watch }.prefix(3))
+        Array(
+            events
+                .filter { event in
+                    switch event.verdictKind {
+                    case .watch:
+                        return false
+                    case .review, .adjust:
+                        return true
+                    }
+                }
+                .prefix(3)
+        )
     }
 
     static func event(id: Int) -> PolSignalEvent {

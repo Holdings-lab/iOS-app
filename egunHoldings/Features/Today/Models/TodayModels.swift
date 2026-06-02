@@ -183,6 +183,39 @@ struct TodayPortfolioSummary {
     var weeklySparklinePoints: [Double] = []
 }
 
+enum TodayAPIConnectionKind {
+    case connected
+    case mock
+    case pending
+    case fallback
+
+    var label: String {
+        switch self {
+        case .connected: return "API"
+        case .mock: return "Mock"
+        case .pending: return "연결 예정"
+        case .fallback: return "Fallback"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .connected: return PSColor.emerald
+        case .mock: return PSColor.yellow
+        case .pending: return PSColor.gray
+        case .fallback: return PSColor.red
+        }
+    }
+}
+
+struct TodayAPIConnectionStatus: Identifiable {
+    let id: String
+    let title: String
+    let endpoint: String
+    let detail: String
+    let kind: TodayAPIConnectionKind
+}
+
 enum TodayLoadState: Equatable {
     case idle
     case loading
@@ -203,6 +236,10 @@ struct TodayDashboard {
     let dataUpdatedAt: String
     let dataSources: [String]
     let aiSummaryStatus: String
+    let themeSignals: [PortfolioThemeSignal]
+    let policyReadings: [PolSignalPolicyReading]
+    let adjustmentProposal: PolSignalAdjustmentProposal?
+    let apiConnectionStatuses: [TodayAPIConnectionStatus]
 
     var topPolicy: TodayPolicyEvent? {
         policyEvents.max { $0.myExposure < $1.myExposure }

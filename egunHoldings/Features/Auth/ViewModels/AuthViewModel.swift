@@ -153,7 +153,7 @@ final class AuthViewModel: ObservableObject {
     private func authMessage(for error: Error, fallback: String) -> String {
         if let networkError = error as? NetworkError {
             switch networkError {
-            case .apiFailure(_, let code, let message):
+            case .apiFailure(_, let code, _):
                 switch code {
                 case "AUTH_USER_NOT_FOUND":
                     return "존재하지 않는 사용자입니다."

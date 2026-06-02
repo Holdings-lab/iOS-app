@@ -33,6 +33,7 @@ private struct SheetDragIndicator: View {
 struct SettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     let connectedBrokerText: String
+    @State private var showLogoutConfirm = false
 
     private var items: [(icon: String, title: String, sub: String)] {
         [
@@ -70,28 +71,31 @@ struct SettingsSheet: View {
                         VStack(spacing: 0) {
                             ForEach(items.indices, id: \.self) { i in
                                 let item = items[i]
-                                HStack(spacing: 12) {
-                                    Image(systemName: item.icon)
-                                        .font(.system(size: 16))
-                                        .foregroundStyle(PSColor.electricBlue)
-                                        .frame(width: 28)
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(item.title)
-                                            .font(PSFont.semibold(14))
-                                            .foregroundStyle(PSColor.textPrimary)
-                                        if !item.sub.isEmpty {
-                                            Text(item.sub)
-                                                .font(PSFont.caption())
-                                                .foregroundStyle(PSColor.textMuted)
+                                Button(action: {}) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: item.icon)
+                                            .font(.system(size: 16))
+                                            .foregroundStyle(PSColor.electricBlue)
+                                            .frame(width: 28)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(item.title)
+                                                .font(PSFont.semibold(14))
+                                                .foregroundStyle(PSColor.textPrimary)
+                                            if !item.sub.isEmpty {
+                                                Text(item.sub)
+                                                    .font(PSFont.caption())
+                                                    .foregroundStyle(PSColor.textMuted)
+                                            }
                                         }
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundStyle(PSColor.textFaint)
                                     }
-                                    Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundStyle(PSColor.textFaint)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 14)
                                 }
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 14)
+                                .buttonStyle(PSPressStyle())
 
                                 if i < items.count - 1 {
                                     Divider()
@@ -103,13 +107,13 @@ struct SettingsSheet: View {
                     }
                     .padding(.horizontal, 20)
 
-                    Button(action: {}) {
+                    Button { showLogoutConfirm = true } label: {
                         Text("로그아웃")
                             .font(PSFont.semibold(15))
-                            .foregroundStyle(Color.up)
+                            .foregroundStyle(Color.trendDown)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.upBg, in: RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous))
+                            .background(Color.trendDown.opacity(0.08), in: RoundedRectangle(cornerRadius: KDXRadius.button, style: .continuous))
                     }
                     .buttonStyle(PSPressStyle())
                     .padding(.horizontal, 20)
@@ -119,6 +123,12 @@ struct SettingsSheet: View {
             }
         }
         .sheetBackground()
+        .confirmationDialog("로그아웃하시겠습니까?", isPresented: $showLogoutConfirm, titleVisibility: .visible) {
+            Button("로그아웃", role: .destructive) { dismiss() }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text("연결된 증권사 정보와 설정이 초기화됩니다.")
+        }
     }
 }
 
@@ -372,9 +382,12 @@ struct SaveCheckpointSheet: View {
                         .padding(.horizontal, 20)
                     }
 
-                    PSGradientButton(label: "저장") { dismiss() }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 40)
+                    PSGradientButton(label: "저장") {
+                        UINotificationFeedbackGenerator().notificationOccurred(.success)
+                        dismiss()
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
                 }
             }
         }
@@ -460,6 +473,12 @@ struct SnoozeSheet: View {
                     .font(PSFont.semibold(18))
                     .foregroundStyle(PSColor.textPrimary)
                 Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(PSColor.textMuted.opacity(0.5))
+                }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -467,7 +486,10 @@ struct SnoozeSheet: View {
 
             VStack(spacing: 10) {
                 ForEach(options, id: \.0) { option in
-                    Button { dismiss() } label: {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        dismiss()
+                    } label: {
                         PSGlassCard(variant: .secondary, padding: 14) {
                             HStack {
                                 VStack(alignment: .leading, spacing: 3) {
@@ -678,6 +700,7 @@ struct ExposureThemeSheet: View {
     let holdings: [TodayHolding]
     let relatedPolicies: [TodayPolicyEvent]
     @Environment(\.dismiss) private var dismiss
+    @State private var isSaveCheckpointPresented = false
 
     private var linkedHoldings: [TodayHolding] {
         holdings.filter { h in
@@ -764,7 +787,7 @@ struct ExposureThemeSheet: View {
                         }
                     }
 
-                    Button(action: {}) {
+                    Button { isSaveCheckpointPresented = true } label: {
                         HStack {
                             Image(systemName: "bookmark.badge.plus")
                                 .font(.system(size: 13, weight: .medium))
@@ -783,5 +806,12 @@ struct ExposureThemeSheet: View {
             }
         }
         .sheetBackground()
+        .sheet(isPresented: $isSaveCheckpointPresented) {
+            SaveCheckpointSheet(conditionText: "\(item.theme) 테마 노출 모니터링")
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.hidden)
+                .presentationBackground(.clear)
+                .presentationCornerRadius(KDXRadius.bottomSheet)
+        }
     }
 }

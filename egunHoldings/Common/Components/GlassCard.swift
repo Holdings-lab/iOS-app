@@ -1,6 +1,5 @@
 import SwiftUI
 
-// KODEX light card — white bg + 1px hairline, no shadow, no glass blur
 struct GlassCard: ViewModifier {
     func body(content: Content) -> some View {
         content
@@ -9,6 +8,7 @@ struct GlassCard: ViewModifier {
                 RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
                     .stroke(Color.hairline, lineWidth: 1)
             }
+            .shadow(color: Color.cardShadow, radius: 24, x: 0, y: 8)
     }
 }
 
@@ -56,6 +56,7 @@ struct KDXCard<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.elevated, in: shape)
             .overlay { shape.stroke(Color.hairline, lineWidth: 1) }
+            .shadow(color: Color.cardShadow, radius: 24, x: 0, y: 8)
     }
 }
 

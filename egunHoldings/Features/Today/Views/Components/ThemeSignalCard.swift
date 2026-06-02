@@ -7,8 +7,8 @@ import SwiftUI
 /// 카드별 독립 확장 상태를 관리한다.
 struct ThemeSignalSection: View {
     let signals: [PortfolioThemeSignal]
-    /// 카드 내 "왜 그런지 알아보기" 탭 시 호출. eventId 전달.
-    let onFullAnalysis: (Int) -> Void
+    /// 카드 내 "왜 그런지 알아보기" 탭 시 호출. 테마를 전달해 Signal 상세 화면으로 이동.
+    let onFullAnalysis: (PortfolioThemeSignal.Theme) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -19,9 +19,7 @@ struct ThemeSignalSection: View {
                     ThemeSignalCardWrapper(
                         signal: signal,
                         onFullAnalysis: {
-                            if let eventId = signal.relatedEventId {
-                                onFullAnalysis(eventId)
-                            }
+                            onFullAnalysis(signal.theme)
                         }
                     )
                 }

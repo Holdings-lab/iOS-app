@@ -66,10 +66,13 @@ struct TodayView: View {
                         }
 
                         PolSignalTodayBriefingView(
-                            themeSignals: PolSignalFlowMockData.todayThemeSignals,
-                            proposal: PolSignalFlowMockData.adjustmentProposal,
-                            onSignalTap: { eventId in
-                                navigationPath.append(PolSignalRoute.detail(eventId))
+                            themeSignals: viewModel.themeSignals,
+                            policyReadings: viewModel.policyReadings,
+                            proposal: viewModel.adjustmentProposal,
+                            onThemeTap: { theme in
+                                // Today 탭 자체 NavigationStack에 push.
+                                // 탭 전환 없이 자연스럽게 뒤로가기로 Today에 복귀할 수 있도록 함.
+                                navigationPath.append(PolSignalRoute.themeDetail(theme))
                             },
                             onProposalTap: {
                                 onSignalRouteRequested(.adjustment)
@@ -106,7 +109,10 @@ struct TodayView: View {
                 case .list:
                     EmptyView()
                 case .detail(let id):
-                    SignalSectorDetailView(snapshot: SignalSectorDetailSnapshot.fixture(forEventId: id))
+                    EmptyView()
+                        .onAppear {
+                            onSignalRouteRequested(.detail(id))
+                        }
                 case .adjustment:
                     EmptyView()
                         .onAppear {
@@ -114,6 +120,9 @@ struct TodayView: View {
                         }
                 case .policyReader(let id):
                     PolSignalPolicyReaderView(event: PolSignalFlowMockData.policyReading(id: id))
+                case .themeDetail(let theme):
+                    // Today 탭 내부에서 직접 렌더링 — 탭 전환 없음.
+                    SignalThemeDetailView(theme: theme)
                 }
             }
             .navigationDestination(item: $policyNewsViewModel.presentedItem) { item in
