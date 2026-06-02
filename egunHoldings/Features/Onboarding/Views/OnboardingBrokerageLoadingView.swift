@@ -2,241 +2,214 @@ import SwiftUI
 
 struct OnboardingBrokerageLoadingView: View {
     @ObservedObject var viewModel: OnboardingFlowViewModel
-    let onSkip: () -> Void
     let onComplete: () -> Void
 
-    @State private var phase: BrokerageLoadingPhase = .connecting
-    @State private var activeChecklistIndex = 1
-    @State private var completedChecklistCount = 1
-    @State private var animatedDotIndex = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var activeStep: BrokerageConnectionStep? = .account
+    @State private var completedSteps: Set<BrokerageConnectionStep> = []
+    @State private var showsCompletion = false
+    @State private var showsCompletionContent = false
+    @State private var showsCompletionShimmer = false
+    @State private var showsStartButton = false
     @State private var didStart = false
+
+    private var selectedInstitution: AccountInstitution {
+        viewModel.connectedInstitution ?? viewModel.recommendedInstitution
+    }
 
     var body: some View {
         ZStack {
-            OnboardingV3Theme.background
+            Color.canvas
                 .ignoresSafeArea()
 
-            Group {
-                switch phase {
-                case .connecting:
-                    BrokerageConnectingPhase(dotIndex: animatedDotIndex)
-                case .checking:
-                    BrokerageChecklistPhase(
-                        activeIndex: activeChecklistIndex,
-                        completedCount: completedChecklistCount
-                    )
-                case .completed:
-                    BrokerageCompletePhase()
-                case .failed(let reason):
-                    BrokerageFailurePhase(
-                        reason: reason,
-                        onRetry: restartSequence,
-                        onSkip: onSkip
-                    )
-                }
+            if showsCompletion {
+                BrokerageConnectionCompletePhase(
+                    holdingsCount: nil,
+                    showsContent: showsCompletionContent,
+                    showsShimmer: showsCompletionShimmer,
+                    showsStartButton: showsStartButton,
+                    reduceMotion: reduceMotion,
+                    onStart: onComplete
+                )
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .scale(scale: 0.95)),
+                    removal: .opacity
+                ))
+            } else {
+                BrokerageConnectionProgressPhase(
+                    institution: selectedInstitution,
+                    activeStep: activeStep,
+                    completedSteps: completedSteps,
+                    reduceMotion: reduceMotion
+                )
+                .transition(.opacity)
             }
-            .transition(.opacity)
-            .animation(.easeInOut(duration: 0.3), value: phase)
         }
-        .contentShape(Rectangle())
-        .allowsHitTesting(true)
-        .task {
-            await startSequenceIfNeeded()
+        .task(id: reduceMotion) {
+            await startSequenceIfNeeded(reduceMotion: reduceMotion)
         }
-        .onboardingV3Background()
+        .toolbar(.hidden, for: .navigationBar)
+        .preferredColorScheme(.light)
     }
 
-    private func startSequenceIfNeeded() async {
+    private func startSequenceIfNeeded(reduceMotion: Bool) async {
         guard !didStart else { return }
         didStart = true
-        await runSuccessSequence()
-    }
 
-    private func restartSequence() {
-        Task {
-            phase = .connecting
-            activeChecklistIndex = 1
-            completedChecklistCount = 1
-            await runSuccessSequence()
-        }
-    }
-
-    private func runSuccessSequence() async {
-        await animateConnectionDots(for: 1_500_000_000)
+        let stepDelay: UInt64 = reduceMotion ? 150_000_000 : 700_000_000
+        let completionDelay: UInt64 = reduceMotion ? 100_000_000 : 400_000_000
 
         await MainActor.run {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                phase = .checking
-                activeChecklistIndex = 1
-                completedChecklistCount = 1
-            }
+            activeStep = .account
+            completedSteps = []
+            showsCompletion = false
+            showsCompletionContent = false
+            showsCompletionShimmer = false
+            showsStartButton = false
         }
 
-        for index in 1..<BrokerageChecklistItem.allCases.count {
-            try? await Task.sleep(nanoseconds: 1_150_000_000)
+        for step in BrokerageConnectionStep.allCases {
             await MainActor.run {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    completedChecklistCount = index + 1
-                    activeChecklistIndex = min(index + 1, BrokerageChecklistItem.allCases.count - 1)
+                if reduceMotion {
+                    activeStep = step
+                } else {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        activeStep = step
+                    }
+                }
+            }
+
+            try? await Task.sleep(nanoseconds: stepDelay)
+
+            await MainActor.run {
+                if reduceMotion {
+                    _ = completedSteps.insert(step)
+                } else {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.65)) {
+                        _ = completedSteps.insert(step)
+                    }
                 }
             }
         }
 
-        try? await Task.sleep(nanoseconds: 350_000_000)
+        try? await Task.sleep(nanoseconds: completionDelay)
+
         await MainActor.run {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                phase = .completed
-            }
-        }
-
-        try? await Task.sleep(nanoseconds: 1_500_000_000)
-        await MainActor.run {
-            onComplete()
-        }
-    }
-
-    private func animateConnectionDots(for duration: UInt64) async {
-        let startedAt = Date()
-
-        while Date().timeIntervalSince(startedAt) < Double(duration) / 1_000_000_000 {
-            await MainActor.run {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    animatedDotIndex = (animatedDotIndex + 1) % 5
+            if reduceMotion {
+                showsCompletion = true
+                showsCompletionContent = true
+                showsStartButton = true
+            } else {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showsCompletion = true
                 }
             }
-            try? await Task.sleep(nanoseconds: 600_000_000)
+        }
+
+        guard !reduceMotion else { return }
+
+        await MainActor.run {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                showsCompletionContent = true
+            }
+        }
+
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        await MainActor.run {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showsCompletionShimmer = true
+            }
+        }
+
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        await MainActor.run {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showsCompletionShimmer = false
+            }
+        }
+
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        await MainActor.run {
+            withAnimation(.easeOut(duration: 0.25)) {
+                showsStartButton = true
+            }
         }
     }
 }
 
-private enum BrokerageLoadingPhase: Equatable {
-    case connecting
-    case checking
-    case completed
-    case failed(BrokerageConnectionFailureReason)
-}
+private enum BrokerageConnectionStep: CaseIterable, Identifiable, Hashable {
+    case account
+    case balance
+    case holdings
 
-private enum BrokerageConnectionFailureReason: Equatable {
-    case password
-    case network
-    case server
+    var id: String {
+        title
+    }
 
-    var message: String {
+    var title: String {
         switch self {
-        case .password:
-            return "증권사 비밀번호를 확인해주세요"
-        case .network:
-            return "인터넷 연결을 확인하고 다시 시도해주세요"
-        case .server:
-            return "잠시 후 다시 시도해주세요 (오류코드: E403)"
+        case .account:
+            return "계정 확인"
+        case .balance:
+            return "잔고 불러오기"
+        case .holdings:
+            return "종목 동기화"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .account:
+            return "person.crop.circle"
+        case .balance:
+            return "banknote"
+        case .holdings:
+            return "chart.pie"
         }
     }
 }
 
-private struct BrokerageConnectingPhase: View {
-    let dotIndex: Int
+private struct BrokerageConnectionProgressPhase: View {
+    let institution: AccountInstitution
+    let activeStep: BrokerageConnectionStep?
+    let completedSteps: Set<BrokerageConnectionStep>
+    let reduceMotion: Bool
 
     var body: some View {
-        VStack(spacing: 24) {
-            BrokerageConnectionBridge(dotIndex: dotIndex)
+        GeometryReader { proxy in
+            VStack(spacing: 0) {
+                BrokerageConnectionBridge(institution: institution, reduceMotion: reduceMotion)
+                    .frame(height: proxy.size.height * 0.32)
 
-            VStack(spacing: 9) {
-                Text("안전하게 연결하고 있어요")
-                    .font(.pretendard(20, weight: .bold))
-                    .foregroundStyle(Color.textPrimary)
-
-                Text("🔒 조회 전용 연결이라 거래·이체는 절대 되지 않아요")
-                    .font(.pretendard(13, weight: .regular))
-                    .foregroundStyle(OnboardingV3Theme.muted)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: OnboardingV3Layout.maxWidth)
-        .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
-    }
-}
-
-private struct BrokerageConnectionBridge: View {
-    let dotIndex: Int
-
-    var body: some View {
-        HStack(spacing: 13) {
-            Image("hantoo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 46, height: 46)
-                .padding(10)
-                .background(Color.white, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(OnboardingV3Theme.border, lineWidth: 1)
+                VStack(spacing: 16) {
+                    ForEach(BrokerageConnectionStep.allCases) { step in
+                        BrokerageConnectionStepRow(
+                            step: step,
+                            state: state(for: step),
+                            reduceMotion: reduceMotion
+                        )
+                    }
                 }
-
-            HStack(spacing: 5) {
-                ForEach(0..<5, id: \.self) { index in
-                    Circle()
-                        .fill(index == dotIndex ? OnboardingV3Theme.primary : OnboardingV3Theme.border)
-                        .frame(width: index == dotIndex ? 8 : 5, height: index == dotIndex ? 8 : 5)
-                        .scaleEffect(index == dotIndex ? 1.18 : 1)
-                }
-
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(OnboardingV3Theme.primary)
-                    .padding(.leading, 2)
-            }
-            .frame(width: 86)
-
-            Text("P")
-                .font(.pretendard(24, weight: .bold))
-                .foregroundStyle(Color.white)
-                .frame(width: 58, height: 58)
-                .background(OnboardingV3Theme.primary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        }
-    }
-}
-
-private enum BrokerageChecklistItem: String, CaseIterable, Identifiable {
-    case authentication = "계좌 인증 완료"
-    case holdings = "보유 종목 불러오는 중"
-    case balance = "잔고 확인"
-    case analysis = "분석 준비"
-
-    var id: String { rawValue }
-}
-
-private struct BrokerageChecklistPhase: View {
-    let activeIndex: Int
-    let completedCount: Int
-
-    var body: some View {
-        VStack(spacing: 34) {
-            VStack(alignment: .leading, spacing: 20) {
-                ForEach(Array(BrokerageChecklistItem.allCases.enumerated()), id: \.element.id) { index, item in
-                    BrokerageChecklistRow(
-                        title: item.rawValue,
-                        state: state(for: index)
-                    )
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Text("잠깐이면 돼요. 앱을 닫아도 괜찮아요")
-                .font(.pretendard(13, weight: .regular))
-                .foregroundStyle(OnboardingV3Theme.muted)
-                .multilineTextAlignment(.center)
+                .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
+                .frame(maxWidth: OnboardingV3Layout.maxWidth)
                 .frame(maxWidth: .infinity)
+
+                Spacer(minLength: 24)
+
+                BrokerageConnectionPermissionNote()
+                    .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
+                    .padding(.bottom, max(proxy.safeAreaInsets.bottom, 24))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
-        .frame(maxWidth: OnboardingV3Layout.maxWidth)
     }
 
-    private func state(for index: Int) -> BrokerageChecklistState {
-        if index < completedCount {
+    private func state(for step: BrokerageConnectionStep) -> BrokerageConnectionStepState {
+        if completedSteps.contains(step) {
             return .completed
         }
 
-        if index == activeIndex {
+        if activeStep == step {
             return .active
         }
 
@@ -244,178 +217,246 @@ private struct BrokerageChecklistPhase: View {
     }
 }
 
-private enum BrokerageChecklistState {
+private struct BrokerageConnectionBridge: View {
+    let institution: AccountInstitution
+    let reduceMotion: Bool
+
+    var body: some View {
+        HStack(spacing: 18) {
+            BrokerageLogoCircle(institution: institution)
+
+            BrokerageAnimatedDots(reduceMotion: reduceMotion)
+
+            AppLogoCircle()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.top, 18)
+    }
+}
+
+private struct BrokerageLogoCircle: View {
+    let institution: AccountInstitution
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.white)
+
+            if institution.id == AccountInstitution.koreaInvestmentID {
+                Image("hantoo")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(7)
+            } else {
+                Text(mark)
+                    .font(.pretendard(15, weight: .bold))
+                    .foregroundStyle(Color(hex: institution.accentHex))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .padding(.horizontal, 5)
+            }
+        }
+        .frame(width: 40, height: 40)
+        .overlay {
+            Circle()
+                .stroke(Color.hairline, lineWidth: 1)
+        }
+    }
+
+    private var mark: String {
+        let cleanedName = institution.name
+            .replacingOccurrences(of: "투자증권", with: "")
+            .replacingOccurrences(of: "증권", with: "")
+
+        return String(cleanedName.prefix(2))
+    }
+}
+
+private struct AppLogoCircle: View {
+    var body: some View {
+        Circle()
+            .fill(Color.brand)
+            .frame(width: 40, height: 40)
+            .overlay {
+                Text("P")
+                    .font(.pretendard(19, weight: .bold))
+                    .foregroundStyle(Color.white)
+            }
+    }
+}
+
+private struct BrokerageAnimatedDots: View {
+    let reduceMotion: Bool
+    @State private var isAnimating = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .fill(Color.brand)
+                    .frame(width: 6, height: 6)
+                    .opacity(reduceMotion ? 0.7 : (isAnimating ? 1 : 0.2))
+                    .animation(
+                        reduceMotion
+                            ? nil
+                            : .easeInOut(duration: 0.45)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.15),
+                        value: isAnimating
+                    )
+            }
+        }
+        .frame(width: 54)
+        .onAppear {
+            guard !reduceMotion else { return }
+            isAnimating = true
+        }
+    }
+}
+
+private enum BrokerageConnectionStepState {
     case completed
     case active
     case waiting
 }
 
-private struct BrokerageChecklistRow: View {
-    let title: String
-    let state: BrokerageChecklistState
+private struct BrokerageConnectionStepRow: View {
+    let step: BrokerageConnectionStep
+    let state: BrokerageConnectionStepState
+    let reduceMotion: Bool
 
     var body: some View {
-        HStack(spacing: 14) {
-            icon
-                .frame(width: 28, height: 28)
+        HStack(spacing: 12) {
+            Image(systemName: step.icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(iconColor)
+                .frame(width: 24)
 
-            Text(title)
-                .font(.pretendard(16, weight: .bold))
-                .foregroundStyle(textColor)
+            Text(step.title)
+                .font(.pretendard(16, weight: .semibold))
+                .foregroundStyle(Color.textPrimary)
 
             Spacer()
+
+            statusView
+                .frame(width: 26, height: 26)
         }
-    }
-
-    @ViewBuilder
-    private var icon: some View {
-        switch state {
-        case .completed:
-            Circle()
-                .fill(Color(hex: "10B981"))
-                .overlay {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color.white)
-                }
-                .scaleEffect(1)
-                .transition(.scale.combined(with: .opacity))
-        case .active:
-            ProgressView()
-                .tint(OnboardingV3Theme.primary)
-        case .waiting:
-            Circle()
-                .stroke(OnboardingV3Theme.border, lineWidth: 1.5)
-                .frame(width: 20, height: 20)
-        }
-    }
-
-    private var textColor: Color {
-        switch state {
-        case .completed, .active:
-            return Color.textPrimary
-        case .waiting:
-            return OnboardingV3Theme.muted
-        }
-    }
-}
-
-private struct BrokerageCompletePhase: View {
-    var body: some View {
-        VStack(spacing: 22) {
-            Circle()
-                .fill(OnboardingV3Theme.primary)
-                .frame(width: 48, height: 48)
-                .overlay {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(Color.white)
-                }
-                .transition(.scale(scale: 0.78).combined(with: .opacity))
-
-            VStack(spacing: 8) {
-                Text("연결됐어요!")
-                    .font(.pretendard(24, weight: .bold))
-                    .foregroundStyle(Color.textPrimary)
-
-                Text("SOXX, SMH 외 3개 종목을 확인했어요")
-                    .font(.pretendard(15, weight: .regular))
-                    .foregroundStyle(OnboardingV3Theme.muted)
-                    .multilineTextAlignment(.center)
-            }
-
-            BrokerageConnectedDataCard()
-                .padding(.top, 8)
-        }
-        .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
-        .frame(maxWidth: OnboardingV3Layout.maxWidth)
-    }
-}
-
-private struct BrokerageConnectedDataCard: View {
-    var body: some View {
-        HStack(spacing: 0) {
-            BrokerageConnectedMetric(title: "총 계좌", value: "1개")
-            Divider().frame(height: 34)
-            BrokerageConnectedMetric(title: "보유 종목", value: "5개")
-            Divider().frame(height: 34)
-            BrokerageConnectedMetric(title: "포트폴리오", value: "₩134,829,500")
-        }
-        .padding(.vertical, 16)
+        .padding(.horizontal, 16)
+        .frame(height: 58)
         .background(Color.white, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(OnboardingV3Theme.border, lineWidth: 1)
+                .stroke(Color.hairline, lineWidth: 1)
+        }
+        .opacity(state == .completed ? 0.5 : 1)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: state == .completed)
+    }
+
+    @ViewBuilder
+    private var statusView: some View {
+        switch state {
+        case .completed:
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(Color(hex: "10B981"))
+                .transition(.scale(scale: 0.5).combined(with: .opacity))
+                .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.65), value: state == .completed)
+        case .active:
+            ProgressView()
+                .controlSize(.small)
+                .tint(Color.brand)
+        case .waiting:
+            Circle()
+                .stroke(Color.hairline, lineWidth: 1.4)
+                .frame(width: 18, height: 18)
+        }
+    }
+
+    private var iconColor: Color {
+        switch state {
+        case .completed:
+            return Color.textTertiary
+        case .active:
+            return Color.brand
+        case .waiting:
+            return Color.textTertiary
         }
     }
 }
 
-private struct BrokerageConnectedMetric: View {
-    let title: String
-    let value: String
-
+private struct BrokerageConnectionPermissionNote: View {
     var body: some View {
-        VStack(spacing: 5) {
-            Text(title)
-                .font(.pretendard(11, weight: .medium))
-                .foregroundStyle(OnboardingV3Theme.muted)
+        HStack(spacing: 6) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 12, weight: .semibold))
 
-            Text(value)
-                .font(.pretendard(14, weight: .bold))
-                .foregroundStyle(Color.textPrimary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
+            Text("주문 권한은 요청하지 않아요")
+                .font(.pretendard(13, weight: .regular))
         }
+        .foregroundStyle(Color.textTertiary)
         .frame(maxWidth: .infinity)
     }
 }
 
-private struct BrokerageFailurePhase: View {
-    let reason: BrokerageConnectionFailureReason
-    let onRetry: () -> Void
-    let onSkip: () -> Void
+private struct BrokerageConnectionCompletePhase: View {
+    let holdingsCount: Int?
+    let showsContent: Bool
+    let showsShimmer: Bool
+    let showsStartButton: Bool
+    let reduceMotion: Bool
+    let onStart: () -> Void
+
+    private var subtitle: String {
+        guard let holdingsCount, holdingsCount > 0 else {
+            return "보유 종목을 불러왔어요"
+        }
+
+        return "\(holdingsCount)개 종목을 불러왔어요"
+    }
 
     var body: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: 24) {
             Circle()
-                .fill(Color(hex: "F59E0B").opacity(0.16))
-                .frame(width: 54, height: 54)
+                .fill(Color.brand.opacity(0.1))
+                .frame(width: 72, height: 72)
                 .overlay {
-                    Image(systemName: "exclamationmark")
-                        .font(.system(size: 23, weight: .bold))
-                        .foregroundStyle(Color(hex: "F59E0B"))
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 31, weight: .bold))
+                        .foregroundStyle(Color.brand)
                 }
+                .brightness(showsShimmer ? 0.15 : 0)
+                .scaleEffect(showsContent ? 1 : 0.01)
+                .opacity(showsContent ? 1 : 0)
+                .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.6), value: showsContent)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: showsShimmer)
 
             VStack(spacing: 8) {
-                Text("연결에 실패했어요")
+                Text("연결 완료")
                     .font(.pretendard(24, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
 
-                Text(reason.message)
+                Text(subtitle)
                     .font(.pretendard(15, weight: .regular))
-                    .foregroundStyle(OnboardingV3Theme.muted)
+                    .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
             }
+            .opacity(showsContent ? 1 : 0)
 
-            VStack(spacing: 12) {
-                OnboardingV3PrimaryButton(title: "다시 시도", action: onRetry)
-
-                Button("나중에 설정하기", action: onSkip)
-                    .font(.pretendard(14, weight: .semibold))
-                    .foregroundStyle(OnboardingV3Theme.primary)
-                    .buttonStyle(.plain)
+            if showsStartButton {
+                OnboardingV3PrimaryButton(title: "시작하기", action: onStart)
+                    .transition(.opacity)
             }
-            .padding(.top, 10)
         }
         .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
         .frame(maxWidth: OnboardingV3Layout.maxWidth)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: showsStartButton)
     }
 }
 
 #Preview {
     OnboardingBrokerageLoadingView(
         viewModel: OnboardingFlowViewModel(),
-        onSkip: {},
         onComplete: {}
     )
     .preferredColorScheme(.light)

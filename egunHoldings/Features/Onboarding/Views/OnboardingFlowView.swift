@@ -65,10 +65,6 @@ struct OnboardingFlowView: View {
                 case .brokerageLoading:
                     OnboardingBrokerageLoadingView(
                         viewModel: onboardingViewModel,
-                        onSkip: {
-                            onboardingViewModel.skipBrokerageConnection()
-                            path.append(.completion)
-                        },
                         onComplete: { path.append(.completion) }
                     )
                 case .completion:

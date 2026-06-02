@@ -4,7 +4,9 @@ struct OnboardingPage3View: View {
     @ObservedObject var viewModel: OnboardingFlowViewModel
     let onBack: () -> Void
     let onNext: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
+    @State private var isSkipConfirmationPresented = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -34,9 +36,10 @@ struct OnboardingPage3View: View {
                         BrokerInstitutionCard(
                             institution: institution,
                             isSelected: viewModel.connectedInstitutionID == institution.id,
-                            isConnectable: viewModel.canConnect(institution)
+                            isConnectable: viewModel.canConnect(institution),
+                            hasActiveSelection: viewModel.connectedInstitutionID != nil
                         ) {
-                            withAnimation(.easeInOut(duration: 0.2)) {
+                            withAnimation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.6)) {
                                 viewModel.selectInstitution(institution)
                             }
                         }
@@ -62,11 +65,22 @@ struct OnboardingPage3View: View {
                     }
 
                     OnboardingV3SecondaryButton(title: "나중에 설정하기") {
-                        viewModel.skipBrokerageConnection()
-                        onNext()
+                        isSkipConfirmationPresented = true
                     }
                 }
             }
+        }
+        .confirmationDialog(
+            "계좌 없이 시작할 수 있어요\n일부 기능은 연결 후 사용 가능해요",
+            isPresented: $isSkipConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button("지금은 건너뛸게요") {
+                viewModel.skipBrokerageConnection()
+                onNext()
+            }
+
+            Button("계좌 연결하기", role: .cancel) {}
         }
         .onboardingV3Background()
     }
@@ -137,10 +151,18 @@ private struct BrokerInstitutionCard: View {
     let institution: AccountInstitution
     let isSelected: Bool
     let isConnectable: Bool
+    let hasActiveSelection: Bool
     let onTap: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isPulsing = false
+
     var body: some View {
-        Button(action: onTap) {
+        Button {
+            guard isConnectable else { return }
+            onTap()
+            playSelectionPulse()
+        } label: {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     if isSelected {
@@ -182,27 +204,53 @@ private struct BrokerInstitutionCard: View {
             .background(cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(cardBorder, lineWidth: isSelected || isConnectable ? 2 : 1)
+                    .stroke(cardBorder, lineWidth: isSelected ? 2 : 1)
             }
         }
         .buttonStyle(.plain)
         .disabled(!isConnectable)
+        .scaleEffect(isPulsing ? 1.04 : 1)
+        .opacity(cardOpacity)
+        .animation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.6), value: isPulsing)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: hasActiveSelection)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isSelected)
     }
 
     private var cardBackground: Color {
-        if isSelected || isConnectable {
-            return isSelected ? OnboardingV3Theme.selectedBackground : OnboardingV3Theme.cardBackground
+        if isSelected {
+            return OnboardingV3Theme.selectedBackground
+        }
+
+        if isConnectable {
+            return OnboardingV3Theme.cardBackground
         }
 
         return Color(hex: "F8FAFC")
     }
 
     private var cardBorder: Color {
-        if isSelected || isConnectable {
+        if isSelected {
             return OnboardingV3Theme.primary
         }
 
         return OnboardingV3Theme.border
+    }
+
+    private var cardOpacity: Double {
+        if hasActiveSelection, !isSelected {
+            return 0.5
+        }
+
+        return isConnectable ? 1 : 0.62
+    }
+
+    private func playSelectionPulse() {
+        guard !reduceMotion else { return }
+        isPulsing = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            isPulsing = false
+        }
     }
 
     @ViewBuilder

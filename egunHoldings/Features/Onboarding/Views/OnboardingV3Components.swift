@@ -210,6 +210,8 @@ struct OnboardingV3PrimaryButton: View {
             Text(title)
                 .font(.pretendard(16, weight: .semibold))
                 .foregroundStyle(Color.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
                 .frame(maxWidth: .infinity)
                 .frame(height: OnboardingV3Layout.bottomButtonHeight)
                 .background(OnboardingV3Theme.primary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))

@@ -70,6 +70,28 @@ final class SignUpFlowViewModel: ObservableObject {
                 detailBody: "AI 해석 정보는 투자 판단을 돕기 위한 참고 자료이며, 확정적 예측이나 수익 보장을 의미하지 않습니다."
             ),
             SignupConsentDefinition(
+                id: "ai_data_transfer",
+                title: "AI 응답 생성을 위한 데이터 처리 동의",
+                summary: "포트폴리오 분석 시 익명화된 자산 정보가 외부 AI 서비스에 전송돼요.",
+                isRequired: true,
+                detailBody: """
+                포트폴리오 동반자 기능 이용 시, 아래 정보가 외부 AI API 서버에
+                익명화되어 전송됩니다.
+
+                전송되는 정보
+                • 보유 자산 종목 및 비중 (%)
+                • 보유 기간 및 수익률
+                • 투자 성향 및 목표 기간
+
+                전송되지 않는 정보
+                • 실명, 생년월일 등 개인 식별 정보
+                • 정확한 자산 평가액
+                • 계좌번호 및 금융기관 정보
+
+                외부 AI 서비스는 해당 데이터를 모델 학습에 사용하지 않습니다.
+                """
+            ),
+            SignupConsentDefinition(
                 id: "age",
                 title: "만 14세 이상 확인",
                 summary: "서비스 이용 가능 연령 기준을 확인해요.",

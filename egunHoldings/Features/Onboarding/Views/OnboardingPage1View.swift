@@ -4,15 +4,20 @@ struct OnboardingPage1View: View {
     @ObservedObject var viewModel: OnboardingFlowViewModel
     let onNext: () -> Void
     var onBack: () -> Void = {}
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 12),
-        GridItem(.flexible(), spacing: 12)
-    ]
+    private var selectionAnimation: Animation? {
+        reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.7)
+    }
 
-    private var previewItem: OnboardingNewsPreviewItem? {
-        viewModel.previewItems.first
+    private var bottomButtonTitle: String {
+        if viewModel.canAdvanceFromKeywordStep {
+            return "다음"
+        }
+
+        return "3개 이상 선택해주세요 (현재 \(viewModel.keywordSelectionCount)개)"
     }
 
     var body: some View {
@@ -23,28 +28,27 @@ struct OnboardingPage1View: View {
                 OnboardingV3StepHeader(step: 1, onBack: onBack)
 
                 OnboardingV3QuestionHeader(
-                    title: "어떤 산업을 주로 보시나요?",
-                    subtitle: "선택하면 아래 뉴스 미리보기가 즉시 바뀌어요"
+                    title: "어떤 주제에 관심 있으세요?",
+                    subtitle: "3개 이상 선택하면 맞춤 시그널을 받을 수 있어요"
                 )
 
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(viewModel.allSectors) { sector in
-                        SectorSelectionCard(
-                            sector: sector,
-                            isSelected: viewModel.selectedSectors.contains(sector)
-                        ) {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                viewModel.toggleSector(sector)
+                VStack(alignment: .leading, spacing: 20) {
+                    ForEach(viewModel.allKeywordCategories) { category in
+                        KeywordCategorySection(
+                            category: category,
+                            selectedKeywords: viewModel.selectedKeywords,
+                            animation: selectionAnimation
+                        ) { keyword in
+                            withAnimation(selectionAnimation) {
+                                viewModel.toggleKeyword(keyword)
                             }
                         }
                     }
                 }
-
-                SectorNewsPreviewCard(item: previewItem)
             }
             .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
             .padding(.top, OnboardingV3Layout.progressContentTopPadding)
-            .padding(.bottom, 120)
+            .padding(.bottom, 220)
             .frame(maxWidth: OnboardingV3Layout.maxWidth, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
@@ -52,110 +56,189 @@ struct OnboardingPage1View: View {
         .onboardingProgressOverlay(step: 1, isCollapsed: isProgressCollapsed)
         .safeAreaInset(edge: .bottom) {
             OnboardingV3BottomBar {
-                OnboardingV3PrimaryButton(
-                    title: "다음",
-                    isEnabled: viewModel.canAdvanceFromSectorStep,
-                    action: onNext
-                )
+                VStack(spacing: 12) {
+                    KeywordNewsPreviewCard(
+                        preview: viewModel.keywordNewsPreview,
+                        animation: reduceMotion ? nil : .easeInOut(duration: 0.2)
+                    )
+
+                    OnboardingV3PrimaryButton(
+                        title: bottomButtonTitle,
+                        isEnabled: viewModel.canAdvanceFromKeywordStep,
+                        action: onNext
+                    )
+                }
             }
         }
         .onboardingV3Background()
     }
 }
 
-private struct SectorSelectionCard: View {
-    let sector: InterestSector
+private struct KeywordCategorySection: View {
+    let category: InterestKeywordCategory
+    let selectedKeywords: Set<InterestKeyword>
+    let animation: Animation?
+    let onToggle: (InterestKeyword) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(category.displayName.uppercased())
+                .font(.pretendard(12, weight: .semibold))
+                .foregroundStyle(Color.textTertiary)
+
+            FlowLayout(horizontalSpacing: 8, verticalSpacing: 10) {
+                ForEach(category.keywords) { keyword in
+                    KeywordChip(
+                        keyword: keyword,
+                        isSelected: selectedKeywords.contains(keyword),
+                        animation: animation
+                    ) {
+                        onToggle(keyword)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct KeywordChip: View {
+    let keyword: InterestKeyword
     let isSelected: Bool
+    let animation: Animation?
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
-                    Text(sector.emoji)
-                        .font(.system(size: 32))
-                        .frame(width: 38, height: 38, alignment: .leading)
-
-                    Spacer(minLength: 8)
-
-                    OnboardingV3SelectionCheck(isSelected: isSelected)
+            HStack(spacing: 5) {
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .transition(.scale.combined(with: .opacity))
                 }
 
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(sector.title)
-                        .font(.pretendard(15, weight: .bold))
-                        .foregroundStyle(Color.textPrimary)
-
-                    Text(sector.description)
-                        .font(.pretendard(13, weight: .regular))
-                        .foregroundStyle(OnboardingV3Theme.muted)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                }
+                Text(keyword.tag)
+                    .font(.pretendard(14, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
             }
-            .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
-            .padding(14)
+            .foregroundStyle(isSelected ? Color.brand : Color.textSecondary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
             .background(
-                isSelected ? OnboardingV3Theme.selectedBackground : OnboardingV3Theme.cardBackground,
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                isSelected ? Color.brand.opacity(0.12) : Color(hex: "F3F4F6"),
+                in: Capsule(style: .continuous)
             )
             .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(isSelected ? OnboardingV3Theme.primary : OnboardingV3Theme.border, lineWidth: isSelected ? 2 : 1)
+                Capsule(style: .continuous)
+                    .stroke(isSelected ? Color.brand : Color.clear, lineWidth: 1)
             }
+            .contentShape(Capsule(style: .continuous))
         }
-        .buttonStyle(ScalingSelectionButtonStyle())
+        .buttonStyle(.plain)
+        .animation(animation, value: isSelected)
     }
 }
 
-private struct SectorNewsPreviewCard: View {
-    let item: OnboardingNewsPreviewItem?
+private struct KeywordNewsPreviewCard: View {
+    let preview: String
+    let animation: Animation?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("지금 이런 시그널이 분석되고 있어요")
-                .font(.pretendard(13, weight: .semibold))
-                .foregroundStyle(OnboardingV3Theme.muted)
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "newspaper")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(Color.textTertiary)
+                .frame(width: 18, height: 18)
+                .padding(.top, 1)
 
-            HStack(alignment: .top, spacing: 12) {
-                Circle()
-                    .fill(OnboardingV3Theme.selectedBackground)
-                    .frame(width: 38, height: 38)
-                    .overlay {
-                        Image(systemName: "newspaper")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(OnboardingV3Theme.primary)
-                    }
+            VStack(alignment: .leading, spacing: 5) {
+                Text("선택 기반 미리보기")
+                    .font(.pretendard(11, weight: .semibold))
+                    .foregroundStyle(Color.brand)
 
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(item?.title ?? "관심 산업을 선택하면 관련 뉴스가 표시돼요")
-                        .font(.pretendard(15, weight: .bold))
-                        .foregroundStyle(Color.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text(item?.summary ?? "선택한 섹터에 맞춰 정책 뉴스와 시장 신호를 먼저 보여드릴게요.")
-                        .font(.pretendard(13, weight: .regular))
-                        .foregroundStyle(OnboardingV3Theme.muted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                Text(preview)
+                    .id(preview)
+                    .font(.pretendard(14, weight: .regular))
+                    .foregroundStyle(Color.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity)
             }
+
+            Spacer(minLength: 0)
         }
-        .padding(16)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(OnboardingV3Theme.cardBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(OnboardingV3Theme.border, lineWidth: 1)
-        }
-        .animation(.easeInOut(duration: 0.2), value: item?.id)
+        .background(Color(hex: "F8F9FA"), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .animation(animation, value: preview)
     }
 }
 
-private struct ScalingSelectionButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+private struct FlowLayout: Layout {
+    let horizontalSpacing: CGFloat
+    let verticalSpacing: CGFloat
+
+    init(horizontalSpacing: CGFloat = 8, verticalSpacing: CGFloat = 10) {
+        self.horizontalSpacing = horizontalSpacing
+        self.verticalSpacing = verticalSpacing
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .greatestFiniteMagnitude
+        let layout = makeLayout(maxWidth: maxWidth, subviews: subviews)
+
+        return CGSize(
+            width: proposal.width ?? layout.width,
+            height: layout.height
+        )
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var xOffset: CGFloat = 0
+        var yOffset: CGFloat = 0
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+
+            if xOffset > 0, xOffset + size.width > bounds.width {
+                xOffset = 0
+                yOffset += rowHeight + verticalSpacing
+                rowHeight = 0
+            }
+
+            subview.place(
+                at: CGPoint(x: bounds.minX + xOffset, y: bounds.minY + yOffset),
+                proposal: ProposedViewSize(size)
+            )
+
+            xOffset += size.width + horizontalSpacing
+            rowHeight = max(rowHeight, size.height)
+        }
+    }
+
+    private func makeLayout(maxWidth: CGFloat, subviews: Subviews) -> (width: CGFloat, height: CGFloat) {
+        var xOffset: CGFloat = 0
+        var yOffset: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var measuredWidth: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+
+            if xOffset > 0, xOffset + size.width > maxWidth {
+                measuredWidth = max(measuredWidth, xOffset - horizontalSpacing)
+                xOffset = 0
+                yOffset += rowHeight + verticalSpacing
+                rowHeight = 0
+            }
+
+            xOffset += size.width + horizontalSpacing
+            rowHeight = max(rowHeight, size.height)
+        }
+
+        measuredWidth = max(measuredWidth, xOffset > 0 ? xOffset - horizontalSpacing : 0)
+
+        return (measuredWidth, yOffset + rowHeight)
     }
 }
 

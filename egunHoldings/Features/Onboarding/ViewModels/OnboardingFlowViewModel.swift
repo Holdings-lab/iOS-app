@@ -4,6 +4,7 @@ import Foundation
 @MainActor
 final class OnboardingFlowViewModel: ObservableObject {
     @Published private(set) var selectedSectors: Set<InterestSector> = []
+    @Published private(set) var selectedKeywords: Set<InterestKeyword> = []
     @Published private(set) var selectedStyle: InvestmentStyleOption? = InvestmentProfile.balanced.legacyStyle
     @Published private(set) var rebalancingPreference = OnboardingRebalancingPreference()
     @Published private(set) var connectedInstitutionID: String?
@@ -20,6 +21,10 @@ final class OnboardingFlowViewModel: ObservableObject {
 
     var allSectors: [InterestSector] {
         InterestSector.onboardingOptions
+    }
+
+    var allKeywordCategories: [InterestKeywordCategory] {
+        InterestKeywordCategory.allCategories
     }
 
     var recommendedInstitution: AccountInstitution {
@@ -48,6 +53,31 @@ final class OnboardingFlowViewModel: ObservableObject {
 
     var canAdvanceFromSectorStep: Bool {
         !selectedSectors.isEmpty
+    }
+
+    var canAdvanceFromKeywordStep: Bool {
+        selectedKeywords.count >= 3
+    }
+
+    var keywordSelectionCount: Int {
+        selectedKeywords.count
+    }
+
+    var keywordNewsPreview: String {
+        switch orderedSelectedKeywords.first?.id {
+        case "qqq":
+            return "美 연준 금리 동결에 QQQ 0.8% 상승 마감"
+        case "nvidia":
+            return "엔비디아, AI 칩 수요 급증으로 분기 매출 신기록"
+        case "fomc":
+            return "FOMC 의사록 공개 — 금리 인하 시점 불확실성 지속"
+        case "tsla":
+            return "테슬라, 2분기 인도량 전망치 하회 우려"
+        case "xle":
+            return "유가 3% 급등, XLE 에너지 ETF 동반 상승"
+        default:
+            return "선택한 키워드 기반 시그널이 분석되고 있어요"
+        }
     }
 
     var previewItems: [OnboardingNewsPreviewItem] {
@@ -171,6 +201,14 @@ final class OnboardingFlowViewModel: ObservableObject {
         }
     }
 
+    func toggleKeyword(_ keyword: InterestKeyword) {
+        if selectedKeywords.contains(keyword) {
+            selectedKeywords.remove(keyword)
+        } else {
+            selectedKeywords.insert(keyword)
+        }
+    }
+
     func selectInvestmentProfile(_ profile: InvestmentProfile) {
         rebalancingPreference.investmentProfile = profile
         selectedStyle = profile.legacyStyle
@@ -228,14 +266,23 @@ final class OnboardingFlowViewModel: ObservableObject {
         rebalancingPreference.downturnBehavior = settings.downturn
     }
 
+    private var orderedSelectedKeywords: [InterestKeyword] {
+        allKeywordCategories
+            .flatMap(\.keywords)
+            .filter { selectedKeywords.contains($0) }
+    }
+
     func makeOnboardingResult() -> OnboardingResult {
         let orderedSectors = selectedSectors
             .sorted { $0.title < $1.title }
             .map(\.id)
 
+        let orderedKeywordIDs = orderedSelectedKeywords.map(\.id)
+
         return OnboardingResult(
             connectedInstitutionIDs: connectedInstitutionID.map { [$0] } ?? [],
             selectedSectorIDs: orderedSectors,
+            selectedKeywordIDs: orderedKeywordIDs,
             investmentStyleID: rebalancingPreference.investmentProfile.legacyStyle.rawValue,
             rebalancingPreference: rebalancingPreference,
             selectedAssetSymbols: [],
