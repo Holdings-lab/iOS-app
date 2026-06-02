@@ -6,6 +6,8 @@ enum PolSignalRoute: Hashable {
     case detail(Int)
     case adjustment
     case policyReader(Int)
+    /// Today 탭 "왜 그런지 알아보기" 진입용 — 테마별 상세 분석 화면.
+    case themeDetail(PortfolioThemeSignal.Theme)
 }
 
 enum PolSignalFeedTab: String, CaseIterable, Identifiable {

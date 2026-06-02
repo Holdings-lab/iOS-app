@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct SignalDecisionMockData {
+nonisolated struct SignalDecisionMockData {
     static let dashboard = SignalDecisionDashboard(
         actionOptions: [
             PolicyActionOption(

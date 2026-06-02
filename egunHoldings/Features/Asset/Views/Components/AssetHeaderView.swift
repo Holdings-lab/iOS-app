@@ -4,58 +4,41 @@ struct AssetHeaderView: View {
     let totalAmount: String
     let profitSummary: String
     let profitColor: Color
-    let showsNotificationIcon: Bool
 
     init(
         totalAmount: String = "",
         profitSummary: String = "",
-        profitColor: Color = .textTertiary,
-        showsNotificationIcon: Bool = true
+        profitColor: Color = .textTertiary
     ) {
         self.totalAmount = totalAmount
         self.profitSummary = profitSummary
         self.profitColor = profitColor
-        self.showsNotificationIcon = showsNotificationIcon
     }
 
     var body: some View {
         PSGlassCard(padding: PSSpacing.cardPadding) {
-            ZStack(alignment: .topTrailing) {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Portfolio Balance")
-                        .font(PSFont.caption())
-                        .foregroundStyle(Color.textSecondary)
+            VStack(alignment: .leading, spacing: 10) {
+                Text("총 자산")
+                    .font(PSFont.caption())
+                    .foregroundStyle(Color.textSecondary)
 
-                    BigAmountLabel(
-                        prefix: amountParts.prefix,
-                        integer: amountParts.integer,
-                        decimal: amountParts.decimal
+                BigAmountLabel(
+                    prefix: amountParts.prefix,
+                    integer: amountParts.integer,
+                    decimal: amountParts.decimal
+                )
+                .lineLimit(1)
+                .minimumScaleFactor(0.76)
+
+                if !profitSummary.isEmpty {
+                    TrendBadge(
+                        value: trendParts.value,
+                        percent: trendParts.percent,
+                        isUp: trendParts.isUp
                     )
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.76)
-
-                    if !profitSummary.isEmpty {
-                        TrendBadge(
-                            value: trendParts.value,
-                            percent: trendParts.percent,
-                            isUp: trendParts.isUp
-                        )
-                    }
-                }
-                .padding(.trailing, showsNotificationIcon ? 46 : 0)
-
-                if showsNotificationIcon {
-                    Image(systemName: "bell")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color.textPrimary)
-                        .frame(width: 40, height: 40)
-                        .background(Color.elevated, in: RoundedRectangle(cornerRadius: PSRadius.button, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: PSRadius.button, style: .continuous)
-                                .stroke(Color.divider, lineWidth: 1)
-                        }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 

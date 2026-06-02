@@ -12,21 +12,22 @@ struct AssetSegmentControl: View {
                 } label: {
                     Text(segment.displayTitle)
                         .font(PSFont.caption())
-                        .foregroundStyle(selectedSegment == segment ? Color.textPrimary : Color.textSecondary)
+                        .fontWeight(selectedSegment == segment ? .semibold : .regular)
+                        .foregroundStyle(selectedSegment == segment ? .white : Color.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
                         .background(
-                            selectedSegment == segment ? Color.elevated : Color.clear,
+                            selectedSegment == segment ? Color.brand : Color.clear,
                             in: Capsule(style: .continuous)
                         )
                         .shadow(
-                            color: selectedSegment == segment ? Color.cardShadow : Color.clear,
-                            radius: selectedSegment == segment ? 10 : 0,
+                            color: selectedSegment == segment ? Color.brand.opacity(0.35) : Color.clear,
+                            radius: selectedSegment == segment ? 8 : 0,
                             x: 0,
                             y: selectedSegment == segment ? 4 : 0
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleButtonStyle())
             }
         }
         .padding(5)

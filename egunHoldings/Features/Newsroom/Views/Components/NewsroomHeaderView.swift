@@ -7,35 +7,39 @@ struct NewsroomHeaderView: View {
     let onTickerTap: (NewsroomMarketTicker) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "newspaper.fill")
-                        .font(.system(size: 21, weight: .semibold))
-                        .foregroundStyle(Color.electricBlue)
-                        .frame(width: 30, height: 30)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: "newspaper.fill")
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundStyle(Color.electricBlue)
+                    .frame(width: 30, height: 30)
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(alignment: .lastTextBaseline, spacing: 9) {
-                            Text("피드")
-                                .font(.pretendard(28, weight: .bold))
-                                .foregroundStyle(Color.textPrimary)
-                                .tracking(-0.5)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("피드")
+                        .font(.pretendard(22, weight: .bold))
+                        .foregroundStyle(Color.textPrimary)
+                        .tracking(-0.5)
 
-                            NewsroomRollingTickerView(
-                                tickers: tickers,
-                                onTickerTap: onTickerTap
-                            )
-                        }
-
-                        Text(feedMode.subtitle)
-                            .font(.pretendard(13, weight: .medium))
-                            .foregroundStyle(Color.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    Text(feedMode.subtitle)
+                        .font(.pretendard(13, weight: .medium))
+                        .foregroundStyle(Color.textTertiary)
                 }
 
                 Spacer()
+            }
+
+            if !tickers.isEmpty {
+                NewsroomRollingTickerView(
+                    tickers: tickers,
+                    onTickerTap: onTickerTap
+                )
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.elevated, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.hairline, lineWidth: 1)
+                }
             }
         }
     }

@@ -22,7 +22,7 @@ struct AssetExposureOverviewSection: View {
     }
 
     private var accountOverviewView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: PSSpacing.sectionGap) {
             portfolioInsightCard
 
             if let notice = weeklyAdjustmentNotice {
@@ -90,43 +90,64 @@ struct AssetExposureOverviewSection: View {
 
     private var portfolioInsightCard: some View {
         Button(action: onShowOverallPolicyDetail) {
-            HStack(alignment: .center, spacing: 12) {
-                let metric = leadingExposureMetric(in: dashboard.exposureMetrics)
-                Image(systemName: metric?.symbol ?? "scope")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(metric?.color ?? Color.electricBlue)
-                    .frame(width: 34, height: 34)
-                    .background((metric?.color ?? Color.electricBlue).opacity(0.1), in: Circle())
+            let metric = leadingExposureMetric(in: dashboard.exposureMetrics)
+            let accentColor = metric?.color ?? Color.brand
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(exposureInsightText(for: metric))
-                        .font(.pretendard(15, weight: .bold))
-                        .foregroundStyle(Color.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .center) {
+                    Text("정책 노출 현황")
+                        .font(PSFont.caption())
+                        .foregroundStyle(Color.textSecondary)
 
-                    Text("전체 계좌 기준으로 합산한 정책 노출입니다.")
-                        .font(.pretendard(11, weight: .medium))
-                        .foregroundStyle(Color.mutedForeground)
-                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+
+                    HStack(spacing: 4) {
+                        Text("자산별로 보기")
+                            .font(.pretendard(12, weight: .semibold))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundStyle(accentColor)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(accentColor.opacity(0.09), in: Capsule())
                 }
 
-                Spacer(minLength: 0)
+                HStack(alignment: .center, spacing: 14) {
+                    Image(systemName: metric?.symbol ?? "scope")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(accentColor)
+                        .frame(width: 48, height: 48)
+                        .background(accentColor.opacity(0.1), in: Circle())
 
-                HStack(spacing: 5) {
-                    Text("자산별로 보기")
-                        .font(.pretendard(12, weight: .bold))
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .bold))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(metric?.title ?? "정책")
+                            .font(PSFont.caption())
+                            .foregroundStyle(Color.textSecondary)
+
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text("\(metric?.percent ?? 0)%")
+                                .font(.pretendard(28, weight: .bold))
+                                .foregroundStyle(accentColor)
+                                .monospacedDigit()
+
+                            Image(systemName: metric?.trend.symbol ?? "arrow.up.right")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(metric?.trend.color ?? Color.trendUp)
+                        }
+
+                        Text("전체 계좌 기준 합산")
+                            .font(.pretendard(11, weight: .medium))
+                            .foregroundStyle(Color.textTertiary)
+                    }
+
+                    Spacer(minLength: 0)
                 }
-                .foregroundStyle(Color.electricBlue)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(Color.electricBlue.opacity(0.1), in: Capsule())
             }
-            .padding(16)
+            .padding(PSSpacing.cardPadding)
             .glassCard()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleButtonStyle())
     }
 
     private func adjustmentNoticeCard(_ notice: AssetAdjustmentNotice) -> some View {
@@ -158,7 +179,7 @@ struct AssetExposureOverviewSection: View {
                     .padding(.vertical, 6)
                     .background(notice.color.opacity(0.12), in: Capsule())
             }
-            .padding(16)
+            .padding(PSSpacing.cardPadding)
             .glassCard()
         }
         .buttonStyle(.plain)
@@ -186,7 +207,7 @@ struct AssetExposureOverviewSection: View {
                             expandsHoldings: dashboard.accounts.count == 1
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleButtonStyle())
                 }
             }
         }
@@ -286,7 +307,7 @@ struct AssetExposureOverviewSection: View {
 
             Spacer(minLength: 0)
         }
-        .padding(16)
+        .padding(PSSpacing.cardPadding)
         .glassCard()
     }
 
@@ -362,7 +383,7 @@ struct AssetExposureOverviewSection: View {
                 }
             }
         }
-        .padding(16)
+        .padding(PSSpacing.cardPadding)
         .glassCard()
     }
 
@@ -524,7 +545,7 @@ private struct AssetAccountCard: View {
 
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(account.totalAmount)
-                        .font(.pretendard(17, weight: .bold))
+                        .font(.pretendard(20, weight: .bold))
                         .foregroundStyle(Color.textPrimary)
                         .monospacedDigit()
                         .lineLimit(1)
@@ -538,7 +559,7 @@ private struct AssetAccountCard: View {
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color.textTertiary)
+                    .foregroundStyle(Color.textSecondary)
             }
 
             PolicyTagPillRow(tags: account.policyTags)
@@ -552,7 +573,7 @@ private struct AssetAccountCard: View {
                 .padding(.top, 2)
             }
         }
-        .padding(16)
+        .padding(PSSpacing.cardPadding)
         .contentShape(RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
         .glassCard()
     }

@@ -499,15 +499,15 @@ struct PolSignalTodayBriefingView: View {
     let themeSignals: [PortfolioThemeSignal]
     var policyReadings: [PolSignalPolicyReading] = PolSignalFlowMockData.policyReadings
     let proposal: PolSignalAdjustmentProposal?
-    /// "왜 그런지 알아보기" 탭 시 Signal 탭으로 이동. eventId 전달.
-    let onSignalTap: (Int) -> Void
+    /// "왜 그런지 알아보기" 탭 시 호출. 테마 단위 Signal 상세 화면으로 이동.
+    let onThemeTap: (PortfolioThemeSignal.Theme) -> Void
     let onProposalTap: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             ThemeSignalSection(
                 signals: themeSignals,
-                onFullAnalysis: onSignalTap
+                onFullAnalysis: onThemeTap
             )
             policyEventSection
 

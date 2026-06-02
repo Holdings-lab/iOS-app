@@ -56,7 +56,7 @@ struct NewsroomNewsFilterBar: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 38)
                         .background(
-                            selectedFilter == filter ? Color.textPrimary : Color.elevated,
+                            selectedFilter == filter ? Color.brand : Color.elevated,
                             in: Capsule(style: .continuous)
                         )
                         .overlay {
@@ -251,7 +251,7 @@ private struct IndustryNewsSummaryCard: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleButtonStyle())
 
             HStack(spacing: 8) {
                 Button(action: onSelect) {
@@ -264,7 +264,10 @@ private struct IndustryNewsSummaryCard: View {
                 }
                 .buttonStyle(PressScaleButtonStyle())
 
-                Button(action: onToggleSave) {
+                Button {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onToggleSave()
+                } label: {
                     Image(systemName: isSaved ? "bookmark.fill" : "bookmark")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(isSaved ? Color.brand : Color.textTertiary)

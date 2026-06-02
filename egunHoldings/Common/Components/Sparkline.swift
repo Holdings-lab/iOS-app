@@ -32,7 +32,9 @@ struct Sparkline: View {
         .chartPlotStyle { plot in
             plot.background(Color.clear)
         }
-        .frame(width: width, height: height)
+        .frame(height: height)
+        .frame(width: width)
+        .frame(maxWidth: width == nil ? .infinity : nil)
         .accessibilityHidden(true)
     }
 
