@@ -20,18 +20,18 @@ nonisolated enum SignalThemeDetailMockData {
         }
     }
 
-    // MARK: - State A — 빅테크 QQQ (5/28 기준, 강한 상승 예상)
+    // MARK: - State A — 빅테크 QQQ (5/22 기준, 강한 상승 예상)
 
     static let bigTechDetail = SignalThemeDetail(
         theme: .bigTech,
         verdict: .adjust,
         prediction: SignalPrediction(
-            returnPct: 3.4,
+            returnPct: 2.6,
             directionLabel: "강한 상승 예상",
-            currentPriceText: "$718.00",
-            predictedPriceText: "$742.42",
-            priceDeltaText: "+24.42",
-            asOfDateLabel: "5/28 (목) 기준",
+            currentPriceText: "$717.54",
+            predictedPriceText: "$735.20",
+            priceDeltaText: "+17.66",
+            asOfDateLabel: "5/22 (금) 기준",
             targetDateLabel: "6/1 (월) 예상"
         ),
         signalCards: [
@@ -58,13 +58,13 @@ nonisolated enum SignalThemeDetailMockData {
             SignalTrendPoint(weekLabel: "3주 전", returnPct: 0.4, verdictKind: .watch),
             SignalTrendPoint(weekLabel: "2주 전", returnPct: 1.1, verdictKind: .watch),
             SignalTrendPoint(weekLabel: "지난 주", returnPct: 2.0, verdictKind: .review),
-            SignalTrendPoint(weekLabel: "이번 주", returnPct: 3.4, verdictKind: .adjust, isCurrent: true)
+            SignalTrendPoint(weekLabel: "이번 주", returnPct: 2.6, verdictKind: .adjust, isCurrent: true)
         ],
         nextCheckpoints: [
             SignalCheckpoint(
                 dateLabel: "6/1 (월)",
                 title: "QQQ 예측 대상일",
-                description: "5거래일 후 목표가 $742.42 도달 여부를 확인하세요."
+                description: "5거래일 후 목표가 $735.20 도달 여부를 확인하세요."
             )
         ]
     )
