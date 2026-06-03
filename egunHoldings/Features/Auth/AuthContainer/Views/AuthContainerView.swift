@@ -5,6 +5,7 @@ struct AuthContainerView: View {
 
     @StateObject private var viewModel = AuthViewModel()
     @State private var showsSignUp = false
+    @State private var isLoginInFlight = false
 
     var body: some View {
         Group {
@@ -31,11 +32,18 @@ struct AuthContainerView: View {
             } else {
                 LoginView(
                     errorMessage: viewModel.authErrorMessage,
+                    isLoading: isLoginInFlight,
                     onLogin: { email, password in
+                        guard !isLoginInFlight else { return }
+                        isLoginInFlight = true
+
                         Task {
                             if let session = await viewModel.login(email: email, password: password) {
                                 onLoginSuccess(session)
+                                return
                             }
+
+                            isLoginInFlight = false
                         }
                     },
                     onSocialLogin: { provider in
@@ -53,6 +61,7 @@ struct AuthContainerView: View {
     }
 
     private func closeSignup() {
+        isLoginInFlight = false
         viewModel.resetAuthError()
         withAnimation(.easeInOut(duration: 0.2)) {
             showsSignUp = false

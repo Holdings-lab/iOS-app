@@ -51,8 +51,9 @@ final class AppRouter: ObservableObject {
 
     func handleLoginSuccess(session newSession: AppUserSession) {
         let isNewUser = newSession.onboardingCompleted == false
-        saveSession(newSession)
+        applySession(newSession)
         route = isNewUser ? .onboarding : .main
+        persistSessionAfterRoute(newSession)
 
         if shouldRefreshBrokerBalance(for: newSession) {
             Task {
@@ -73,8 +74,9 @@ final class AppRouter: ObservableObject {
         currentSession.onboardingResult = result
         currentSession.brokerBalanceSnapshot = nil
 
-        saveSession(currentSession)
+        applySession(currentSession)
         route = .main
+        persistSessionAfterRoute(currentSession)
 
         if shouldRefreshBrokerBalance(for: currentSession) {
             Task {
@@ -103,10 +105,33 @@ final class AppRouter: ObservableObject {
         }
     }
 
-    private func saveSession(_ session: AppUserSession) {
+    private func applySession(_ session: AppUserSession) {
         self.session = session
         lastAuthenticatedEmail = session.email
         applySessionDerivedData(from: session)
+    }
+
+    private func saveSession(_ session: AppUserSession) {
+        applySession(session)
+        persistSessionNow(session)
+    }
+
+    private func persistSessionAfterRoute(_ session: AppUserSession) {
+        Task { [weak self] in
+            await Task.yield()
+            guard let self else { return }
+            guard let currentSession = self.session else { return }
+
+            if currentSession.token == session.token,
+               currentSession.onboardingCompleted && !session.onboardingCompleted {
+                return
+            }
+
+            self.persistSessionNow(session)
+        }
+    }
+
+    private func persistSessionNow(_ session: AppUserSession) {
         store.save(session)
         syncRegisteredAccount(with: session)
     }

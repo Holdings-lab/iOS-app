@@ -67,6 +67,7 @@ enum SocialLoginProvider: String, CaseIterable, Hashable {
 
 struct LoginView: View {
     let errorMessage: String?
+    let isLoading: Bool
     let onLogin: (_ email: String, _ password: String) -> Void
     let onSocialLogin: (SocialLoginProvider) -> Void
     let onTapSignUp: () -> Void
@@ -81,7 +82,7 @@ struct LoginView: View {
     }
 
     private var canSubmit: Bool {
-        !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !password.isEmpty
+        !isLoading && !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !password.isEmpty
     }
 
     var body: some View {
@@ -130,7 +131,12 @@ struct LoginView: View {
                 PFInlineErrorText(message: errorMessage)
             }
 
-            PrimaryGradientButton(title: "로그인", isEnabled: canSubmit, action: submitLogin)
+            PrimaryGradientButton(
+                title: isLoading ? "로그인 중..." : "로그인",
+                isEnabled: canSubmit,
+                isLoading: isLoading,
+                action: submitLogin
+            )
 
             socialDivider
 
@@ -139,6 +145,8 @@ struct LoginView: View {
                     SocialButton(provider: provider) {
                         onSocialLogin(provider)
                     }
+                    .disabled(isLoading)
+                    .opacity(isLoading ? 0.55 : 1)
                 }
             }
 
@@ -148,6 +156,7 @@ struct LoginView: View {
                 Button("회원가입") {
                     onTapSignUp()
                 }
+                .disabled(isLoading)
                 .foregroundStyle(Color.brand)
                 .buttonStyle(.plain)
             }
@@ -268,6 +277,7 @@ struct BrandWaveLogo: View {
 #Preview {
     LoginView(
         errorMessage: nil,
+        isLoading: false,
         onLogin: { _, _ in },
         onSocialLogin: { _ in },
         onTapSignUp: {}

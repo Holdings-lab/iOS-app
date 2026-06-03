@@ -30,9 +30,10 @@ final class AuthViewModel: ObservableObject {
             return nil
         }
 
+        let existingAccount = registeredAccount(for: normalizedEmail)
+
         do {
             let loginSession = try await authRepository.login(email: normalizedEmail, password: password)
-            let existingAccount = registeredAccount(for: loginSession.email)
 
             return AppUserSession(
                 userId: loginSession.userId,
