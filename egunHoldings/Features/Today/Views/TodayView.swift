@@ -158,11 +158,7 @@ struct TodayView: View {
     }
 
     private func openNotifications() {
-        if let payload = notificationCenter.latestUnreadAnalysisPayload {
-            openAnalysisNotification(payload)
-        } else {
-            navigationPath.append(TodayRoute.notifications)
-        }
+        navigationPath.append(TodayRoute.notifications)
     }
 
     private func openAnalysisNotification(_ payload: PolSignalAnalysisPayload) {
@@ -277,14 +273,7 @@ private struct TodayHeaderSection: View {
     }
 
     private static var dateText: String {
-        let date = Date()
-        let calendar = Calendar(identifier: .gregorian)
-        let components = calendar.dateComponents([.month, .day, .weekday], from: date)
-        let weekdays = ["", "일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"]
-        let month = components.month ?? 1
-        let day = components.day ?? 1
-        let weekday = weekdays[safe: components.weekday ?? 0] ?? ""
-        return "\(month)월 \(day)일 \(weekday)"
+        "5월 28일 목요일"
     }
 }
 

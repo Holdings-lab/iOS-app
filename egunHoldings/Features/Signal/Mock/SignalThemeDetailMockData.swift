@@ -20,49 +20,51 @@ nonisolated enum SignalThemeDetailMockData {
         }
     }
 
-    // MARK: - State A — 빅테크 (FOMC 주간)
+    // MARK: - State A — 빅테크 QQQ (5/28 기준, 강한 상승 예상)
 
     static let bigTechDetail = SignalThemeDetail(
         theme: .bigTech,
-        verdict: .review,
+        verdict: .adjust,
         prediction: SignalPrediction(
-            returnPct: -0.8,
-            directionLabel: "하락 예상",
-            currentPriceText: "$456.20",
-            predictedPriceText: "$452.30",
-            priceDeltaText: "3.90"
+            returnPct: 3.4,
+            directionLabel: "강한 상승 예상",
+            currentPriceText: "$718.00",
+            predictedPriceText: "$742.42",
+            priceDeltaText: "+24.42",
+            asOfDateLabel: "5/28 (목) 기준",
+            targetDateLabel: "6/1 (월) 예상"
         ),
         signalCards: [
             SignalThemeDetailCard(
                 intensity: .veryHigh,
-                title: "금리 결정이 빅테크 방향을 가를 수 있어요",
-                description: "이번 주 FOMC 금리 발표가 예정돼 있어요.",
-                newsTitle: "Fed, 금리 결정 앞두고 불확실성 고조"
+                title: "AI 반도체 실적이 빅테크 상승을 확인시켜줬어요",
+                description: "NVIDIA가 분기 매출 $81.6B(YoY +85%)로 시장 예상을 크게 웃돌았어요. AI 데이터센터 수요가 폭발적으로 늘고 있어요.",
+                newsTitle: "Nvidia Smashes Records with $81.6B Revenue — AI Chip Demand Surges (Yahoo Finance)"
+            ),
+            SignalThemeDetailCard(
+                intensity: .veryHigh,
+                title: "미-이란 휴전 연장으로 지정학 리스크가 줄었어요",
+                description: "중동 분쟁 완화로 에너지 공급 불안이 해소되면서 위험자산 선호 심리가 빠르게 회복되고 있어요.",
+                newsTitle: "미·이란 협상단 휴전 연장 합의 가능성 고조 — 위험자산 반등 (Yahoo Finance)"
             ),
             SignalThemeDetailCard(
                 intensity: .high,
-                title: "부정적 뉴스가 평소보다 빠르게 쌓이고 있어요",
-                description: "최근 5일간 빅테크 관련 부정 뉴스가 평소의 2배예요.",
-                newsTitle: "관세 리스크에 애플·엔비디아 동반 하락"
-            ),
-            SignalThemeDetailCard(
-                intensity: .medium,
-                title: "시장은 버티는데 뉴스는 흔들리고 있어요",
-                description: "가격 흐름과 뉴스 분위기가 반대 방향이에요. 방향이 정해지면 빠르게 움직일 수 있어요.",
-                newsTitle: nil
+                title: "미중 관세 완화가 공급망 압박을 덜었어요",
+                description: "5/12 90일 관세 휴전으로 상호관세가 125%에서 10%로 급감했어요. 빅테크 공급망 비용 부담이 크게 줄었어요.",
+                newsTitle: "U.S.-China 90-day tariff truce — Nasdaq jumped 3.3% (Yahoo Finance)"
             )
         ],
         trendPoints: [
-            SignalTrendPoint(weekLabel: "3주 전", returnPct: 0.2, verdictKind: .watch),
-            SignalTrendPoint(weekLabel: "2주 전", returnPct: -0.1, verdictKind: .review),
-            SignalTrendPoint(weekLabel: "지난 주", returnPct: -0.5, verdictKind: .review),
-            SignalTrendPoint(weekLabel: "이번 주", returnPct: -0.8, verdictKind: .review, isCurrent: true)
+            SignalTrendPoint(weekLabel: "3주 전", returnPct: 0.4, verdictKind: .watch),
+            SignalTrendPoint(weekLabel: "2주 전", returnPct: 1.1, verdictKind: .watch),
+            SignalTrendPoint(weekLabel: "지난 주", returnPct: 2.0, verdictKind: .review),
+            SignalTrendPoint(weekLabel: "이번 주", returnPct: 3.4, verdictKind: .adjust, isCurrent: true)
         ],
         nextCheckpoints: [
             SignalCheckpoint(
-                dateLabel: "5/28 (수)",
-                title: "FOMC 금리 결정",
-                description: "결과에 따라 이번 신호가 바뀔 수 있어요."
+                dateLabel: "6/1 (월)",
+                title: "QQQ 예측 대상일",
+                description: "5거래일 후 목표가 $742.42 도달 여부를 확인하세요."
             )
         ]
     )
@@ -77,7 +79,9 @@ nonisolated enum SignalThemeDetailMockData {
             directionLabel: "강한 하락 예상",
             currentPriceText: "$184.50",
             predictedPriceText: "$180.62",
-            priceDeltaText: "3.88"
+            priceDeltaText: "3.88",
+            asOfDateLabel: "5/28 (목) 기준",
+            targetDateLabel: "6/1 (월) 예상"
         ),
         signalCards: [
             SignalThemeDetailCard(
@@ -124,7 +128,9 @@ nonisolated enum SignalThemeDetailMockData {
             directionLabel: "하락 예상",
             currentPriceText: "$38.10",
             predictedPriceText: "$37.95",
-            priceDeltaText: "0.15"
+            priceDeltaText: "0.15",
+            asOfDateLabel: "5/28 (목) 기준",
+            targetDateLabel: "6/1 (월) 예상"
         ),
         signalCards: [
             SignalThemeDetailCard(
@@ -159,7 +165,9 @@ nonisolated enum SignalThemeDetailMockData {
             directionLabel: "횡보 예상",
             currentPriceText: "$72.40",
             predictedPriceText: "$72.47",
-            priceDeltaText: "+0.07"
+            priceDeltaText: "+0.07",
+            asOfDateLabel: "5/28 (목) 기준",
+            targetDateLabel: "6/1 (월) 예상"
         ),
         signalCards: [],   // 빈 상태 — UI에서 "이번 주는 조용한 한 주예요" 표시
         trendPoints: [

@@ -79,9 +79,16 @@ final class AppNotificationCenter: ObservableObject {
         notifications.sorted { $0.occurredAt > $1.occurredAt }
     }
 
+    /// 시연 기준 시각 — 2026-05-28 09:15 KST 고정.
+    static let demoNow: Date = {
+        var c = DateComponents()
+        c.year = 2026; c.month = 5; c.day = 28; c.hour = 9; c.minute = 15
+        return Calendar(identifier: .gregorian).date(from: c) ?? Date()
+    }()
+
     private init(center: UNUserNotificationCenter = .current()) {
         self.center = center
-        notifications = Self.makeSeedNotifications()
+        notifications = Self.makeSeedNotifications(now: Self.demoNow)
 
         Task {
             await refreshAuthorizationStatus()
@@ -226,12 +233,29 @@ final class AppNotificationCenter: ObservableObject {
                 relatedTitle: "TIGER 국채3년, 달러 예금",
                 isRead: false
             ),
+            // 미-이란 휴전 연장 협상 뉴스 — 5/27(수) 저녁 발생
+            AppNotificationItem(
+                id: "news-iran-ceasefire",
+                kind: .news,
+                title: "미-이란 휴전 연장 협상 타결 가능성 고조",
+                message: "지정학 리스크 완화. 빅테크·반도체 섹터 5거래일 내 상승 여지.",
+                occurredAt: date(minutesAgo: 90),
+                relatedTitle: "빅테크 (QQQ), 반도체",
+                isRead: false,
+                detailBody: "미국과 이란 협상단이 현재의 휴전을 연장하는 방향으로 협의 중인 것으로 알려졌습니다.\n\n지난 2월 말 발발한 중동 분쟁이 약 90일 만에 완화 국면에 접어들면서, 글로벌 에너지 공급망 불안이 해소되고 위험자산 선호 심리가 빠르게 회복되고 있습니다.\n\nNVIDIA의 어닝 서프라이즈(5/20, 매출 $81.6B · YoY +85%)와 5/12 미중 90일 관세 휴전에 이어, 이번 지정학 리스크 완화까지 맞물리면서 빅테크·반도체 섹터에 복합 상승 요인이 형성되고 있습니다.",
+                relatedSectors: ["빅테크 (QQQ)", "반도체"],
+                impactBullets: [
+                    "지정학 리스크 완화 → QQQ 등 빅테크 위험자산 매수 심리 개선",
+                    "에너지 공급 안정 → AI 데이터센터 운영비용 압박 감소",
+                    "NVIDIA 어닝 서프라이즈·미중 관세 완화와 맞물려 5거래일 내 급등 여지"
+                ]
+            ),
             AppNotificationItem(
                 id: "volatility-soxx",
                 kind: .volatility,
                 title: "반도체 ETF 변동성 확대",
                 message: "SOXX와 삼성전자 관련 변동성이 높아져 보유 비중 점검이 필요합니다.",
-                occurredAt: date(minutesAgo: 74),
+                occurredAt: date(minutesAgo: 124),
                 relatedTitle: "SOXX, 삼성전자",
                 isRead: false
             ),

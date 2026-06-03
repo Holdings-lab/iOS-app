@@ -33,6 +33,10 @@ struct SignalPrediction {
     let predictedPriceText: String
     /// 가격 변동 절대값 (괄호 안 표시용). 예: "3.90" or "+0.07"
     let priceDeltaText: String
+    /// 예측 기준일 표시. 예: "5/28 (목) 기준"
+    let asOfDateLabel: String
+    /// 예측 대상일 표시. 예: "6/1 (월) 예상"
+    let targetDateLabel: String
 
     enum Direction {
         case up, down, flat

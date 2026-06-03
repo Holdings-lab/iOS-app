@@ -68,7 +68,7 @@ struct SignalThemeDetailView: View {
 
             Spacer(minLength: 0)
 
-            Text("이번 주 기준")
+            Text(detail.prediction.asOfDateLabel)
                 .font(.pretendard(11, weight: .medium))
                 .foregroundStyle(PSColor.textFaint)
                 .padding(.horizontal, 10)
@@ -145,7 +145,7 @@ private struct PredictionSummaryCard: View {
                 .frame(height: 1)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("5거래일 후")
+                Text("5거래일 후 · \(prediction.targetDateLabel)")
                     .font(.pretendard(12, weight: .medium))
                     .foregroundStyle(PSColor.textFaint)
 

@@ -274,17 +274,17 @@ nonisolated enum PolSignalFlowMockData {
     // MARK: - Today Top 3 Theme Signals
 
     static let todayThemeSignals: [PortfolioThemeSignal] = [
-        // QQQ — 빅테크 — fall+cluster → review(조심하세요)
+        // QQQ — 빅테크 — NVIDIA 어닝·이란 휴전·미중 관세 완화 → adjust(대응하세요)
         PortfolioThemeSignal(
             id: UUID(),
             theme: .bigTech,
             myExposurePercent: 22,
-            verdictKind: .review,
+            verdictKind: .adjust,
             prescription: TodayDecisionPrescription(
-                summary: "빅테크 주식들이 이번 주 출렁일 가능성이 있어요. FOMC 발언 방향에 따라 달라질 수 있는 시점이에요.",
-                action: "빅테크 비중을 점검하세요",
+                summary: "NVIDIA 어닝 서프라이즈, 미중 관세 완화, 이란 휴전 연장 협상이 맞물리면서 빅테크 상승 여지가 높아요. 5거래일 내 QQQ +3.4% 예상.",
+                action: "빅테크 비중을 늘리세요",
                 nowPercent: "22%",
-                goalLabel: "권장 18%",
+                goalLabel: "목표 26%",
                 narrative: nil
             ),
             nextEventLabel: nil,
