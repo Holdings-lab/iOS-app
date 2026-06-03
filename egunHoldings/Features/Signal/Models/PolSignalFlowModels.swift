@@ -156,6 +156,41 @@ struct PolSignalPolicyReading: Identifiable, Hashable {
     let typicalFlow: [String]
     let readMinutes: Int
     let relevantKeywords: [String]
+    let sourceBadge: String
+    let tldr: String
+    let marketDirection: String
+
+    nonisolated init(
+        id: Int,
+        dDay: String,
+        institution: String,
+        title: String,
+        keywords: [String],
+        readingLens: String,
+        lensApplication: String,
+        whatHappened: String,
+        typicalFlow: [String],
+        readMinutes: Int,
+        relevantKeywords: [String],
+        sourceBadge: String = "",
+        tldr: String = "",
+        marketDirection: String = ""
+    ) {
+        self.id = id
+        self.dDay = dDay
+        self.institution = institution
+        self.title = title
+        self.keywords = keywords
+        self.readingLens = readingLens
+        self.lensApplication = lensApplication
+        self.whatHappened = whatHappened
+        self.typicalFlow = typicalFlow
+        self.readMinutes = readMinutes
+        self.relevantKeywords = relevantKeywords
+        self.sourceBadge = sourceBadge
+        self.tldr = tldr
+        self.marketDirection = marketDirection
+    }
 }
 
 struct PolSignalAnalysisPayload: Identifiable, Hashable {

@@ -582,6 +582,14 @@ struct PolicyReadCard: View {
 
             lensTag
 
+            if !event.marketDirection.isEmpty {
+                marketDirectionTag
+            }
+
+            if !event.tldr.isEmpty {
+                tldrBox
+            }
+
             PolSignalDashedRule()
                 .stroke(PSColor.Reader.border, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
                 .frame(height: 1)
@@ -621,6 +629,15 @@ struct PolicyReadCard: View {
                 PolSignalReaderKeywordChip(text: "#\(keyword)")
             }
 
+            if !event.sourceBadge.isEmpty {
+                Text(event.sourceBadge)
+                    .font(.pretendard(11, weight: .semibold, relativeTo: .caption))
+                    .foregroundStyle(PSColor.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(PSColor.surfaceAlt, in: Capsule(style: .continuous))
+            }
+
             Text("· \(event.institution)")
                 .font(.pretendard(12, weight: .medium, relativeTo: .caption))
                 .foregroundStyle(PSColor.textSecondary)
@@ -647,6 +664,32 @@ struct PolicyReadCard: View {
             Capsule(style: .continuous)
                 .stroke(PSColor.Reader.lensBorder, lineWidth: 1)
         }
+    }
+
+    private var marketDirectionTag: some View {
+        Text(event.marketDirection)
+            .font(.pretendard(12, weight: .bold, relativeTo: .caption))
+            .foregroundStyle(PSColor.success)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(PSColor.success.opacity(0.10), in: Capsule(style: .continuous))
+    }
+
+    private var tldrBox: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text("쉽게 말하면")
+                .font(.pretendard(11, weight: .bold, relativeTo: .caption))
+                .foregroundStyle(PSColor.primary)
+            Text(event.tldr)
+                .font(.pretendard(13, weight: .regular, relativeTo: .footnote))
+                .foregroundStyle(PSColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .background(
+            PSColor.surfaceAlt,
+            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+        )
     }
 }
 

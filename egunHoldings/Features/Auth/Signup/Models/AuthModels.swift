@@ -189,7 +189,9 @@ extension InterestKeywordCategory {
                 InterestKeyword(id: "usd_krw", tag: "#달러환율", categoryID: "rates_macro"),
                 InterestKeyword(id: "us_treasury", tag: "#미국채", categoryID: "rates_macro"),
                 InterestKeyword(id: "tlt", tag: "#TLT", categoryID: "rates_macro"),
-                InterestKeyword(id: "inflation", tag: "#인플레이션", categoryID: "rates_macro")
+                InterestKeyword(id: "inflation", tag: "#인플레이션", categoryID: "rates_macro"),
+                InterestKeyword(id: "us_china_trade", tag: "#미중무역", categoryID: "rates_macro"),
+                InterestKeyword(id: "geopolitics", tag: "#지정학", categoryID: "rates_macro")
             ]
         ),
         InterestKeywordCategory(
