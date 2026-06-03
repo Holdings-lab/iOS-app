@@ -9,6 +9,7 @@ struct TodayView: View {
     @ObservedObject private var exchangeRateViewModel: ExchangeRateViewModel
     @State private var navigationPath = NavigationPath()
     @State private var isPushSlotDismissed = false
+    @State private var presentedNotificationDetail: AppNotificationItem?
     private let userId: Int64?
     private let onAssetTabRequested: () -> Void
     private let onSignalRouteRequested: (PolSignalRoute) -> Void
@@ -49,14 +50,18 @@ struct TodayView: View {
                         TodayHeaderSection(
                             name: "투자자",
                             hasUnreadNotification: notificationCenter.hasUnreadNotifications,
-                            onNotifications: openNotifications,
+                            onNotifications: {
+                                openTodayNotification()
+                            },
                             onSettings: { navigationPath.append(TodayRoute.settings) }
                         )
 
                         if let item = notificationCenter.todayPreviewNotification, !isPushSlotDismissed {
                             TodayUnreadNotificationCard(
                                 item: item,
-                                onOpen: openNotifications,
+                                onOpen: {
+                                    openTodayNotification(item)
+                                },
                                 onDismiss: {
                                     isPushSlotDismissed = true
                                 }
@@ -141,6 +146,11 @@ struct TodayView: View {
                     .presentationBackground(.clear)
                     .presentationCornerRadius(KDXRadius.bottomSheet)
             }
+            .sheet(item: $presentedNotificationDetail) { item in
+                NewsDetailSheet(item: item)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
         }
     }
 
@@ -157,6 +167,23 @@ struct TodayView: View {
 
     private func openNotifications() {
         navigationPath.append(TodayRoute.notifications)
+    }
+
+    private func openTodayNotification(_ item: AppNotificationItem? = nil) {
+        guard let item = item ?? notificationCenter.todayPreviewNotification else {
+            openNotifications()
+            return
+        }
+
+        notificationCenter.markAsRead(item)
+
+        if item.hasDetailContent {
+            presentedNotificationDetail = item
+        } else if let payload = item.analysisPayload {
+            openAnalysisNotification(payload)
+        } else {
+            openNotifications()
+        }
     }
 
     private func openAnalysisNotification(_ payload: PolSignalAnalysisPayload) {
@@ -333,7 +360,7 @@ private struct TodayUnreadNotificationCard: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("받은편지함에서 알림 보기")
+                .accessibilityLabel("알림 상세 보기")
 
                 Button(action: onDismiss) {
                     Image(systemName: "xmark")
