@@ -91,7 +91,7 @@ struct NotificationInboxView: View {
                 ForEach(group.items) { item in
                     NotificationInboxRow(item: item) {
                         notificationCenter.markAsRead(item)
-                        if item.detailBody != nil {
+                        if item.hasDetailContent {
                             detailItem = item
                         } else if let payload = item.analysisPayload {
                             onAnalysisNotification(payload)
@@ -155,11 +155,12 @@ private struct NotificationInboxRow: View {
                         Text(item.message)
                             .font(.pretendard(13, weight: .regular))
                             .foregroundStyle(Color.textTertiary)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                             .lineSpacing(2)
                     }
 
-                    if let relatedTitle = item.relatedTitle {
+                    if let relatedTitle = item.relatedTitle, !item.hasDetailContent {
                         Text(relatedTitle)
                             .font(.pretendard(11, weight: .semibold))
                             .foregroundStyle(Color.textSecondary)
@@ -197,6 +198,7 @@ private struct NotificationInboxRow: View {
 struct NewsDetailSheet: View {
     let item: AppNotificationItem
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         VStack(spacing: 0) {
@@ -209,6 +211,10 @@ struct NewsDetailSheet: View {
                     titleBlock
                     Divider().background(Color.hairline)
 
+                    if let sectors = item.relatedSectors, !sectors.isEmpty {
+                        sectorSection(sectors)
+                    }
+
                     if let body = item.detailBody {
                         Text(body)
                             .font(.pretendard(15, weight: .regular))
@@ -217,12 +223,12 @@ struct NewsDetailSheet: View {
                             .lineSpacing(4)
                     }
 
-                    if let sectors = item.relatedSectors, !sectors.isEmpty {
-                        sectorSection(sectors)
-                    }
-
                     if let bullets = item.impactBullets, !bullets.isEmpty {
                         impactSection(bullets)
+                    }
+
+                    if !item.sourceReferences.isEmpty {
+                        sourceSection(item.sourceReferences)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -238,7 +244,7 @@ struct NewsDetailSheet: View {
     private var sheetHeader: some View {
         HStack {
             Spacer(minLength: 0)
-            Text("뉴스 상세")
+            Text(item.kind == .policy ? "정책 상세" : "뉴스 상세")
                 .font(.pretendard(16, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
             Spacer(minLength: 0)
@@ -344,6 +350,68 @@ struct NewsDetailSheet: View {
         .overlay {
             RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
                 .stroke(Color.success.opacity(0.20), lineWidth: 1)
+        }
+    }
+
+    private func sourceSection(_ sources: [AppNotificationSource]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "link")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.electricBlue)
+                Text("원문 출처")
+                    .font(.pretendard(13, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+            }
+
+            VStack(spacing: 10) {
+                ForEach(sources) { source in
+                    Button {
+                        if let url = source.url {
+                            openURL(url)
+                        }
+                    } label: {
+                        HStack(alignment: .center, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(source.title)
+                                    .font(.pretendard(14, weight: .bold))
+                                    .foregroundStyle(Color.textPrimary)
+                                    .fixedSize(horizontal: false, vertical: true)
+
+                                Text(source.subtitle)
+                                    .font(.pretendard(12, weight: .medium))
+                                    .foregroundStyle(Color.textTertiary)
+                                    .fixedSize(horizontal: false, vertical: true)
+
+                                if let host = source.url?.host {
+                                    Text(host)
+                                        .font(.pretendard(11, weight: .semibold))
+                                        .foregroundStyle(Color.electricBlue)
+                                        .lineLimit(1)
+                                }
+                            }
+
+                            Spacer(minLength: 8)
+
+                            Image(systemName: source.url == nil ? "doc.text" : "arrow.up.forward")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(source.url == nil ? Color.textDisabled : Color.electricBlue)
+                        }
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.subtle.opacity(0.72), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(source.url == nil)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.elevated, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
+                .stroke(Color.hairline, lineWidth: 1)
         }
     }
 

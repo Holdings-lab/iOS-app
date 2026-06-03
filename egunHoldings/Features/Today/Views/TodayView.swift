@@ -48,17 +48,15 @@ struct TodayView: View {
                     LazyVStack(alignment: .leading, spacing: 24) {
                         TodayHeaderSection(
                             name: "투자자",
-                            hasUnreadAnalysis: notificationCenter.latestUnreadAnalysisPayload != nil,
+                            hasUnreadNotification: notificationCenter.hasUnreadNotifications,
                             onNotifications: openNotifications,
                             onSettings: { navigationPath.append(TodayRoute.settings) }
                         )
 
-                        if let payload = notificationCenter.latestUnreadAnalysisPayload, !isPushSlotDismissed {
-                            AnalysisPushSlotCard(
-                                event: PolSignalFlowMockData.event(id: payload.eventId),
-                                onOpen: {
-                                    openAnalysisNotification(payload)
-                                },
+                        if let item = notificationCenter.todayPreviewNotification, !isPushSlotDismissed {
+                            TodayUnreadNotificationCard(
+                                item: item,
+                                onOpen: openNotifications,
                                 onDismiss: {
                                     isPushSlotDismissed = true
                                 }
@@ -230,7 +228,7 @@ struct TodayView: View {
 
 private struct TodayHeaderSection: View {
     let name: String
-    let hasUnreadAnalysis: Bool
+    let hasUnreadNotification: Bool
     let onNotifications: () -> Void
     let onSettings: () -> Void
 
@@ -251,7 +249,7 @@ private struct TodayHeaderSection: View {
                 HeaderIconButton(
                     iconName: "bell",
                     accessibilityLabel: "알림",
-                    showsUnreadBadge: hasUnreadAnalysis,
+                    showsUnreadBadge: hasUnreadNotification,
                     action: onNotifications
                 )
 
@@ -298,8 +296,8 @@ private struct HeaderIconButton: View {
     }
 }
 
-private struct AnalysisPushSlotCard: View {
-    let event: PolSignalEvent
+private struct TodayUnreadNotificationCard: View {
+    let item: AppNotificationItem
     let onOpen: () -> Void
     let onDismiss: () -> Void
 
@@ -308,24 +306,24 @@ private struct AnalysisPushSlotCard: View {
             HStack(alignment: .top, spacing: 12) {
                 Button(action: onOpen) {
                     HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "bell.badge.fill")
+                        Image(systemName: item.kind.iconName)
                             .symbolRenderingMode(.palette)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(PSColor.textPrimary, PSColor.danger)
+                            .foregroundStyle(item.kind.tintColor, PSColor.danger)
                             .frame(width: 36, height: 36)
-                            .background(PSColor.primarySoft, in: Circle())
+                            .background(item.kind.tintColor.opacity(0.12), in: Circle())
 
                         VStack(alignment: .leading, spacing: 5) {
-                            Text("푸시 알림")
+                            Text(item.kind.title)
                                 .font(.pretendard(12, weight: .semibold, relativeTo: .caption))
-                                .foregroundStyle(PSColor.primary)
+                                .foregroundStyle(item.kind.tintColor)
 
-                            Text("\(event.title) 분석 완료")
+                            Text(item.title)
                                 .font(.pretendard(15, weight: .bold, relativeTo: .body))
                                 .foregroundStyle(PSColor.textPrimary)
                                 .fixedSize(horizontal: false, vertical: true)
 
-                            Text("\(event.exposureSummary) 보유 중인 당신, 확인해보세요.")
+                            Text(item.message)
                                 .font(.pretendard(13, weight: .regular, relativeTo: .footnote))
                                 .foregroundStyle(PSColor.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -335,6 +333,7 @@ private struct AnalysisPushSlotCard: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("받은편지함에서 알림 보기")
 
                 Button(action: onDismiss) {
                     Image(systemName: "xmark")
@@ -343,7 +342,7 @@ private struct AnalysisPushSlotCard: View {
                         .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("푸시 알림 닫기")
+                .accessibilityLabel("알림 카드 닫기")
             }
         }
     }

@@ -28,6 +28,12 @@ final class AppNotificationCenter: ObservableObject {
             .analysisPayload
     }
 
+    var todayPreviewNotification: AppNotificationItem? {
+        sortedNotifications.first { !$0.isRead && $0.kind == .news && $0.hasDetailContent }
+            ?? sortedNotifications.first { !$0.isRead && $0.hasDetailContent }
+            ?? sortedNotifications.first { !$0.isRead }
+    }
+
     var authorizationStatusText: String {
         switch authorizationStatus {
         case .authorized, .provisional, .ephemeral:
@@ -231,7 +237,18 @@ final class AppNotificationCenter: ObservableObject {
                 message: "기준금리 인하가 발표되어 채권 ETF 영향도를 다시 계산했습니다.",
                 occurredAt: date(minutesAgo: 18),
                 relatedTitle: "TIGER 국채3년, 달러 예금",
-                isRead: false
+                isRead: false,
+                detailBody: "한국은행 기준금리 결정 이후 채권형 ETF와 달러 예금의 금리 민감도를 다시 점검했습니다.\n\n금리 인하 발표는 단기 채권 가격과 예금 금리 재조정 속도에 영향을 줄 수 있어, 보유 중인 안전자산의 역할과 기대 수익률을 함께 확인해야 합니다.",
+                sourceReferences: [
+                    AppNotificationSource(
+                        title: "한국은행 통화정책방향",
+                        subtitle: "정책 원문 · 기준금리 결정 발표"
+                    ),
+                    AppNotificationSource(
+                        title: "한국은행 기자간담회",
+                        subtitle: "정책 배경 설명 · 채권시장 참고자료"
+                    )
+                ]
             ),
             // 미-이란 휴전 연장 협상 뉴스 — 5/27(수) 저녁 발생
             AppNotificationItem(
@@ -248,6 +265,21 @@ final class AppNotificationCenter: ObservableObject {
                     "지정학 리스크 완화 → QQQ 등 빅테크 위험자산 매수 심리 개선",
                     "에너지 공급 안정 → AI 데이터센터 운영비용 압박 감소",
                     "NVIDIA 어닝 서프라이즈·미중 관세 완화와 맞물려 5거래일 내 급등 여지"
+                ],
+                sourceReferences: [
+                    AppNotificationSource(
+                        title: "미-이란 휴전 연장 협상 브리핑",
+                        subtitle: "뉴스 원문 · 2026.05.28 07:45"
+                    ),
+                    AppNotificationSource(
+                        title: "미중 90일 관세 휴전 발표",
+                        subtitle: "정책 원문 · 2026.05.12"
+                    ),
+                    AppNotificationSource(
+                        title: "NVIDIA FY2026 Q1 Results",
+                        subtitle: "기업 실적 원문 · Investor Relations",
+                        url: URL(string: "https://investor.nvidia.com/")
+                    )
                 ]
             ),
             AppNotificationItem(
