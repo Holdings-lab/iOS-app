@@ -11,6 +11,7 @@ final class AppNotificationCenter: ObservableObject {
     @Published private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
     @Published private(set) var deviceToken: String?
     @Published private(set) var remoteRegistrationError: String?
+    @Published private(set) var pendingPushRoute: PolSignalRoute?
 
     private let center: UNUserNotificationCenter
 
@@ -128,7 +129,11 @@ final class AppNotificationCenter: ObservableObject {
     }
 
     func markAsRead(_ item: AppNotificationItem) {
-        guard let index = notifications.firstIndex(where: { $0.id == item.id }) else { return }
+        markAsRead(notificationId: item.id)
+    }
+
+    func markAsRead(notificationId: String) {
+        guard let index = notifications.firstIndex(where: { $0.id == notificationId }) else { return }
         notifications[index].isRead = true
     }
 
@@ -154,11 +159,29 @@ final class AppNotificationCenter: ObservableObject {
         notifications.sort { $0.occurredAt > $1.occurredAt }
     }
 
+    func handlePushNotificationOpen(userInfo: [AnyHashable: Any]) {
+        if let notificationId = Self.stringValue(userInfo["notificationId"]) {
+            markAsRead(notificationId: notificationId)
+        }
+
+        pendingPushRoute = Self.pushRoute(from: userInfo)
+    }
+
+    func consumePendingPushRoute() -> PolSignalRoute? {
+        defer { pendingPushRoute = nil }
+        return pendingPushRoute
+    }
+
+    func signalRoute(for payload: PolSignalAnalysisPayload) -> PolSignalRoute {
+        Self.route(forEventId: payload.eventId)
+    }
+
     func addCompletedAnalysisNotification(payload: PolSignalAnalysisPayload, event: PolSignalEvent) {
+        let ticker = event.exposures.first?.ticker ?? event.category
         let item = AppNotificationItem(
             kind: .signalAnalysis,
-            title: "\(event.title) 분석 완료",
-            message: "\(event.exposureSummary) 보유 중인 당신, 확인해보세요.",
+            title: "\(ticker) 변동 가능성 확인",
+            message: "보유한 \(ticker)의 변동 가능성이 커졌어요. 이유를 확인해보세요.",
             occurredAt: Date(),
             relatedTitle: event.title,
             analysisPayload: payload,
@@ -179,11 +202,15 @@ final class AppNotificationCenter: ObservableObject {
         }
 
         let item = AppNotificationItem(
-            kind: .volatility,
-            title: "자산 변동성 위험 확인",
-            message: "보유 자산 중 반도체 노출 종목 변동성이 평소보다 높아졌습니다.",
+            kind: .signalAnalysis,
+            title: "SOXX 변동 가능성 확인",
+            message: "보유한 SOXX의 변동 가능성이 커졌어요. 이유를 확인해보세요.",
             occurredAt: Date(),
-            relatedTitle: "SOXX, 삼성전자",
+            relatedTitle: "반도체",
+            analysisPayload: PolSignalAnalysisPayload(
+                eventId: 102,
+                analysisVersion: "test-notification"
+            ),
             isRead: false
         )
         addInAppNotification(item)
@@ -199,6 +226,10 @@ final class AppNotificationCenter: ObservableObject {
         if let payload = item.analysisPayload {
             userInfo["eventId"] = payload.eventId
             userInfo["analysisVersion"] = payload.analysisVersion
+            if let theme = Self.theme(forEventId: payload.eventId) {
+                userInfo["route"] = "signalThemeDetail"
+                userInfo["theme"] = theme.tickerId
+            }
         }
         content.userInfo = userInfo
 
@@ -254,5 +285,98 @@ final class AppNotificationCenter: ObservableObject {
             )
         ]
         .sorted { $0.occurredAt > $1.occurredAt }
+    }
+
+    private static func pushRoute(from userInfo: [AnyHashable: Any]) -> PolSignalRoute? {
+        if let theme = theme(from: userInfo) {
+            return .themeDetail(theme)
+        }
+
+        guard let eventId = intValue(userInfo["eventId"]) else {
+            return nil
+        }
+
+        if let theme = theme(forEventId: eventId) {
+            return route(for: theme)
+        }
+
+        return .detail(eventId)
+    }
+
+    private static func route(forEventId eventId: Int) -> PolSignalRoute {
+        if let theme = theme(forEventId: eventId) {
+            return route(for: theme)
+        }
+
+        return .detail(eventId)
+    }
+
+    private static func route(for theme: PortfolioThemeSignal.Theme) -> PolSignalRoute {
+        .themeDetail(theme)
+    }
+
+    private static func theme(from userInfo: [AnyHashable: Any]) -> PortfolioThemeSignal.Theme? {
+        let keys = ["theme", "ticker", "symbol", "assetTicker", "routeTheme"]
+        for key in keys {
+            if let theme = theme(from: userInfo[key]) {
+                return theme
+            }
+        }
+        return nil
+    }
+
+    private static func theme(forEventId eventId: Int) -> PortfolioThemeSignal.Theme? {
+        PolSignalFlowMockData.todayThemeSignals
+            .first { $0.relatedEventId == eventId }?
+            .theme
+    }
+
+    private static func theme(from value: Any?) -> PortfolioThemeSignal.Theme? {
+        guard let raw = stringValue(value) else { return nil }
+        let normalized = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: " ", with: "")
+            .uppercased()
+
+        switch normalized {
+        case "QQQ", "BIGTECH", "BIGTECHAI", "빅테크", "빅테크AI":
+            return .bigTech
+        case "SOXX", "SMH", "SEMICONDUCTOR", "SEMICONDUCTORS", "CHIP", "CHIPS", "반도체":
+            return .semiconductor
+        case "XLF", "FINANCIALS", "FINANCE", "금융":
+            return .financials
+        case "ICLN", "GREENENERGY", "CLEANENERGY", "ENERGY", "친환경":
+            return .greenEnergy
+        default:
+            return nil
+        }
+    }
+
+    private static func intValue(_ value: Any?) -> Int? {
+        if let value = value as? Int {
+            return value
+        }
+        if let value = value as? Int64 {
+            return Int(value)
+        }
+        if let value = value as? Double {
+            return Int(value)
+        }
+        if let value = value as? String {
+            return Int(value)
+        }
+        return nil
+    }
+
+    private static func stringValue(_ value: Any?) -> String? {
+        if let value = value as? String {
+            return value
+        }
+        if let value = value as? CustomStringConvertible {
+            return value.description
+        }
+        return nil
     }
 }

@@ -15,7 +15,7 @@ struct RootTabView: View {
     @State private var signalRoute: PolSignalRoute?
     @State private var signalViewIdentity = UUID()
     @StateObject private var exchangeRateViewModel = ExchangeRateViewModel()
-    @StateObject private var pushAnalysisCoordinator = PushAnalysisCoordinator()
+    @ObservedObject private var notificationCenter = AppNotificationCenter.shared
 
     init(
         userId: Int64? = nil,
@@ -44,7 +44,7 @@ struct RootTabView: View {
                     openSignal(route)
                 },
                 onAnalysisNotificationRequested: { payload in
-                    pushAnalysisCoordinator.present(payload)
+                    openSignal(notificationCenter.signalRoute(for: payload))
                 }
             )
             .id(portfolioSnapshot)
@@ -78,18 +78,11 @@ struct RootTabView: View {
         }
         .tint(Color.brand)
         .preferredColorScheme(.light)
-        .onReceive(NotificationCenter.default.publisher(for: .polSignalAnalysisPayloadReceived)) { notification in
-            guard let payload = notification.object as? PolSignalAnalysisPayload else { return }
-            pushAnalysisCoordinator.present(payload)
+        .onAppear {
+            consumePendingPushRoute()
         }
-        .sheet(item: $pushAnalysisCoordinator.presentedAnalysis) { payload in
-            PolSignalAnalysisSheet(payload: payload) { eventId in
-                pushAnalysisCoordinator.dismiss()
-                openSignal(.detail(eventId))
-            }
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(PSColor.surface)
+        .onChange(of: notificationCenter.pendingPushRoute) { _, _ in
+            consumePendingPushRoute()
         }
     }
 
@@ -97,6 +90,11 @@ struct RootTabView: View {
         signalRoute = route
         signalViewIdentity = UUID()
         selectedTab = .signal
+    }
+
+    private func consumePendingPushRoute() {
+        guard let route = notificationCenter.consumePendingPushRoute() else { return }
+        openSignal(route)
     }
 
     private func setupTabBarAppearance() {

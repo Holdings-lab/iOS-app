@@ -1,4 +1,3 @@
-import Combine
 import SwiftUI
 
 enum PolSignalRoute: Hashable {
@@ -172,23 +171,6 @@ struct PolSignalAnalysisPayload: Identifiable, Hashable {
 
     var id: String {
         "\(eventId)-\(analysisVersion)"
-    }
-}
-
-extension Notification.Name {
-    static let polSignalAnalysisPayloadReceived = Notification.Name("PolSignalAnalysisPayloadReceived")
-}
-
-@MainActor
-final class PushAnalysisCoordinator: ObservableObject {
-    @Published var presentedAnalysis: PolSignalAnalysisPayload?
-
-    func present(_ payload: PolSignalAnalysisPayload) {
-        presentedAnalysis = payload
-    }
-
-    func dismiss() {
-        presentedAnalysis = nil
     }
 }
 
