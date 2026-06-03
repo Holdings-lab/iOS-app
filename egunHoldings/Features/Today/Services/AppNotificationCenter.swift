@@ -220,36 +220,6 @@ final class AppNotificationCenter: ObservableObject {
         }
 
         return [
-            AppNotificationItem(
-                id: "analysis-usd-103",
-                kind: .signalAnalysis,
-                title: "원/달러 1,490원 돌파 분석 완료",
-                message: "달러 자산 15% 보유 중인 당신, 확인해보세요.",
-                occurredAt: date(minutesAgo: 4),
-                relatedTitle: "eventId 103 · analysisVersion \(PolSignalFlowMockData.latestAnalysisPayload.analysisVersion)",
-                analysisPayload: PolSignalFlowMockData.latestAnalysisPayload,
-                isRead: false
-            ),
-            AppNotificationItem(
-                id: "policy-rate-cut",
-                kind: .policy,
-                title: "한은 기준금리 결정 업데이트",
-                message: "기준금리 인하가 발표되어 채권 ETF 영향도를 다시 계산했습니다.",
-                occurredAt: date(minutesAgo: 18),
-                relatedTitle: "TIGER 국채3년, 달러 예금",
-                isRead: false,
-                detailBody: "한국은행 기준금리 결정 이후 채권형 ETF와 달러 예금의 금리 민감도를 다시 점검했습니다.\n\n금리 인하 발표는 단기 채권 가격과 예금 금리 재조정 속도에 영향을 줄 수 있어, 보유 중인 안전자산의 역할과 기대 수익률을 함께 확인해야 합니다.",
-                sourceReferences: [
-                    AppNotificationSource(
-                        title: "한국은행 통화정책방향",
-                        subtitle: "정책 원문 · 기준금리 결정 발표"
-                    ),
-                    AppNotificationSource(
-                        title: "한국은행 기자간담회",
-                        subtitle: "정책 배경 설명 · 채권시장 참고자료"
-                    )
-                ]
-            ),
             // 미-이란 휴전 연장 협상 뉴스 — 5/27(수) 저녁 발생
             AppNotificationItem(
                 id: "news-iran-ceasefire",
@@ -281,33 +251,6 @@ final class AppNotificationCenter: ObservableObject {
                         url: URL(string: "https://investor.nvidia.com/")
                     )
                 ]
-            ),
-            AppNotificationItem(
-                id: "volatility-soxx",
-                kind: .volatility,
-                title: "반도체 ETF 변동성 확대",
-                message: "SOXX와 삼성전자 관련 변동성이 높아져 보유 비중 점검이 필요합니다.",
-                occurredAt: date(minutesAgo: 124),
-                relatedTitle: "SOXX, 삼성전자",
-                isRead: false
-            ),
-            AppNotificationItem(
-                id: "news-chips",
-                kind: .news,
-                title: "미국 반도체 보조금 기사 업데이트",
-                message: "보조금 2차 발표 전망 기사가 추가되어 관련 정책 브리핑이 갱신됐습니다.",
-                occurredAt: date(minutesAgo: 210),
-                relatedTitle: "미국 반도체 보조금 2차 발표",
-                isRead: true
-            ),
-            AppNotificationItem(
-                id: "asset-cash",
-                kind: .asset,
-                title: "현금 비중 변화 확인",
-                message: "오늘 자산 변동으로 현금 방어 비중이 목표 범위 안에 있는지 확인했습니다.",
-                occurredAt: date(minutesAgo: 1_430),
-                relatedTitle: "내 총자산",
-                isRead: true
             )
         ]
         .sorted { $0.occurredAt > $1.occurredAt }
