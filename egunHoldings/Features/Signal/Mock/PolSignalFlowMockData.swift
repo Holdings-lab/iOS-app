@@ -220,96 +220,97 @@ nonisolated enum PolSignalFlowMockData {
     static let policyReadings: [PolSignalPolicyReading] = [
         PolSignalPolicyReading(
             id: 201,
-            date: "5/20 발표됨",
-            institution: "NVIDIA IR",
-            title: "NVIDIA Q1 FY2027 실적: 매출 $81.6B, YoY +85%",
-            keywords: ["엔비디아", "AI반도체", "빅테크"],
-            whatHappened: "NVIDIA가 분기 매출 $81.6B(전년 대비 +85%)를 발표했어요. 시장 예상보다 높은 데이터센터 매출이 확인되며 AI 인프라 수요가 계속 주목받고 있어요.",
+            date: "5/28 업데이트",
+            institution: "AP",
+            title: "미·이란, 60일 휴전 연장 잠정 합의",
+            keywords: ["지정학", "원유", "빅테크"],
+            whatHappened: "미국과 이란 협상단이 3개월째 이어진 전쟁의 휴전을 60일 더 연장하고 핵 프로그램 관련 새 협상을 시작하는 잠정 합의에 도달했다는 보도가 나왔어요. 최종 승인이 남아 있어 확정된 평화 합의는 아니지만, 에너지 공급 불안과 시장 심리를 함께 볼 수 있는 뉴스예요.",
             aiSummary: [
-                "AI 칩 매출이 크게 늘었어요",
-                "데이터센터 수요가 핵심이에요",
-                "빅테크 투자 흐름과 이어져요"
+                "휴전 연장안이 보도됐어요",
+                "원유 공급 불안과 연결돼요",
+                "위험자산 심리도 함께 봐요"
             ],
             keywordLinks: [
-                PolSignalPolicyKeywordLink(kw: "엔비디아", why: "실적 발표 주체라 선택한 키워드와 직접 연결돼요."),
-                PolSignalPolicyKeywordLink(kw: "AI반도체", why: "데이터센터용 GPU 수요가 기사 핵심이에요."),
-                PolSignalPolicyKeywordLink(kw: "빅테크", why: "대형 기술주의 AI 투자 흐름을 이해하는 배경 뉴스예요.")
+                PolSignalPolicyKeywordLink(kw: "지정학", why: "국가 간 휴전 협상과 중동 긴장이 기사 중심 소재예요."),
+                PolSignalPolicyKeywordLink(kw: "원유", why: "중동 정세는 유가와 에너지 공급 기사에 자주 연결돼요."),
+                PolSignalPolicyKeywordLink(kw: "빅테크", why: "지정학 리스크 완화는 성장주 투자심리와 함께 해석돼요.")
             ],
             followUps: [
-                "데이터센터 매출은 왜 중요할까요?",
-                "다음 분기 가이던스는 무엇을 뜻할까요?",
-                "AI 칩 공급 부족은 얼마나 이어질까요?"
+                "잠정 합의와 최종 합의는 무엇이 다를까요?",
+                "휴전 뉴스는 왜 유가와 같이 움직일까요?",
+                "원문에서 확인해야 할 조건은 무엇일까요?"
             ],
             readMinutes: 2
         ),
         PolSignalPolicyReading(
             id: 202,
-            date: "5/27 보도됨",
-            institution: "Yahoo Finance",
-            title: "미·이란 협상단 휴전 연장 합의 가능성 고조",
-            keywords: ["지정학", "원유"],
-            whatHappened: "미국과 이란 협상단이 현재의 휴전을 연장하는 방향으로 논의 중이라는 보도가 나왔어요. 중동 긴장과 에너지 공급 불안을 함께 이해할 때 참고할 뉴스예요.",
+            date: "5/28 08:30 EDT",
+            institution: "BEA",
+            title: "미국 1분기 GDP 2차 추정치 1.6%로 하향",
+            keywords: ["GDP", "금리", "QQQ"],
+            whatHappened: "미국 BEA가 2026년 1분기 실질 GDP 증가율 2차 추정치를 연율 1.6%로 발표했어요. 앞선 추정치보다 낮아진 수치라 성장 속도, 기업이익, 금리 기대를 함께 읽을 때 참고할 만한 거시경제 뉴스예요.",
             aiSummary: [
-                "휴전 연장 논의가 보도됐어요",
-                "에너지 공급 불안과 연결돼요",
-                "지정학 뉴스의 배경이에요"
+                "성장률 추정치가 낮아졌어요",
+                "기업이익과 같이 봐야 해요",
+                "금리 기대에 연결될 수 있어요"
             ],
             keywordLinks: [
-                PolSignalPolicyKeywordLink(kw: "지정학", why: "국가 간 협상과 중동 긴장이 기사 중심 소재예요."),
-                PolSignalPolicyKeywordLink(kw: "원유", why: "중동 정세는 원유 공급 불안과 자주 함께 다뤄져요.")
+                PolSignalPolicyKeywordLink(kw: "GDP", why: "성장률 수정치가 기사 핵심 숫자예요."),
+                PolSignalPolicyKeywordLink(kw: "금리", why: "성장 둔화 여부는 연준 정책 기대와 함께 읽혀요."),
+                PolSignalPolicyKeywordLink(kw: "QQQ", why: "성장주 ETF는 경기와 금리 해석에 민감하게 반응해요.")
             ],
             followUps: [
-                "휴전 연장은 어떤 절차로 확인될까요?",
-                "중동 뉴스는 왜 원유 기사와 같이 나올까요?",
-                "원문에서 봐야 할 표현은 무엇일까요?"
+                "2차 추정치는 왜 처음 발표와 다를까요?",
+                "GDP와 기업이익은 어떻게 연결될까요?",
+                "성장 둔화가 금리 기대에 주는 의미는 무엇일까요?"
             ],
             readMinutes: 2
         ),
         PolSignalPolicyReading(
             id: 203,
-            date: "5/12 발표됨",
-            institution: "USTR",
-            title: "미중 90일 관세 휴전: 상호관세 125% → 10% 급감",
-            keywords: ["미중무역", "빅테크", "AI반도체"],
-            whatHappened: "미국과 중국이 90일 동안 상호관세를 낮추기로 합의했어요. 기존 125%였던 관세가 10%로 낮아지며 공급망과 수입 비용 이슈가 다시 주목받고 있어요.",
+            date: "5/28 08:30 EDT",
+            institution: "BEA",
+            title: "4월 PCE 물가 0.4% 상승, 소비지출 0.5% 증가",
+            keywords: ["PCE", "금리인하", "소비"],
+            whatHappened: "BEA의 4월 개인소득·지출 자료에서 PCE 가격지수는 전월 대비 0.4% 올랐고, 개인소비지출은 0.5% 증가했어요. PCE는 연준이 자주 보는 물가 지표라 금리 전망을 이해할 때 같이 확인하는 뉴스예요.",
             aiSummary: [
-                "미중 관세가 90일 낮아졌어요",
-                "공급망 비용 이슈와 이어져요",
-                "협상 연장이 다음 쟁점이에요"
+                "PCE 물가가 다시 올랐어요",
+                "소비지출도 늘어났어요",
+                "연준 금리 판단과 이어져요"
             ],
             keywordLinks: [
-                PolSignalPolicyKeywordLink(kw: "미중무역", why: "관세 조정과 양국 협상이 기사 핵심이에요."),
-                PolSignalPolicyKeywordLink(kw: "빅테크", why: "글로벌 생산·판매망을 가진 대형 기술주와 연결돼요."),
-                PolSignalPolicyKeywordLink(kw: "AI반도체", why: "반도체 공급망 비용을 이해할 때 함께 보는 뉴스예요.")
+                PolSignalPolicyKeywordLink(kw: "PCE", why: "이번 기사에서 가장 중요한 물가 지표예요."),
+                PolSignalPolicyKeywordLink(kw: "금리인하", why: "물가 흐름은 연준의 인하 시점 기대와 연결돼요."),
+                PolSignalPolicyKeywordLink(kw: "소비", why: "소비지출 증가가 가계 수요를 보여주는 단서예요.")
             ],
             followUps: [
-                "90일 휴전 이후에는 무엇이 결정될까요?",
-                "상호관세는 일반 관세와 어떻게 다를까요?",
-                "공급망 뉴스는 어떤 기업에 자주 연결될까요?"
+                "PCE와 CPI는 무엇이 다를까요?",
+                "근원 PCE는 왜 따로 볼까요?",
+                "소비지출 증가는 물가에 어떤 의미일까요?"
             ],
             readMinutes: 3
         ),
         PolSignalPolicyReading(
             id: 204,
-            date: "6월 예정",
-            institution: "미 연준",
-            title: "연준, 2026년 금리 2회 인하 기대 유지",
-            keywords: ["FOMC", "금리인하", "QQQ"],
-            whatHappened: "시장은 연준이 2026년 안에 기준금리를 두 차례 내릴 가능성을 계속 보고 있어요. 물가와 고용 지표가 앞으로의 정책 문구를 이해하는 핵심 단서예요.",
+            date: "5/28 08:30 EDT",
+            institution: "U.S. Census",
+            title: "미국 4월 내구재 주문 7.9% 급증",
+            keywords: ["제조업", "AI인프라", "항공"],
+            whatHappened: "미국 Census Bureau가 4월 내구재 신규 주문이 전월 대비 7.9% 늘었다고 발표했어요. 항공기 주문 급증이 큰 비중을 차지했고, 핵심 자본재 주문은 별도로 확인해야 해서 제조업 수요를 한 번에 단정하기보다는 세부 항목을 나눠 읽는 뉴스예요.",
             aiSummary: [
-                "금리 인하 기대가 유지됐어요",
-                "물가와 고용 지표가 관건이에요",
-                "성장주 뉴스와 함께 읽혀요"
+                "내구재 주문이 크게 늘었어요",
+                "항공기 주문 영향이 컸어요",
+                "제조업 수요를 나눠 봐요"
             ],
             keywordLinks: [
-                PolSignalPolicyKeywordLink(kw: "FOMC", why: "연준의 회의와 정책 문구를 이해하는 뉴스예요."),
-                PolSignalPolicyKeywordLink(kw: "금리인하", why: "시장 기대가 어떤 근거로 생기는지 살펴볼 수 있어요."),
-                PolSignalPolicyKeywordLink(kw: "QQQ", why: "금리 기사에서 성장주 ETF가 자주 함께 언급돼요.")
+                PolSignalPolicyKeywordLink(kw: "제조업", why: "내구재 주문은 생산과 설비 수요를 보여주는 지표예요."),
+                PolSignalPolicyKeywordLink(kw: "AI인프라", why: "기업 설비투자 흐름을 볼 때 함께 확인할 수 있어요."),
+                PolSignalPolicyKeywordLink(kw: "항공", why: "이번 증가폭에는 항공기 주문 효과가 크게 반영됐어요.")
             ],
             followUps: [
-                "연준 점도표는 무엇을 보여줄까요?",
-                "물가 지표는 금리 전망에 어떻게 연결될까요?",
-                "FOMC 문구에서 자주 보는 단어는 무엇일까요?"
+                "내구재 주문은 왜 변동성이 클까요?",
+                "핵심 자본재 주문은 무엇을 뜻할까요?",
+                "항공기 주문을 제외하면 흐름이 달라질까요?"
             ],
             readMinutes: 2
         )
