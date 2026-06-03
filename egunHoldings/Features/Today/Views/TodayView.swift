@@ -51,7 +51,7 @@ struct TodayView: View {
                             name: "투자자",
                             hasUnreadNotification: notificationCenter.hasUnreadNotifications,
                             onNotifications: {
-                                openTodayNotification()
+                                openNotifications()
                             },
                             onSettings: { navigationPath.append(TodayRoute.settings) }
                         )
