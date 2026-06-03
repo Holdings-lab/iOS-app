@@ -519,7 +519,7 @@ struct PolSignalTodayBriefingView: View {
 
     private var policyEventSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            PolSignalSectionHeader(title: "오늘 읽을 정책 이벤트", meta: "\(policyReadings.count)건")
+            PolSignalSectionHeader(title: "오늘 읽을 뉴스", meta: "\(policyReadings.count)건")
 
             VStack(spacing: 10) {
                 ForEach(policyReadings) { event in
@@ -580,14 +580,8 @@ struct PolicyReadCard: View {
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
 
-            lensTag
-
-            if !event.marketDirection.isEmpty {
-                marketDirectionTag
-            }
-
-            if !event.tldr.isEmpty {
-                tldrBox
+            if let firstSummary = event.aiSummary.first, !firstSummary.isEmpty {
+                aiPreview(firstSummary)
             }
 
             PolSignalDashedRule()
@@ -629,67 +623,32 @@ struct PolicyReadCard: View {
                 PolSignalReaderKeywordChip(text: "#\(keyword)")
             }
 
-            if !event.sourceBadge.isEmpty {
-                Text(event.sourceBadge)
-                    .font(.pretendard(11, weight: .semibold, relativeTo: .caption))
-                    .foregroundStyle(PSColor.textSecondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(PSColor.surfaceAlt, in: Capsule(style: .continuous))
-            }
-
             Text("· \(event.institution)")
                 .font(.pretendard(12, weight: .medium, relativeTo: .caption))
                 .foregroundStyle(PSColor.textSecondary)
 
-            Text("· \(event.dDay)")
+            Text("· \(event.date)")
                 .font(.pretendard(12, weight: .medium, relativeTo: .caption))
                 .foregroundStyle(PSColor.textSecondary)
         }
     }
 
-    private var lensTag: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "lightbulb")
-                .font(.system(size: 12, weight: .semibold))
-            Text(event.readingLens)
-                .font(.pretendard(12, weight: .semibold, relativeTo: .caption))
-                .lineLimit(1)
-        }
-        .foregroundStyle(PSColor.Reader.lensText)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(PSColor.Reader.lensBg, in: Capsule(style: .continuous))
-        .overlay {
-            Capsule(style: .continuous)
-                .stroke(PSColor.Reader.lensBorder, lineWidth: 1)
-        }
-    }
-
-    private var marketDirectionTag: some View {
-        Text(event.marketDirection)
-            .font(.pretendard(12, weight: .bold, relativeTo: .caption))
-            .foregroundStyle(PSColor.success)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(PSColor.success.opacity(0.10), in: Capsule(style: .continuous))
-    }
-
-    private var tldrBox: some View {
+    private func aiPreview(_ summary: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
-            Text("쉽게 말하면")
-                .font(.pretendard(11, weight: .bold, relativeTo: .caption))
+            Image(systemName: "wand.and.sparkles")
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(PSColor.primary)
-            Text(event.tldr)
+                .padding(.top, 1)
+
+            Text(summary)
                 .font(.pretendard(13, weight: .regular, relativeTo: .footnote))
-                .foregroundStyle(PSColor.textSecondary)
+                .foregroundStyle(PSColor.textPrimary)
+                .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
-        .background(
-            PSColor.surfaceAlt,
-            in: RoundedRectangle(cornerRadius: 10, style: .continuous)
-        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 

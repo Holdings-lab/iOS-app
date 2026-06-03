@@ -608,24 +608,32 @@ nonisolated struct TodayEventItemDTO: Decodable {
         let keywords = (tags?.nonEmpty ?? relatedAssets?.nonEmpty ?? ["정책"])
             .prefix(3)
             .map { $0 }
-        let relatedAssetText = relatedAssets?.joined(separator: ", ") ?? "관련 자산 분석 대기"
+        let keywordText = keywords.joined(separator: ", ")
+        let sourceText = tags?.first ?? "뉴스"
 
         return PolSignalPolicyReading(
             id: eventId ?? index + 1,
-            dDay: countdownText ?? timeText ?? "오늘",
-            institution: tags?.first ?? "정책 이벤트",
-            title: title ?? "정책 이벤트",
+            date: countdownText ?? timeText ?? "오늘",
+            institution: sourceText,
+            title: title ?? "관심 키워드 뉴스",
             keywords: Array(keywords),
-            readingLens: statusText ?? "정책 일정 확인",
-            lensApplication: "서버 이벤트 목록에서 받은 일정입니다. 상세 읽기 설명은 백엔드 모델 연결 전까지 보조 문장으로 표시합니다.",
-            whatHappened: "관련 자산: \(relatedAssetText)",
-            typicalFlow: [
-                "발표 전: 일정과 관련 자산을 먼저 확인합니다.",
-                "발표 직후: 영향 방향과 변동성 점수를 다시 점검합니다.",
-                "이후: 실제 보유 비중에 맞춰 행동 필요 여부를 판단합니다."
+            whatHappened: "서버 이벤트 목록에서 받은 뉴스예요. 관심 키워드 \(keywordText)이(가) 포함되어 있어 짧게 읽을 수 있도록 정리했어요.",
+            aiSummary: [
+                statusText ?? "새 뉴스가 도착했어요",
+                "\(keywords.first ?? "관심 키워드")와 연결돼요",
+                "원문 확인 전 빠른 요약이에요"
             ],
-            readMinutes: max(1, min(5, importanceStars ?? 2)),
-            relevantKeywords: Array(keywords)
+            keywordLinks: keywords.map { keyword in
+                PolSignalPolicyKeywordLink(
+                    kw: keyword,
+                    why: "\(keyword) 키워드가 이 뉴스의 분류 태그에 포함돼요."
+                )
+            },
+            followUps: [
+                "이 키워드는 어떤 기사에서 자주 등장할까요?",
+                "원문에서 확인할 표현은 무엇일까요?"
+            ],
+            readMinutes: max(1, min(5, importanceStars ?? 2))
         )
     }
 }

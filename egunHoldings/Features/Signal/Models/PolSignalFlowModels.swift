@@ -144,53 +144,26 @@ struct PolSignalEvent: Identifiable {
     let prescription: TodayDecisionPrescription?
 }
 
-struct PolSignalPolicyReading: Identifiable, Hashable {
+nonisolated struct PolSignalPolicyKeywordLink: Identifiable, Hashable {
+    let kw: String
+    let why: String
+
+    var id: String {
+        "\(kw)-\(why)"
+    }
+}
+
+nonisolated struct PolSignalPolicyReading: Identifiable, Hashable {
     let id: Int
-    let dDay: String
+    let date: String
     let institution: String
     let title: String
     let keywords: [String]
-    let readingLens: String
-    let lensApplication: String
     let whatHappened: String
-    let typicalFlow: [String]
+    let aiSummary: [String]
+    let keywordLinks: [PolSignalPolicyKeywordLink]
+    let followUps: [String]
     let readMinutes: Int
-    let relevantKeywords: [String]
-    let sourceBadge: String
-    let tldr: String
-    let marketDirection: String
-
-    nonisolated init(
-        id: Int,
-        dDay: String,
-        institution: String,
-        title: String,
-        keywords: [String],
-        readingLens: String,
-        lensApplication: String,
-        whatHappened: String,
-        typicalFlow: [String],
-        readMinutes: Int,
-        relevantKeywords: [String],
-        sourceBadge: String = "",
-        tldr: String = "",
-        marketDirection: String = ""
-    ) {
-        self.id = id
-        self.dDay = dDay
-        self.institution = institution
-        self.title = title
-        self.keywords = keywords
-        self.readingLens = readingLens
-        self.lensApplication = lensApplication
-        self.whatHappened = whatHappened
-        self.typicalFlow = typicalFlow
-        self.readMinutes = readMinutes
-        self.relevantKeywords = relevantKeywords
-        self.sourceBadge = sourceBadge
-        self.tldr = tldr
-        self.marketDirection = marketDirection
-    }
 }
 
 struct PolSignalAnalysisPayload: Identifiable, Hashable {

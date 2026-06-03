@@ -3,13 +3,14 @@ import SwiftUI
 struct PolSignalPolicyReaderView: View {
     let event: PolSignalPolicyReading
 
-    @State private var isUnderstood = false
+    @State private var isRead = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 24) {
                 header
-                readerSection(number: "1", title: "무슨 일이 있어요") {
+
+                readerSection(number: "1", title: "무슨 일이에요") {
                     Text(event.whatHappened)
                         .font(.pretendard(15, weight: .regular, relativeTo: .body))
                         .foregroundStyle(PSColor.textPrimary)
@@ -19,62 +20,38 @@ struct PolSignalPolicyReaderView: View {
 
                 readerSection(
                     number: "2",
-                    title: "이렇게 읽어요",
+                    title: "AI가 3줄로 정리했어요",
                     iconName: "sparkles",
+                    trailingBadge: "AI",
                     isHighlighted: true
                 ) {
-                    VStack(alignment: .leading, spacing: 14) {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("전이되는 렌즈")
-                                .font(.pretendard(12, weight: .semibold, relativeTo: .caption))
-                                .foregroundStyle(PSColor.primary)
-
-                            Text(event.readingLens)
-                                .font(.pretendard(18, weight: .semibold, relativeTo: .headline))
-                                .foregroundStyle(PSColor.textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
-
-                            Text("이 패턴은 다른 정책 이벤트를 읽을 때도 다시 쓰여요.")
-                                .font(.pretendard(12, weight: .regular, relativeTo: .caption))
-                                .foregroundStyle(PSColor.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("이번 적용")
-                                .font(.pretendard(12, weight: .semibold, relativeTo: .caption))
-                                .foregroundStyle(PSColor.primary)
-
-                            Text(event.lensApplication)
-                                .font(.pretendard(15, weight: .regular, relativeTo: .body))
-                                .foregroundStyle(PSColor.textPrimary)
-                                .lineSpacing(4)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
+                    aiSummaryList
                 }
 
-                readerSection(number: "3", title: "보통 이런 흐름이에요") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        ForEach(Array(event.typicalFlow.enumerated()), id: \.offset) { index, flow in
-                            HStack(alignment: .top, spacing: 10) {
-                                Text("\(index + 1)")
-                                    .font(.pretendard(12, weight: .bold, relativeTo: .caption))
-                                    .foregroundStyle(PSColor.Reader.lensText)
-                                    .frame(width: 22, height: 22)
-                                    .background(PSColor.Reader.lensBg, in: Circle())
+                readerSection(number: "3", title: "내 키워드와 이렇게 연결돼요") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("선택한 키워드를 기준으로 이 뉴스가 뜬 이유예요.")
+                            .font(.pretendard(12, weight: .regular, relativeTo: .caption))
+                            .foregroundStyle(PSColor.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                                Text(flow)
-                                    .font(.pretendard(14, weight: .regular, relativeTo: .body))
-                                    .foregroundStyle(PSColor.textPrimary)
-                                    .lineSpacing(3)
-                                    .fixedSize(horizontal: false, vertical: true)
+                        VStack(spacing: 10) {
+                            ForEach(event.keywordLinks) { link in
+                                keywordLinkRow(link)
                             }
                         }
                     }
                 }
 
-                relevanceFooter
+                readerSection(
+                    number: "4",
+                    title: "더 알아볼 수 있어요",
+                    iconName: "safari",
+                    usesNeutralBackground: true
+                ) {
+                    followUpRows
+                }
+
                 actionArea
             }
             .padding(.horizontal, PSSpacing.screenHorizontal)
@@ -82,7 +59,7 @@ struct PolSignalPolicyReaderView: View {
             .padding(.bottom, 32)
         }
         .background(PSColor.Reader.surface.ignoresSafeArea())
-        .navigationTitle("정책 읽기")
+        .navigationTitle("뉴스 읽기")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
         .toolbar {
@@ -110,7 +87,7 @@ struct PolSignalPolicyReaderView: View {
                     .font(.pretendard(12, weight: .medium, relativeTo: .caption))
                     .foregroundStyle(PSColor.textSecondary)
 
-                Text("· \(event.dDay)")
+                Text("· \(event.date)")
                     .font(.pretendard(12, weight: .medium, relativeTo: .caption))
                     .foregroundStyle(PSColor.textSecondary)
             }
@@ -120,22 +97,6 @@ struct PolSignalPolicyReaderView: View {
                 .foregroundStyle(PSColor.textPrimary)
                 .lineSpacing(2)
                 .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 6) {
-                Image(systemName: "lightbulb")
-                    .font(.system(size: 13, weight: .semibold))
-                Text(event.readingLens)
-                    .font(.pretendard(13, weight: .semibold, relativeTo: .caption))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .foregroundStyle(PSColor.Reader.lensText)
-            .padding(.horizontal, 11)
-            .padding(.vertical, 8)
-            .background(PSColor.Reader.lensBg, in: Capsule(style: .continuous))
-            .overlay {
-                Capsule(style: .continuous)
-                    .stroke(PSColor.Reader.lensBorder, lineWidth: 1)
-            }
 
             Label("읽기 약 \(event.readMinutes)분", systemImage: "clock")
                 .font(.pretendard(13, weight: .medium, relativeTo: .caption))
@@ -150,11 +111,61 @@ struct PolSignalPolicyReaderView: View {
         }
     }
 
+    private var aiSummaryList: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(event.aiSummary.enumerated()), id: \.offset) { _, summary in
+                HStack(alignment: .top, spacing: 10) {
+                    Circle()
+                        .fill(PSColor.primary)
+                        .frame(width: 5, height: 5)
+                        .padding(.top, 8)
+
+                    Text(summary)
+                        .font(.pretendard(15, weight: .regular, relativeTo: .body))
+                        .foregroundStyle(PSColor.textPrimary)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private var followUpRows: some View {
+        VStack(spacing: 8) {
+            ForEach(Array(event.followUps.enumerated()), id: \.offset) { _, question in
+                Button {} label: {
+                    HStack(alignment: .center, spacing: 12) {
+                        Text(question)
+                            .font(.pretendard(14, weight: .medium, relativeTo: .body))
+                            .foregroundStyle(PSColor.textPrimary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Spacer(minLength: 8)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(PSColor.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minHeight: 46)
+                    .padding(.horizontal, 12)
+                    .background(PSColor.Reader.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(question)
+            }
+        }
+    }
+
     private func readerSection<Content: View>(
         number: String,
         title: String,
         iconName: String? = nil,
+        trailingBadge: String? = nil,
         isHighlighted: Bool = false,
+        usesNeutralBackground: Bool = false,
         @ViewBuilder content: () -> Content
     ) -> some View {
         HStack(alignment: .top, spacing: 12) {
@@ -169,24 +180,36 @@ struct PolSignalPolicyReaderView: View {
                 }
 
             VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 6) {
-                    Text(title)
-                        .font(.pretendard(17, weight: .semibold, relativeTo: .headline))
-                        .foregroundStyle(PSColor.textPrimary)
-
+                HStack(alignment: .center, spacing: 6) {
                     if let iconName {
                         Image(systemName: iconName)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(PSColor.primary)
                     }
+
+                    Text(title)
+                        .font(.pretendard(17, weight: .semibold, relativeTo: .headline))
+                        .foregroundStyle(PSColor.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Spacer(minLength: 6)
+
+                    if let trailingBadge {
+                        Text(trailingBadge)
+                            .font(.pretendard(11, weight: .bold, relativeTo: .caption))
+                            .foregroundStyle(PSColor.primary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(PSColor.Reader.surface, in: Capsule(style: .continuous))
+                    }
                 }
 
                 content()
             }
-            .padding(isHighlighted ? 14 : 0)
+            .padding((isHighlighted || usesNeutralBackground) ? 14 : 0)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                isHighlighted ? PSColor.primarySoft : Color.clear,
+                sectionBackground(isHighlighted: isHighlighted, usesNeutralBackground: usesNeutralBackground),
                 in: RoundedRectangle(cornerRadius: 14, style: .continuous)
             )
             .overlay {
@@ -198,36 +221,40 @@ struct PolSignalPolicyReaderView: View {
         }
     }
 
-    private var relevanceFooter: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PolSignalDashedRule()
-                .stroke(PSColor.Reader.border, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                .frame(height: 1)
+    private func sectionBackground(isHighlighted: Bool, usesNeutralBackground: Bool) -> Color {
+        if isHighlighted {
+            return PSColor.primarySoft
+        }
 
-            HStack(spacing: 8) {
-                Image(systemName: "link")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(PSColor.primary)
-                Text("내 관심 키워드와 연결돼요")
-                    .font(.pretendard(15, weight: .semibold, relativeTo: .body))
-                    .foregroundStyle(PSColor.textPrimary)
-            }
+        if usesNeutralBackground {
+            return PSColor.surfaceAlt
+        }
 
-            PolSignalFlowLayout(spacing: 6) {
-                ForEach(event.relevantKeywords, id: \.self) { keyword in
-                    PolSignalReaderKeywordChip(text: "#\(keyword)")
-                }
-            }
+        return .clear
+    }
 
-            Text("왜 내가 읽어야 하나의 단서예요. 지금 무엇을 해야 한다는 뜻은 아니에요.")
-                .font(.pretendard(13, weight: .regular, relativeTo: .footnote))
-                .foregroundStyle(PSColor.textSecondary)
+    private func keywordLinkRow(_ link: PolSignalPolicyKeywordLink) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text("#\(link.kw)")
+                .font(.pretendard(12, weight: .bold, relativeTo: .caption))
+                .foregroundStyle(PSColor.primary)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 6)
+                .background(PSColor.primarySoft, in: Capsule(style: .continuous))
+                .fixedSize()
+
+            Text(link.why)
+                .font(.pretendard(14, weight: .regular, relativeTo: .body))
+                .foregroundStyle(PSColor.textPrimary)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
-
-            PolSignalDashedRule()
-                .stroke(PSColor.Reader.border, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                .frame(height: 1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(12)
+        .background(PSColor.Reader.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(PSColor.Reader.border, lineWidth: 1)
         }
     }
 
@@ -235,7 +262,7 @@ struct PolSignalPolicyReaderView: View {
         VStack(alignment: .leading, spacing: 10) {
             Button {} label: {
                 HStack(spacing: 6) {
-                    Text("학습 탭에서 이 렌즈 더 보기")
+                    Text("이 키워드 다른 뉴스 보기")
                         .font(.pretendard(15, weight: .semibold, relativeTo: .body))
                     Image(systemName: "arrow.right")
                         .font(.system(size: 13, weight: .bold))
@@ -243,30 +270,37 @@ struct PolSignalPolicyReaderView: View {
                 .foregroundStyle(PSColor.primary)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 48)
-                .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: PSRadius.button, style: .continuous))
+                .background(PSColor.Reader.surface, in: RoundedRectangle(cornerRadius: PSRadius.button, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: PSRadius.button, style: .continuous)
+                        .stroke(PSColor.Reader.lensBorder, lineWidth: 1)
+                }
+                .contentShape(RoundedRectangle(cornerRadius: PSRadius.button, style: .continuous))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("이 키워드 다른 뉴스 보기")
 
             Button {
-                isUnderstood.toggle()
+                isRead.toggle()
             } label: {
                 HStack(spacing: 7) {
-                    Image(systemName: isUnderstood ? "checkmark.circle.fill" : "checkmark.circle")
+                    Image(systemName: isRead ? "checkmark.circle.fill" : "checkmark.circle")
                         .font(.system(size: 16, weight: .semibold))
-                    Text("이해했어요")
+                    Text("읽었어요 ✓")
                         .font(.pretendard(15, weight: .semibold, relativeTo: .body))
                 }
                 .foregroundStyle(Color.white)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 52)
                 .background(PSColor.primary, in: RoundedRectangle(cornerRadius: PSRadius.button, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: PSRadius.button, style: .continuous))
             }
             .buttonStyle(.plain)
-            .sensoryFeedback(.success, trigger: isUnderstood)
-            .accessibilityLabel("이해했어요")
-            .accessibilityValue(isUnderstood ? "완료" : "미완료")
+            .sensoryFeedback(.success, trigger: isRead)
+            .accessibilityLabel("읽었어요")
+            .accessibilityValue(isRead ? "완료" : "미완료")
 
-            Text("완료 표시는 학습 기록에만 사용돼요.")
+            Text("완료 표시는 기록에만 사용돼요.")
                 .font(.pretendard(12, weight: .regular, relativeTo: .caption))
                 .foregroundStyle(PSColor.textFaint)
                 .frame(maxWidth: .infinity, alignment: .center)

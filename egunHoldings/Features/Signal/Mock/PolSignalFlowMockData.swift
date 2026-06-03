@@ -220,83 +220,98 @@ nonisolated enum PolSignalFlowMockData {
     static let policyReadings: [PolSignalPolicyReading] = [
         PolSignalPolicyReading(
             id: 201,
-            dDay: "5/20 발표됨",
+            date: "5/20 발표됨",
             institution: "NVIDIA IR",
             title: "NVIDIA Q1 FY2027 실적: 매출 $81.6B, YoY +85%",
             keywords: ["엔비디아", "AI반도체", "빅테크"],
-            readingLens: "실적 → AI 투자 사이클 확인",
-            lensApplication: "실적 발표는 '얼마 벌었냐'보다 '다음 분기 가이던스'가 시장을 움직여요. NVIDIA는 데이터센터 수주 잔고와 신형 칩 출하 일정을 함께 확인해야 해요.",
-            whatHappened: "NVIDIA가 분기 매출 $81.6B(전년 대비 +85%)를 발표하며 시장 예상($78.8B)을 크게 웃돌았어요. AI 데이터센터 수요가 예상보다 훨씬 빠르게 늘고 있다는 확인 신호예요.",
-            typicalFlow: [
-                "발표 직전: AI 관련 ETF에 기대 매수가 미리 붙어요.",
-                "발표 당일: 어닝 서프라이즈 → 빅테크 전반에 매수세 확산.",
-                "이후 1~2주: 경쟁사·AI 인프라 기업까지 후행 상승이 이어져요."
+            whatHappened: "NVIDIA가 분기 매출 $81.6B(전년 대비 +85%)를 발표했어요. 시장 예상보다 높은 데이터센터 매출이 확인되며 AI 인프라 수요가 계속 주목받고 있어요.",
+            aiSummary: [
+                "AI 칩 매출이 크게 늘었어요",
+                "데이터센터 수요가 핵심이에요",
+                "빅테크 투자 흐름과 이어져요"
             ],
-            readMinutes: 2,
-            relevantKeywords: ["엔비디아", "AI반도체"],
-            sourceBadge: "NVIDIA IR",
-            tldr: "AI 칩 수요가 폭발 중이고, 그게 빅테크 전체를 끌어올리고 있어요.",
-            marketDirection: "빅테크·AI 강세 ▲"
+            keywordLinks: [
+                PolSignalPolicyKeywordLink(kw: "엔비디아", why: "실적 발표 주체라 선택한 키워드와 직접 연결돼요."),
+                PolSignalPolicyKeywordLink(kw: "AI반도체", why: "데이터센터용 GPU 수요가 기사 핵심이에요."),
+                PolSignalPolicyKeywordLink(kw: "빅테크", why: "대형 기술주의 AI 투자 흐름을 이해하는 배경 뉴스예요.")
+            ],
+            followUps: [
+                "데이터센터 매출은 왜 중요할까요?",
+                "다음 분기 가이던스는 무엇을 뜻할까요?",
+                "AI 칩 공급 부족은 얼마나 이어질까요?"
+            ],
+            readMinutes: 2
         ),
         PolSignalPolicyReading(
             id: 202,
-            dDay: "5/27 보도됨",
+            date: "5/27 보도됨",
             institution: "Yahoo Finance",
             title: "미·이란 협상단 휴전 연장 합의 가능성 고조",
             keywords: ["지정학", "원유"],
-            readingLens: "지정학 완화 → 위험자산 선호 회복",
-            lensApplication: "전쟁 리스크가 줄면 투자자들이 안전자산(달러·금)에서 주식으로 돌아와요. 에너지 공급 불안이 해소되면 AI 데이터센터 운영비 전망도 개선돼요.",
-            whatHappened: "미국과 이란 협상단이 현재의 휴전을 연장하는 방향으로 협의 중인 것으로 알려졌어요. 지난 2월 말 발발한 중동 분쟁이 약 90일 만에 완화 국면에 접어들었어요.",
-            typicalFlow: [
-                "소식 직후: 안전자산 매도·위험자산 매수 흐름이 나타나요.",
-                "수일 내: 국제 유가 안정 → 에너지 비용 전망 개선.",
-                "중장기: 지정학 리스크 프리미엄이 걷히면 성장주 밸류에이션이 회복돼요."
+            whatHappened: "미국과 이란 협상단이 현재의 휴전을 연장하는 방향으로 논의 중이라는 보도가 나왔어요. 중동 긴장과 에너지 공급 불안을 함께 이해할 때 참고할 뉴스예요.",
+            aiSummary: [
+                "휴전 연장 논의가 보도됐어요",
+                "에너지 공급 불안과 연결돼요",
+                "지정학 뉴스의 배경이에요"
             ],
-            readMinutes: 2,
-            relevantKeywords: ["지정학", "원유"],
-            sourceBadge: "Yahoo Finance",
-            tldr: "중동 긴장이 풀리면서 주식시장이 안도 랠리를 탈 조건이 생겼어요.",
-            marketDirection: "위험자산에 우호적 ▲"
+            keywordLinks: [
+                PolSignalPolicyKeywordLink(kw: "지정학", why: "국가 간 협상과 중동 긴장이 기사 중심 소재예요."),
+                PolSignalPolicyKeywordLink(kw: "원유", why: "중동 정세는 원유 공급 불안과 자주 함께 다뤄져요.")
+            ],
+            followUps: [
+                "휴전 연장은 어떤 절차로 확인될까요?",
+                "중동 뉴스는 왜 원유 기사와 같이 나올까요?",
+                "원문에서 봐야 할 표현은 무엇일까요?"
+            ],
+            readMinutes: 2
         ),
         PolSignalPolicyReading(
             id: 203,
-            dDay: "5/12 발표됨",
+            date: "5/12 발표됨",
             institution: "USTR",
             title: "미중 90일 관세 휴전: 상호관세 125% → 10% 급감",
             keywords: ["미중무역", "빅테크", "AI반도체"],
-            readingLens: "무역정책 → 공급망 비용 → 기업 마진",
-            lensApplication: "관세 변화는 '오늘 주가'보다 '기업 이익 전망'에 더 크게 작용해요. 빅테크 공급망(TSMC → 미국 조립 → 세계 판매) 전체의 비용 구조가 바뀌는 거예요.",
-            whatHappened: "미국과 중국이 90일간 상호관세를 대폭 낮추기로 합의했어요. 기존 125%였던 상호관세가 10%로 낮아졌고, 발표 당일 나스닥이 3.3% 급등했어요.",
-            typicalFlow: [
-                "발표 당일: 공급망 부담 완화 기대로 빅테크·반도체 ETF가 동반 상승해요.",
-                "이후 수주: 실제 수입·수출 데이터에서 효과가 확인되기 시작해요.",
-                "90일 후: 협상 연장 여부가 다음 변수가 돼요."
+            whatHappened: "미국과 중국이 90일 동안 상호관세를 낮추기로 합의했어요. 기존 125%였던 관세가 10%로 낮아지며 공급망과 수입 비용 이슈가 다시 주목받고 있어요.",
+            aiSummary: [
+                "미중 관세가 90일 낮아졌어요",
+                "공급망 비용 이슈와 이어져요",
+                "협상 연장이 다음 쟁점이에요"
             ],
-            readMinutes: 3,
-            relevantKeywords: ["미중무역", "AI반도체"],
-            sourceBadge: "USTR",
-            tldr: "관세가 거의 없어지면서 애플·엔비디아 같은 빅테크의 이익 전망이 개선됐어요.",
-            marketDirection: "빅테크·반도체 강세 ▲"
+            keywordLinks: [
+                PolSignalPolicyKeywordLink(kw: "미중무역", why: "관세 조정과 양국 협상이 기사 핵심이에요."),
+                PolSignalPolicyKeywordLink(kw: "빅테크", why: "글로벌 생산·판매망을 가진 대형 기술주와 연결돼요."),
+                PolSignalPolicyKeywordLink(kw: "AI반도체", why: "반도체 공급망 비용을 이해할 때 함께 보는 뉴스예요.")
+            ],
+            followUps: [
+                "90일 휴전 이후에는 무엇이 결정될까요?",
+                "상호관세는 일반 관세와 어떻게 다를까요?",
+                "공급망 뉴스는 어떤 기업에 자주 연결될까요?"
+            ],
+            readMinutes: 3
         ),
         PolSignalPolicyReading(
             id: 204,
-            dDay: "6월 예정",
+            date: "6월 예정",
             institution: "미 연준",
             title: "연준, 2026년 금리 2회 인하 기대 유지",
             keywords: ["FOMC", "금리인하", "QQQ"],
-            readingLens: "금리 인하 기대 → 성장주 밸류에이션",
-            lensApplication: "금리가 내려가면 미래 이익을 '지금 가치'로 환산할 때 할인율이 줄어요. 이익이 먼 미래에 집중된 빅테크·AI 기업일수록 금리 하락의 수혜가 커요.",
-            whatHappened: "연준은 2026년 안에 기준금리를 두 차례 내릴 것으로 시장에서 보고 있어요. 인플레이션이 완만히 내려오는 속도와 고용 지표가 함께 맞아떨어지는 상황이에요.",
-            typicalFlow: [
-                "인하 기대 강화: 성장주(QQQ 등) 밸류에이션 부담이 줄어 주가 상승 여지가 생겨요.",
-                "실제 인하 당일: 이미 가격에 반영된 경우 '소문에 사고 뉴스에 판다'가 나오기도 해요.",
-                "인하 이후: 실물 경기가 살아나면 기업 이익 증가로 이어져요."
+            whatHappened: "시장은 연준이 2026년 안에 기준금리를 두 차례 내릴 가능성을 계속 보고 있어요. 물가와 고용 지표가 앞으로의 정책 문구를 이해하는 핵심 단서예요.",
+            aiSummary: [
+                "금리 인하 기대가 유지됐어요",
+                "물가와 고용 지표가 관건이에요",
+                "성장주 뉴스와 함께 읽혀요"
             ],
-            readMinutes: 2,
-            relevantKeywords: ["FOMC", "금리인하"],
-            sourceBadge: "미 연준",
-            tldr: "금리가 내려가면 애플·구글·엔비디아 같은 성장주가 가장 크게 오르는 구조예요.",
-            marketDirection: "성장주·QQQ 강세 ▲"
+            keywordLinks: [
+                PolSignalPolicyKeywordLink(kw: "FOMC", why: "연준의 회의와 정책 문구를 이해하는 뉴스예요."),
+                PolSignalPolicyKeywordLink(kw: "금리인하", why: "시장 기대가 어떤 근거로 생기는지 살펴볼 수 있어요."),
+                PolSignalPolicyKeywordLink(kw: "QQQ", why: "금리 기사에서 성장주 ETF가 자주 함께 언급돼요.")
+            ],
+            followUps: [
+                "연준 점도표는 무엇을 보여줄까요?",
+                "물가 지표는 금리 전망에 어떻게 연결될까요?",
+                "FOMC 문구에서 자주 보는 단어는 무엇일까요?"
+            ],
+            readMinutes: 2
         )
     ]
 
