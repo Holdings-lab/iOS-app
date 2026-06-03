@@ -10,7 +10,7 @@ struct PolSignalPolicyReaderView: View {
             VStack(alignment: .leading, spacing: 24) {
                 header
 
-                readerSection(number: "1", title: "무슨 일이에요") {
+                readerSection(number: "1", title: "무슨 일인가요?") {
                     Text(event.whatHappened)
                         .font(.pretendard(15, weight: .regular, relativeTo: .body))
                         .foregroundStyle(PSColor.textPrimary)
