@@ -52,6 +52,12 @@ nonisolated enum SignalThemeDetailMockData {
                 title: "미중 관세 완화가 공급망 압박을 덜었어요",
                 description: "5/12 90일 관세 휴전으로 상호관세가 125%에서 10%로 급감했어요. 빅테크 공급망 비용 부담이 크게 줄었어요.",
                 newsTitle: "U.S.-China 90-day tariff truce — Nasdaq jumped 3.3% (Yahoo Finance)"
+            ),
+            SignalThemeDetailCard(
+                intensity: .high,
+                title: "기술 지표도 강한 상승 모멘텀을 확인했어요",
+                description: "QQQ가 '볼린저 밴드(가격의 정상 움직임 범위)' 상단을 돌파했어요. 이 선을 뚫고 올라가면 보통 추세 상승이 이어진다는 신호로 읽혀요.",
+                newsTitle: nil
             )
         ],
         trendPoints: [

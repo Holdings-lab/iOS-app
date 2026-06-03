@@ -92,7 +92,7 @@ struct SignalThemeDetailView: View {
                 SignalCardEmptyState(themeName: detail.theme.displayName)
             } else {
                 VStack(spacing: 10) {
-                    ForEach(detail.signalCards.prefix(3)) { card in
+                    ForEach(detail.signalCards.prefix(4)) { card in
                         SignalCardRow(card: card)
                     }
                 }
