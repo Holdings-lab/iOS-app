@@ -15,6 +15,8 @@ struct UserSettingsView: View {
     @State private var riskAlert = true
     @State private var proposalAlert = true
     @State private var optimizeData = true
+    @State private var isRequestingNotificationAuthorization = false
+    @State private var isSchedulingTestNotification = false
 
     init(
         userId: Int64?,
@@ -190,6 +192,13 @@ struct UserSettingsView: View {
 
     private var notificationSection: some View {
         PolSignalSettingSection(title: "알림") {
+            PolSignalSettingsListRow(
+                title: "푸시 권한",
+                subtitle: notificationCenter.authorizationStatusText
+            )
+            PolSignalSettingsDivider()
+            notificationActionButtons
+            PolSignalSettingsDivider()
             PolSignalToggleRow(title: "정책 이벤트 D-day 알림", isOn: $policyDDayAlert)
             PolSignalSettingsDivider()
             PolSignalToggleRow(
@@ -203,6 +212,76 @@ struct UserSettingsView: View {
             PolSignalToggleRow(title: "조정 제안 대기 알림", isOn: $proposalAlert)
             PolSignalSettingsDivider()
             PolSignalSettingsListRow(title: "방해 금지 시간대", subtitle: "별도 설정 화면 예정")
+        }
+    }
+
+    private var notificationActionButtons: some View {
+        VStack(spacing: 8) {
+            Button {
+                requestNotificationAuthorization()
+            } label: {
+                notificationButtonLabel(
+                    title: isRequestingNotificationAuthorization ? "권한 요청 중" : "푸시 권한 요청",
+                    iconName: "bell.badge",
+                    isLoading: isRequestingNotificationAuthorization
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(isRequestingNotificationAuthorization)
+
+            Button {
+                scheduleTestNotification()
+            } label: {
+                notificationButtonLabel(
+                    title: isSchedulingTestNotification ? "테스트 알림 준비 중" : "테스트 알림 보내기",
+                    iconName: "paperplane.fill",
+                    isLoading: isSchedulingTestNotification
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(isSchedulingTestNotification)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+    }
+
+    private func notificationButtonLabel(title: String, iconName: String, isLoading: Bool) -> some View {
+        HStack(spacing: 8) {
+            if isLoading {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(PSColor.primary)
+            } else {
+                Image(systemName: iconName)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+
+            Text(title)
+                .font(.pretendard(14, weight: .semibold))
+
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(PSColor.primary)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 42)
+        .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private func requestNotificationAuthorization() {
+        guard !isRequestingNotificationAuthorization else { return }
+        isRequestingNotificationAuthorization = true
+        Task {
+            await notificationCenter.requestAuthorization()
+            isRequestingNotificationAuthorization = false
+        }
+    }
+
+    private func scheduleTestNotification() {
+        guard !isSchedulingTestNotification else { return }
+        isSchedulingTestNotification = true
+        Task {
+            await notificationCenter.scheduleTestNotification()
+            isSchedulingTestNotification = false
         }
     }
 
