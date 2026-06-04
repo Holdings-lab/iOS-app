@@ -343,12 +343,12 @@ nonisolated enum PolSignalFlowMockData {
         PortfolioThemeSignal(
             id: UUID(),
             theme: .semiconductor,
-            myExposurePercent: 14,
+            myExposurePercent: 0,
             verdictKind: .adjust,
             prescription: TodayDecisionPrescription(
                 summary: "반도체 보조금 발표 결과에 따라 가격이 빠르게 움직일 수 있어요. 비중이 높아 직접 영향을 받아요.",
                 action: "반도체 비중을 줄이세요",
-                nowPercent: "14%",
+                nowPercent: "0%",
                 goalLabel: "목표 11%",
                 narrative: nil
             ),
@@ -359,12 +359,12 @@ nonisolated enum PolSignalFlowMockData {
         PortfolioThemeSignal(
             id: UUID(),
             theme: .financials,
-            myExposurePercent: 10,
+            myExposurePercent: 0,
             verdictKind: .watch,
             prescription: TodayDecisionPrescription(
                 summary: "금융주는 지금 특별히 행동할 필요 없어요. 다음 BIS 회의 결과를 지켜봐도 충분해요.",
                 action: "현재 비중을 유지하세요",
-                nowPercent: "10%",
+                nowPercent: "0%",
                 goalLabel: "유지 10%",
                 narrative: nil
             ),
@@ -375,10 +375,10 @@ nonisolated enum PolSignalFlowMockData {
         PortfolioThemeSignal(
             id: UUID(),
             theme: .greenEnergy,
-            myExposurePercent: 8,
+            myExposurePercent: 0,
             verdictKind: nil,
             prescription: nil,
-            nextEventLabel: "6/2 IEA 에너지 보고",
+            nextEventLabel: nil,
             relatedEventId: nil
         )
     ]
