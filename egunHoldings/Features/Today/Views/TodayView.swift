@@ -10,6 +10,7 @@ struct TodayView: View {
     @State private var navigationPath = NavigationPath()
     @State private var isPushSlotDismissed = false
     @State private var presentedNotificationDetail: AppNotificationItem?
+    @Binding private var externalSignalRoute: PolSignalRoute?
     private let userId: Int64?
     private let onAssetTabRequested: () -> Void
     private let onSignalRouteRequested: (PolSignalRoute) -> Void
@@ -21,6 +22,7 @@ struct TodayView: View {
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         viewModel: TodayViewModel? = nil,
         exchangeRateViewModel: ExchangeRateViewModel? = nil,
+        externalSignalRoute: Binding<PolSignalRoute?> = .constant(nil),
         onAssetTabRequested: @escaping () -> Void = {},
         onSignalRouteRequested: @escaping (PolSignalRoute) -> Void = { _ in },
         onAnalysisNotificationRequested: @escaping (PolSignalAnalysisPayload) -> Void = { _ in }
@@ -37,6 +39,7 @@ struct TodayView: View {
             )
         )
         _policyNewsViewModel = StateObject(wrappedValue: PolicyNewsViewModel(userId: userId))
+        _externalSignalRoute = externalSignalRoute
         self.exchangeRateViewModel = exchangeRateViewModel ?? ExchangeRateViewModel()
     }
 
@@ -137,6 +140,12 @@ struct TodayView: View {
             }
             .toolbar(.hidden, for: .navigationBar)
             .preferredColorScheme(.light)
+            .onAppear {
+                consumeExternalSignalRoute()
+            }
+            .onChange(of: externalSignalRoute) { _, _ in
+                consumeExternalSignalRoute()
+            }
             .task {
                 await viewModel.load()
                 await notificationCenter.refreshAuthorizationStatus()
@@ -189,6 +198,12 @@ struct TodayView: View {
     private func openAnalysisNotification(_ payload: PolSignalAnalysisPayload) {
         notificationCenter.markAnalysisPayloadAsRead(payload)
         onAnalysisNotificationRequested(payload)
+    }
+
+    private func consumeExternalSignalRoute() {
+        guard let route = externalSignalRoute else { return }
+        externalSignalRoute = nil
+        navigationPath.append(route)
     }
 
     private func policyReading(id: Int) -> PolSignalPolicyReading {

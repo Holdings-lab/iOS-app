@@ -12,6 +12,7 @@ struct RootTabView: View {
     let portfolioSnapshot: PortfolioSnapshot
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     @State private var selectedTab: RootTab = .today
+    @State private var todaySignalRoute: PolSignalRoute?
     @State private var signalRoute: PolSignalRoute?
     @State private var signalViewIdentity = UUID()
     @StateObject private var exchangeRateViewModel = ExchangeRateViewModel()
@@ -37,6 +38,7 @@ struct RootTabView: View {
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
                 exchangeRateViewModel: exchangeRateViewModel,
+                externalSignalRoute: $todaySignalRoute,
                 onAssetTabRequested: {
                     selectedTab = .asset
                 },
@@ -44,7 +46,7 @@ struct RootTabView: View {
                     openSignal(route)
                 },
                 onAnalysisNotificationRequested: { payload in
-                    openSignal(notificationCenter.signalRoute(for: payload))
+                    openTodaySignal(notificationCenter.signalRoute(for: payload))
                 }
             )
             .id(portfolioSnapshot)
@@ -92,9 +94,14 @@ struct RootTabView: View {
         selectedTab = .signal
     }
 
+    private func openTodaySignal(_ route: PolSignalRoute) {
+        selectedTab = .today
+        todaySignalRoute = route
+    }
+
     private func consumePendingPushRoute() {
         guard let route = notificationCenter.consumePendingPushRoute() else { return }
-        openSignal(route)
+        openTodaySignal(route)
     }
 
     private func setupTabBarAppearance() {
