@@ -54,7 +54,7 @@ nonisolated struct MockTodayRepository: TodayRepositoryProtocol {
         return [
             TodayAPIConnectionStatus(
                 id: "theme-signals",
-                title: "내 포트폴리오 영향 Top 3",
+                title: "내 포트폴리오 Top 3",
                 endpoint: "GET /api/users/\(userScoped)/home/briefing",
                 detail: userId == nil ? "로그인 사용자 ID가 없어 Mock 데이터 사용 중" : "서버 실패 시 Mock 데이터 사용",
                 kind: userId == nil ? .mock : .fallback

@@ -180,7 +180,7 @@ nonisolated struct TodayDashboardResponseDTO: Decodable {
         return [
             TodayAPIConnectionStatus(
                 id: "theme-signals",
-                title: "내 포트폴리오 영향 Top 3",
+                title: "내 포트폴리오 Top 3",
                 endpoint: "GET /api/users/\(userScoped)/home/briefing",
                 detail: homeBriefingConnected ? "featuredCard/secondarySignals 매핑" : "응답 필드 없음, Mock 유지",
                 kind: homeBriefingConnected ? .connected : .fallback

@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - ThemeSignalSection
 
-/// Today 탭 "내 포트폴리오 영향 Top 3" 섹션.
+/// Today 탭 "내 포트폴리오 Top 3" 섹션.
 /// 섹션 헤더 + ThemeSignalCard 목록을 조합하며,
 /// 카드별 독립 확장 상태를 관리한다.
 struct ThemeSignalSection: View {
@@ -29,7 +29,7 @@ struct ThemeSignalSection: View {
 
     private var sectionHeader: some View {
         HStack(alignment: .center) {
-            Text("내 포트폴리오 영향 Top 3")
+            Text("내 포트폴리오 Top 3")
                 .font(.pretendard(17, weight: .bold, relativeTo: .headline))
                 .foregroundStyle(PSColor.textPrimary)
 

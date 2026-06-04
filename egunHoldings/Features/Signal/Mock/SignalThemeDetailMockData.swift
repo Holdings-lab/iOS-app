@@ -20,7 +20,7 @@ nonisolated enum SignalThemeDetailMockData {
         }
     }
 
-    // MARK: - State A — 빅테크 QQQ (5/22 기준, 강한 상승 예상)
+    // MARK: - State A — 빅테크 QQQ (5/28 기준, 강한 상승 예상)
 
     static let bigTechDetail = SignalThemeDetail(
         theme: .bigTech,
@@ -31,7 +31,7 @@ nonisolated enum SignalThemeDetailMockData {
             currentPriceText: "$717.54",
             predictedPriceText: "$735.20",
             priceDeltaText: "+17.66",
-            asOfDateLabel: "5/22 (금) 기준",
+            asOfDateLabel: "5/28 (목) 기준",
             targetDateLabel: "6/1 (월) 예상"
         ),
         signalCards: [
