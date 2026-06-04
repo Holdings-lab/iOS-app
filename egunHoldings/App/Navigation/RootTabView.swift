@@ -76,7 +76,7 @@ struct RootTabView: View {
                 Label("내 자산", systemImage: "chart.pie.fill")
             }
         }
-        .tint(Color.brand)
+        .tint(AssetTabPalette.brand)
         .preferredColorScheme(.light)
         .onAppear {
             consumePendingPushRoute()
@@ -100,18 +100,18 @@ struct RootTabView: View {
     private func setupTabBarAppearance() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = UIColor.white
-        appearance.shadowColor = UIColor(Color.hairline)
+        appearance.backgroundColor = UIColor(AssetTabPalette.card)
+        appearance.shadowColor = UIColor(AssetTabPalette.divider)
 
         let itemAppearance = UITabBarItemAppearance()
-        itemAppearance.normal.iconColor = UIColor(Color.textDisabled)
+        itemAppearance.normal.iconColor = UIColor(AssetTabPalette.textSecondary)
         itemAppearance.normal.titleTextAttributes = [
-            .foregroundColor: UIColor(Color.textDisabled),
+            .foregroundColor: UIColor(AssetTabPalette.textSecondary),
             .font: UIFont.systemFont(ofSize: 10, weight: .medium)
         ]
-        itemAppearance.selected.iconColor = UIColor(Color.brand)
+        itemAppearance.selected.iconColor = UIColor(AssetTabPalette.brand)
         itemAppearance.selected.titleTextAttributes = [
-            .foregroundColor: UIColor(Color.brand),
+            .foregroundColor: UIColor(AssetTabPalette.brand),
             .font: UIFont.systemFont(ofSize: 10, weight: .bold)
         ]
 
