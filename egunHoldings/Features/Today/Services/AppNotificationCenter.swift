@@ -203,12 +203,12 @@ final class AppNotificationCenter: ObservableObject {
 
         let item = AppNotificationItem(
             kind: .signalAnalysis,
-            title: "SOXX 변동 가능성 확인",
-            message: "보유한 SOXX의 변동 가능성이 커졌어요. 이유를 확인해보세요.",
+            title: "QQQ 변동 가능성 확인",
+            message: "보유한 QQQ의 변동 가능성이 커졌어요. 이유를 확인해보세요.",
             occurredAt: Date(),
-            relatedTitle: "반도체",
+            relatedTitle: "빅테크 (QQQ)",
             analysisPayload: PolSignalAnalysisPayload(
-                eventId: 102,
+                eventId: 101,
                 analysisVersion: "test-notification"
             ),
             isRead: false
