@@ -122,7 +122,7 @@ struct TodayView: View {
                             onSignalRouteRequested(.adjustment)
                         }
                 case .policyReader(let id):
-                    PolSignalPolicyReaderView(event: PolSignalFlowMockData.policyReading(id: id))
+                    PolSignalPolicyReaderView(event: policyReading(id: id))
                 case .themeDetail(let theme):
                     // Today 탭 내부에서 직접 렌더링 — 탭 전환 없음.
                     SignalThemeDetailView(theme: theme)
@@ -189,6 +189,10 @@ struct TodayView: View {
     private func openAnalysisNotification(_ payload: PolSignalAnalysisPayload) {
         notificationCenter.markAnalysisPayloadAsRead(payload)
         onAnalysisNotificationRequested(payload)
+    }
+
+    private func policyReading(id: Int) -> PolSignalPolicyReading {
+        viewModel.policyReadings.first { $0.id == id } ?? PolSignalFlowMockData.policyReading(id: id)
     }
 
     private var judgmentState: TodayJudgmentDisplayState {

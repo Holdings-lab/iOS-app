@@ -603,6 +603,14 @@ nonisolated struct TodayEventItemDTO: Decodable {
     let countdownText: String?
     let relatedAssets: [String]?
     let alertEnabled: Bool?
+    let sourceURL: String?
+    let sourceUrl: String?
+    let source_url: String?
+    let articleURL: String?
+    let articleUrl: String?
+    let article_url: String?
+    let url: String?
+    let link: String?
 
     func toPolicyReading(index: Int) -> PolSignalPolicyReading {
         let keywords = (tags?.nonEmpty ?? relatedAssets?.nonEmpty ?? ["정책"])
@@ -610,11 +618,15 @@ nonisolated struct TodayEventItemDTO: Decodable {
             .map { $0 }
         let keywordText = keywords.joined(separator: ", ")
         let sourceText = tags?.first ?? "뉴스"
+        let sourceLink = [sourceURL, sourceUrl, source_url, articleURL, articleUrl, article_url, url, link]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty }
 
         return PolSignalPolicyReading(
             id: eventId ?? index + 1,
             date: countdownText ?? timeText ?? "오늘",
             institution: sourceText,
+            sourceURL: sourceLink.flatMap(URL.init(string:)),
             title: title ?? "관심 키워드 뉴스",
             keywords: Array(keywords),
             whatHappened: "서버 이벤트 목록에서 받은 뉴스예요. 관심 키워드 \(keywordText)이(가) 포함되어 있어 짧게 읽을 수 있도록 정리했어요.",

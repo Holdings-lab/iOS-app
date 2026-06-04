@@ -4,6 +4,7 @@ struct PolSignalPolicyReaderView: View {
     let event: PolSignalPolicyReading
 
     @State private var isRead = false
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -45,11 +46,14 @@ struct PolSignalPolicyReaderView: View {
 
                 readerSection(
                     number: "4",
-                    title: "더 알아볼 수 있어요",
+                    title: "원문과 더 읽기",
                     iconName: "safari",
                     usesNeutralBackground: true
                 ) {
-                    followUpRows
+                    VStack(spacing: 10) {
+                        sourceLinkRow
+                        followUpRows
+                    }
                 }
 
                 actionArea
@@ -157,6 +161,50 @@ struct PolSignalPolicyReaderView: View {
                 .accessibilityLabel(question)
             }
         }
+    }
+
+    private var sourceLinkRow: some View {
+        Button {
+            if let sourceURL = event.sourceURL {
+                openURL(sourceURL)
+            }
+        } label: {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: event.sourceURL == nil ? "doc.text" : "arrow.up.forward.square")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(event.sourceURL == nil ? PSColor.textFaint : PSColor.primary)
+                    .frame(width: 30, height: 30)
+                    .background(PSColor.Reader.surface, in: Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(event.sourceURL == nil ? "원문 링크 없음" : "\(event.institution) 원문 열기")
+                        .font(.pretendard(14, weight: .semibold, relativeTo: .body))
+                        .foregroundStyle(event.sourceURL == nil ? PSColor.textSecondary : PSColor.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+
+                    Text(event.sourceURL?.host ?? "원문 링크가 연결되면 여기서 바로 확인할 수 있어요")
+                        .font(.pretendard(12, weight: .regular, relativeTo: .caption))
+                        .foregroundStyle(PSColor.textSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(event.sourceURL == nil ? PSColor.textFaint : PSColor.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: 56)
+            .padding(.horizontal, 12)
+            .background(PSColor.Reader.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(event.sourceURL == nil)
+        .accessibilityLabel(event.sourceURL == nil ? "원문 링크 없음" : "\(event.institution) 원문 열기")
     }
 
     private func readerSection<Content: View>(

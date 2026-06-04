@@ -156,6 +156,7 @@ nonisolated struct PolSignalPolicyReading: Identifiable, Hashable {
     let id: Int
     let date: String
     let institution: String
+    let sourceURL: URL?
     let title: String
     let keywords: [String]
     let whatHappened: String
