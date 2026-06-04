@@ -320,7 +320,7 @@ nonisolated enum PolSignalFlowMockData {
         )
     ]
 
-    // MARK: - Today Theme Signals
+    // MARK: - Today Top 3 Theme Signals
 
     static let todayThemeSignals: [PortfolioThemeSignal] = [
         // QQQ — 빅테크 — NVIDIA 어닝·이란 휴전·미중 관세 완화 → adjust(대응하세요)
@@ -338,11 +338,53 @@ nonisolated enum PolSignalFlowMockData {
             ),
             nextEventLabel: nil,
             relatedEventId: 101
+        ),
+        // SOXX — 반도체 — adjust(대응하세요)
+        PortfolioThemeSignal(
+            id: UUID(),
+            theme: .semiconductor,
+            myExposurePercent: 14,
+            verdictKind: .adjust,
+            prescription: TodayDecisionPrescription(
+                summary: "반도체 보조금 발표 결과에 따라 가격이 빠르게 움직일 수 있어요. 비중이 높아 직접 영향을 받아요.",
+                action: "반도체 비중을 줄이세요",
+                nowPercent: "14%",
+                goalLabel: "목표 11%",
+                narrative: nil
+            ),
+            nextEventLabel: nil,
+            relatedEventId: 102
+        ),
+        // XLF — 금융 — watch(지켜봐요)
+        PortfolioThemeSignal(
+            id: UUID(),
+            theme: .financials,
+            myExposurePercent: 10,
+            verdictKind: .watch,
+            prescription: TodayDecisionPrescription(
+                summary: "금융주는 지금 특별히 행동할 필요 없어요. 다음 BIS 회의 결과를 지켜봐도 충분해요.",
+                action: "현재 비중을 유지하세요",
+                nowPercent: "10%",
+                goalLabel: "유지 10%",
+                narrative: nil
+            ),
+            nextEventLabel: nil,
+            relatedEventId: 103
+        ),
+        // ICLN — 친환경 — 신호 없음
+        PortfolioThemeSignal(
+            id: UUID(),
+            theme: .greenEnergy,
+            myExposurePercent: 8,
+            verdictKind: nil,
+            prescription: nil,
+            nextEventLabel: "6/2 IEA 에너지 보고",
+            relatedEventId: nil
         )
     ]
 
     static let latestAnalysisPayload = PolSignalAnalysisPayload(
-        eventId: 101,
+        eventId: 103,
         analysisVersion: "2026-05-20T09:20:00+09:00"
     )
 
