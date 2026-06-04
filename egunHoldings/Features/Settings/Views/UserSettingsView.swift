@@ -4,8 +4,9 @@ struct UserSettingsView: View {
     @ObservedObject var notificationCenter: AppNotificationCenter
     @StateObject private var viewModel: UserSettingsViewModel
     @Environment(\.dismiss) private var dismiss
+    private let connectedBrokerText: String
 
-    @State private var selectedThemes: Set<String> = ["반도체", "금리·채권", "환율"]
+    @State private var selectedKeywords: Set<String> = ["#엔비디아", "#QQQ", "#FOMC"]
     @State private var language = "한국어"
     @State private var trustLevel = "보통"
     @State private var themeMode = "시스템"
@@ -13,7 +14,6 @@ struct UserSettingsView: View {
     @State private var policyDDayAlert = true
     @State private var analysisDoneAlert = true
     @State private var riskAlert = true
-    @State private var proposalAlert = true
     @State private var optimizeData = true
     @State private var isRequestingNotificationAuthorization = false
     @State private var isSchedulingTestNotification = false
@@ -25,6 +25,7 @@ struct UserSettingsView: View {
         viewModel: UserSettingsViewModel? = nil
     ) {
         self.notificationCenter = notificationCenter
+        self.connectedBrokerText = connectedBrokerText
         _viewModel = StateObject(
             wrappedValue: viewModel ?? UserSettingsViewModel(
                 userId: userId,
@@ -106,37 +107,45 @@ struct UserSettingsView: View {
 
     private var profileCard: some View {
         PolSignalCard {
-            HStack(spacing: 12) {
-                Text("투")
-                    .font(.pretendard(18, weight: .bold))
-                    .foregroundStyle(Color.white)
-                    .frame(width: 48, height: 48)
-                    .background(PSColor.primary, in: Circle())
+            VStack(spacing: 0) {
+                HStack(spacing: 12) {
+                    Text("투")
+                        .font(.pretendard(18, weight: .bold))
+                        .foregroundStyle(Color.white)
+                        .frame(width: 48, height: 48)
+                        .background(PSColor.primary, in: Circle())
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text(viewModel.settings.account.displayName)
                             .font(.pretendard(17, weight: .semibold))
                             .foregroundStyle(PSColor.textPrimary)
-
-                        PolSignalTag(
-                            text: "\(viewModel.settings.rebalancing.investmentProfile.displayName) 투자자",
-                            style: .primary
-                        )
                     }
 
-                    Button("투자 성향 변경 ›") {}
-                        .font(.pretendard(13, weight: .regular))
-                        .foregroundStyle(PSColor.textSecondary)
+                    Spacer(minLength: 0)
                 }
 
-                Spacer(minLength: 0)
+                PolSignalSettingsDivider()
+
+                HStack {
+                    Text("연결된 증권사")
+                        .font(.pretendard(14, weight: .medium))
+                        .foregroundStyle(PSColor.textSecondary)
+                    Spacer()
+                    Text(connectedBrokerText)
+                        .font(.pretendard(14, weight: .semibold))
+                        .foregroundStyle(PSColor.primary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(PSColor.textFaint)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
             }
         }
     }
 
     private var portfolioSection: some View {
-        PolSignalSettingSection(title: "내 포트폴리오") {
+        PolSignalSettingSection(title: "내 포트폴리오 · 관심") {
             NavigationLink {
                 PolSignalHoldingsEditorView()
             } label: {
@@ -149,25 +158,18 @@ struct UserSettingsView: View {
 
             PolSignalSettingsDivider()
 
-            PolSignalSettingsListRow(
-                title: "위험 임계값",
-                subtitle: "단일 자산 상한 \(viewModel.settings.rebalancing.maxSingleAssetWeight)% 설정 중"
-            )
-
-            PolSignalSettingsDivider()
-
             VStack(alignment: .leading, spacing: 10) {
-                Text("관심 테마")
+                Text("관심 키워드")
                     .font(.pretendard(13, weight: .semibold))
                     .foregroundStyle(PSColor.textSecondary)
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    ForEach(["반도체", "금리·채권", "환율", "친환경", "원자재", "부동산·리츠"], id: \.self) { theme in
-                        PolSignalCheckChip(title: theme, isOn: selectedThemes.contains(theme)) {
-                            if selectedThemes.contains(theme) {
-                                selectedThemes.remove(theme)
+                    ForEach(interestKeywordTags, id: \.self) { keyword in
+                        PolSignalCheckChip(title: keyword, isOn: selectedKeywords.contains(keyword)) {
+                            if selectedKeywords.contains(keyword) {
+                                selectedKeywords.remove(keyword)
                             } else {
-                                selectedThemes.insert(theme)
+                                selectedKeywords.insert(keyword)
                             }
                         }
                     }
@@ -179,7 +181,17 @@ struct UserSettingsView: View {
     }
 
     private var signalSection: some View {
-        PolSignalSettingSection(title: "시그널 설정") {
+        PolSignalSettingSection(title: "시그널 · 데이터") {
+            PolSignalSettingsListRow(
+                title: "뉴스 수집 소스",
+                subtitle: "FOMC · Yahoo Finance · BIS"
+            )
+            PolSignalSettingsDivider()
+            PolSignalSettingsListRow(
+                title: "예측 기준",
+                subtitle: "5/28 (목) · 5거래일 후 모델"
+            )
+            PolSignalSettingsDivider()
             PolSignalSettingsListRow(title: "관심 정책 카테고리", subtitle: "산업·금리·환율 우선")
             PolSignalSettingsDivider()
             PolSignalSegmentRow(title: "분석 언어", options: ["한국어", "English"], selection: $language)
@@ -209,10 +221,14 @@ struct UserSettingsView: View {
             PolSignalSettingsDivider()
             PolSignalToggleRow(title: "위험 신호 알림", isOn: $riskAlert)
             PolSignalSettingsDivider()
-            PolSignalToggleRow(title: "조정 제안 대기 알림", isOn: $proposalAlert)
-            PolSignalSettingsDivider()
             PolSignalSettingsListRow(title: "방해 금지 시간대", subtitle: "별도 설정 화면 예정")
         }
+    }
+
+    private var interestKeywordTags: [String] {
+        InterestKeywordCategory.allCategories
+            .flatMap(\.keywords)
+            .map(\.tag)
     }
 
     private var notificationActionButtons: some View {
