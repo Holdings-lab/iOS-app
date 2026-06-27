@@ -123,13 +123,10 @@ nonisolated struct LiveAssetRebalancingRepository: AssetRebalancingRepositoryPro
     }
 
     private static func shouldUseFallback(for error: Error) -> Bool {
-        switch error {
-        case NetworkError.httpStatus(404), NetworkError.notImplemented:
+        if error is NetworkError {
             return true
-        case NetworkError.apiFailure(let statusCode, _, _):
-            return statusCode == 404
-        default:
-            return false
         }
+
+        return (error as NSError).domain == NSURLErrorDomain
     }
 }

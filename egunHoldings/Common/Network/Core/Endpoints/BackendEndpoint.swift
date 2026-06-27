@@ -10,7 +10,7 @@ nonisolated enum BackendEndpoint {
     }
 
     static func register(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/register", method: .post, body: body)
+        Endpoint(baseURL: baseURL, path: "/api/auth/signup", method: .post, body: body)
     }
 
     static func login(body: Data) -> Endpoint {
@@ -18,7 +18,7 @@ nonisolated enum BackendEndpoint {
     }
 
     static func oauthLogin(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/oauth-login", method: .post, body: body)
+        Endpoint(baseURL: baseURL, path: "/api/auth/login/oauth", method: .post, body: body)
     }
 
     static func accounts() -> Endpoint {
@@ -26,59 +26,51 @@ nonisolated enum BackendEndpoint {
     }
 
     static func deleteAccount(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/delete/\(userId)", method: .delete, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)", method: .delete, authorizationRequirement: .bearerToken)
     }
 
     static func registerFCMToken(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/register-fcm-token", method: .post, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/auth/fcm-token", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func updateNickname(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/users/\(userId)/nickname", method: .patch, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/nickname", method: .patch, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func changePassword(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/users/\(userId)/change-password", method: .post, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/password", method: .patch, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func me(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)", authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)", authorizationRequirement: .bearerToken)
     }
 
     static func meProfile(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/profile", authorizationRequirement: .bearerToken)
-    }
-
-    static func investmentProfile(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/investment-profile", authorizationRequirement: .bearerToken)
-    }
-
-    static func updateInvestmentProfile(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/investment-profile", method: .patch, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/profile", authorizationRequirement: .bearerToken)
     }
 
     static func watchAssets(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/watch-assets", authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/watch-assets", authorizationRequirement: .bearerToken)
     }
 
     static func meStudyStats(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/study-stats", authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/study-stats", authorizationRequirement: .bearerToken)
     }
 
     static func meSettings(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/settings", authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/settings", authorizationRequirement: .bearerToken)
     }
 
     static func updateMeSettings(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/settings", method: .patch, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/settings", method: .patch, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func updateWatchAssets(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/watch-assets", method: .post, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/watch-assets", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func watchAssetOptions() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/watch-assets/options", authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/watch-assets/options", authorizationRequirement: .bearerToken)
     }
 
     static func home(userId: Int64) -> Endpoint {
@@ -184,15 +176,15 @@ nonisolated enum BackendEndpoint {
     }
 
     static func portfolio(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)", authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/portfolio", authorizationRequirement: .bearerToken)
     }
 
     static func portfolioRebalancing(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)/rebalancing", authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/portfolio/rebalancing", authorizationRequirement: .bearerToken)
     }
 
     static func portfolioRebalancingPreview(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)/rebalancing/preview", method: .post, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/portfolio/rebalancing/preview", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func insightSection(_ sectionPath: InsightSectionPath) -> Endpoint {
@@ -200,11 +192,11 @@ nonisolated enum BackendEndpoint {
     }
 
     static func trainRegression() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/ai/train-regression", method: .post, body: NetworkJSONCoding.encodeEmptyJSONObject(), authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/ai/models/regression/training", method: .post, body: NetworkJSONCoding.encodeEmptyJSONObject(), authorizationRequirement: .bearerToken)
     }
 
     static func triggerAI(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/ai/trigger", queryItems: userQuery(userId), method: .post, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/ai/users/\(userId)/sync", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func health() -> Endpoint {
@@ -217,7 +209,7 @@ nonisolated enum BackendEndpoint {
             headers["X-Webhook-Secret"] = secret
         }
 
-        return Endpoint(baseURL: baseURL, path: "/api/internal/webhook/event", method: .post, headers: headers, body: body)
+        return Endpoint(baseURL: baseURL, path: "/api/internal/webhooks/events", method: .post, headers: headers, body: body)
     }
 
     static func adminAccounts(page: Int = 0, size: Int = 100) -> Endpoint {
@@ -259,10 +251,6 @@ nonisolated enum BackendEndpoint {
     }
 
     private static let baseURL = NetworkConfiguration.backendBaseURL
-
-    private static func userQuery(_ userId: Int64) -> [URLQueryItem] {
-        [URLQueryItem(name: "userId", value: String(userId))]
-    }
 
     private static func eventQuery(dateSegment: String, category: String) -> [URLQueryItem] {
         [
@@ -325,8 +313,8 @@ nonisolated enum EventSectionPath: String {
 }
 
 nonisolated enum InsightSectionPath: String {
-    case columns
-    case legend
-    case rows
-    case viewTabs = "view-tabs"
+    case columns = "heatmap/columns"
+    case legend = "heatmap/legend"
+    case rows = "heatmap/rows"
+    case viewTabs = "tabs"
 }

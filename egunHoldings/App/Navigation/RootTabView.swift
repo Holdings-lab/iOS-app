@@ -55,7 +55,7 @@ struct RootTabView: View {
                 Label("오늘", systemImage: "sun.max.fill")
             }
 
-            SignalView(initialRoute: signalRoute, externalRoute: $signalRoute)
+            SignalView(userId: userId, initialRoute: signalRoute, externalRoute: $signalRoute)
                 .id(signalViewIdentity)
             .tag(RootTab.signal)
             .tabItem {

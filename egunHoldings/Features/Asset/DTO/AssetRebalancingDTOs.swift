@@ -1,9 +1,5 @@
 import Foundation
 
-nonisolated struct InvestmentProfileUpdateRequestDTO: Encodable, Sendable {
-    let investmentProfile: String
-}
-
 nonisolated struct RebalancingPreviewRequestDTO: Encodable, Sendable {
     let investmentProfile: String?
     let cash: Double

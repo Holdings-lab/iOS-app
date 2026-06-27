@@ -8,13 +8,14 @@ struct SignalView: View {
     @State private var expandedAIEventID: Int?
 
     init(
+        userId: Int64? = nil,
         initialRoute: PolSignalRoute? = nil,
         externalRoute: Binding<PolSignalRoute?> = .constant(nil),
         viewModel: PolSignalFlowViewModel? = nil
     ) {
         // Swift 6: default expression이 MainActor isolated init을 직접 호출할 수 없어서
         // nil을 기본값으로 받고 init body 안에서 lazily 생성. (TodayView와 동일 패턴)
-        _viewModel = StateObject(wrappedValue: viewModel ?? PolSignalFlowViewModel())
+        _viewModel = StateObject(wrappedValue: viewModel ?? PolSignalFlowViewModel(userId: userId))
         _externalRoute = externalRoute
         switch initialRoute {
         case .list:
@@ -86,6 +87,9 @@ struct SignalView: View {
         }
         .onChange(of: externalRoute) { _, _ in
             consumeExternalRoute()
+        }
+        .task {
+            await viewModel.load()
         }
     }
 

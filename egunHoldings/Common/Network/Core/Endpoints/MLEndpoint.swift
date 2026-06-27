@@ -6,19 +6,23 @@ nonisolated enum MLEndpoint {
     }
 
     static func runCrawler() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/ml/crawl/run", method: .post, body: NetworkJSONCoding.encodeEmptyJSONObject())
+        Endpoint(baseURL: baseURL, path: "/ml/crawlers/run", method: .post, body: NetworkJSONCoding.encodeEmptyJSONObject())
     }
 
     static func runPredict() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/ml/predict/run", method: .post, body: NetworkJSONCoding.encodeEmptyJSONObject())
+        Endpoint(baseURL: baseURL, path: "/ml/predictions/run", method: .post, body: NetworkJSONCoding.encodeEmptyJSONObject())
     }
 
     static func predictResult() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/ml/predict/result")
+        Endpoint(baseURL: baseURL, path: "/ml/predictions/latest")
     }
 
     static func pipeline() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/ml/pipeline", method: .post, body: NetworkJSONCoding.encodeEmptyJSONObject())
+        Endpoint(baseURL: baseURL, path: "/ml/pipelines/run", method: .post, body: NetworkJSONCoding.encodeEmptyJSONObject())
+    }
+
+    static func pipelineJob() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/ml/pipelines/job")
     }
 
     static func policyFeed(
@@ -30,7 +34,7 @@ nonisolated enum MLEndpoint {
     ) -> Endpoint {
         Endpoint(
             baseURL: baseURL,
-            path: "/ml/content/policy-feed",
+            path: "/ml/feeds/policy",
             queryItems: policyFeedQuery(userId: userId, limit: limit, category: category, dateFrom: dateFrom, dateTo: dateTo)
         )
     }
