@@ -39,19 +39,25 @@ nonisolated enum SignalThemeDetailMockData {
                 intensity: .veryHigh,
                 title: "AI 반도체 실적이 빅테크 상승을 확인시켜줬어요",
                 description: "NVIDIA가 분기 매출 $81.6B(YoY +85%)로 시장 예상을 크게 웃돌았어요. AI 데이터센터 수요가 폭발적으로 늘고 있어요.",
-                newsTitle: "Nvidia Smashes Records with $81.6B Revenue — AI Chip Demand Surges (Yahoo Finance)"
+                newsTitle: "NVIDIA Announces Financial Results for First Quarter Fiscal 2027",
+                newsURL: "https://finance.yahoo.com/markets/stocks/articles/nvidia-announces-financial-results-first-202000544.html",
+                newsSource: "Yahoo Finance"
             ),
             SignalThemeDetailCard(
                 intensity: .veryHigh,
                 title: "미-이란 휴전 연장으로 지정학 리스크가 줄었어요",
                 description: "중동 분쟁 완화로 에너지 공급 불안이 해소되면서 위험자산 선호 심리가 빠르게 회복되고 있어요.",
-                newsTitle: "미·이란 협상단 휴전 연장 합의 가능성 고조 — 위험자산 반등 (Yahoo Finance)"
+                newsTitle: "US and Iran reach tentative deal for 60-day truce extension, officials say",
+                newsURL: "https://www.aljazeera.com/news/2026/5/28/us-and-iran-reach-tentative-deal-for-60-day-truce-extension-officials-say",
+                newsSource: "Al Jazeera"
             ),
             SignalThemeDetailCard(
                 intensity: .high,
                 title: "미중 관세 완화가 공급망 압박을 덜었어요",
-                description: "5/12 90일 관세 휴전으로 상호관세가 125%에서 10%로 급감했어요. 빅테크 공급망 비용 부담이 크게 줄었어요.",
-                newsTitle: "U.S.-China 90-day tariff truce — Nasdaq jumped 3.3% (Yahoo Finance)"
+                description: "Trump-Xi 정상회담으로 미중 무역 긴장이 완화되고 미국이 엔비디아 H200 칩의 중국 수출을 허용했어요. 빅테크 공급망과 매출 기대가 함께 개선됐어요.",
+                newsTitle: "Trump-Xi summit revives China tech rally hopes as U.S. clears Nvidia H200 sales",
+                newsURL: "https://www.cnbc.com/2026/05/14/trump-xi-meeting-china-stocks-ai-rally.html",
+                newsSource: "CNBC"
             ),
             SignalThemeDetailCard(
                 intensity: .high,

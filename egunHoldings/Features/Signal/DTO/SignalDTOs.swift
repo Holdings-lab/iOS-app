@@ -122,6 +122,35 @@ extension SignalCardResponseDTO {
     }
 }
 
+// MARK: - Events (shared /api/users/{id}/events response, consumed only by Signal now —
+// Today used to also read this into `policyReadings`, but that display was retired.)
+
+nonisolated struct TodayEventsResponseDTO: Decodable {
+    let dateSegments: [String]?
+    let categories: [String]?
+    let items: [TodayEventItemDTO]?
+}
+
+nonisolated struct TodayEventItemDTO: Decodable {
+    let eventId: Int?
+    let timeText: String?
+    let title: String?
+    let statusText: String?
+    let tags: [String]?
+    let importanceStars: Int?
+    let countdownText: String?
+    let relatedAssets: [String]?
+    let alertEnabled: Bool?
+    let sourceURL: String?
+    let sourceUrl: String?
+    let source_url: String?
+    let articleURL: String?
+    let articleUrl: String?
+    let article_url: String?
+    let url: String?
+    let link: String?
+}
+
 extension TodayEventsResponseDTO {
     func toSignalEvents(fallback: [PolSignalEvent]) -> [PolSignalEvent] {
         let mapped = (items ?? []).enumerated().map { index, item in

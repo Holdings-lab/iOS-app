@@ -85,6 +85,10 @@ struct SignalThemeDetailCard: Identifiable {
     let description: String
     /// 대표 뉴스 제목. Phase 1에서는 nil, Phase 1.5부터 채워짐.
     let newsTitle: String?
+    /// 실제 원문 기사 URL. 있으면 "원문 보기" 링크로 렌더링.
+    let newsURL: String?
+    /// 출처명. 예: "Yahoo Finance", "Al Jazeera", "CNBC"
+    let newsSource: String?
 
     enum Intensity {
         case veryHigh
@@ -121,13 +125,17 @@ struct SignalThemeDetailCard: Identifiable {
         intensity: Intensity,
         title: String,
         description: String,
-        newsTitle: String? = nil
+        newsTitle: String? = nil,
+        newsURL: String? = nil,
+        newsSource: String? = nil
     ) {
         self.id = id
         self.intensity = intensity
         self.title = title
         self.description = description
         self.newsTitle = newsTitle
+        self.newsURL = newsURL
+        self.newsSource = newsSource
     }
 }
 
