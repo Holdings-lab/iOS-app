@@ -50,10 +50,8 @@ Onboarding/Views
 
 다음 파일은 화면 조합, 상태 표현, 세부 컴포넌트가 한 파일에 함께 있어 탐색 비용이 크다.
 
-- `Newsroom/Views/Components/PolicyNewsInsightSheet.swift`: 993줄
+- `Newsroom/Views/Components/PolicyNewsInsightSheet.swift`: 670줄
 - `Today/Views/TodayView.swift`: 907줄
-- `Asset/Views/Components/Exposure/AssetExposureOverviewSection.swift`: 709줄
-- `Asset/Views/Components/Rebalance/AssetRebalanceSection.swift`: 657줄
 
 화면 진입점은 상태와 섹션 조합만 담당하고, 독립적인 섹션은
 `Views/Components/<Subfeature>` 아래로 이동한다. 한 파일에 여러 독립 화면 상태나
@@ -65,6 +63,12 @@ Onboarding/Views
 - `PolSignalDashboardViews.swift`: Today 브리핑·자산 스냅샷 539줄 분리
 - `SignalView.swift`: 980줄에서 화면 진입점 445줄로 축소
 - `SignalDetailViews.swift`: 상세 화면·조정 제안 sheet 537줄 분리
+- `PolicyNewsInsightSheet.swift`: 993줄에서 상세 화면 본체 670줄로 축소
+- `PolicyNewsInsightComponents.swift`: 상세 전용 컴포넌트 324줄 분리
+- `AssetExposureOverviewSection.swift`: 709줄에서 개요 427줄로 축소
+- `AssetExposureDetailView.swift`: 상세 화면·컴포넌트 283줄 분리
+- `AssetRebalanceSection.swift`: 657줄에서 화면 본체 308줄로 축소
+- `AssetRebalanceComponents.swift`: 재조정 카드·지표 350줄 분리
 
 ### P1: 기능별 계층의 불일치
 
