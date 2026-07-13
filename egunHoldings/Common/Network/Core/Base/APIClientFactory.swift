@@ -3,7 +3,13 @@ import Foundation
 @preconcurrency import Moya
 
 nonisolated enum APIClientFactory {
+    private static let shared: APIClient = makeClient()
+
     static func makeDefault() -> APIClient {
+        shared
+    }
+
+    private static func makeClient() -> APIClient {
         let tokenStore = SessionAuthTokenStore()
         var plugins: [PluginType] = [
             AuthorizationHeaderPlugin(tokenStore: tokenStore),

@@ -66,27 +66,48 @@ nonisolated enum BackendEndpoint {
     }
 
     static func updateWatchAssets(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/watch-assets", method: .post, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/watch-assets", method: .put, body: body, authorizationRequirement: .bearerToken)
+    }
+
+    static func goal(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/goal", authorizationRequirement: .bearerToken)
+    }
+
+    static func updateGoal(userId: Int64, body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/goal", method: .patch, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func watchAssetOptions() -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/users/watch-assets/options", authorizationRequirement: .bearerToken)
     }
 
-    static func home(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/home", authorizationRequirement: .bearerToken)
+    static func dailyBriefing(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/daily-briefing", authorizationRequirement: .bearerToken)
     }
 
-    static func todayDashboard(userId: Int64) -> Endpoint {
-        homeBriefing(userId: userId)
+    static func todayHoldings(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/holdings", authorizationRequirement: .bearerToken)
     }
 
-    static func homeBriefing(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/home/briefing", authorizationRequirement: .bearerToken)
+    static func holdingsNews(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/holdings-news", authorizationRequirement: .bearerToken)
     }
 
-    static func homeSection(userId: Int64, _ sectionPath: HomeSectionPath) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/home/\(sectionPath.rawValue)", authorizationRequirement: .bearerToken)
+    static func brokerageConnections(userId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/brokerage-connections", authorizationRequirement: .bearerToken)
+    }
+
+    static func createBrokerageConnection(userId: Int64, body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/brokerage-connections", method: .post, body: body, authorizationRequirement: .bearerToken)
+    }
+
+    static func deleteBrokerageConnection(userId: Int64, connectionId: String) -> Endpoint {
+        Endpoint(
+            baseURL: baseURL,
+            path: "/api/users/\(userId)/brokerage-connections/\(escapedPathComponent(connectionId))",
+            method: .delete,
+            authorizationRequirement: .bearerToken
+        )
     }
 
     static func policyFeed(
@@ -284,17 +305,6 @@ nonisolated enum BackendEndpoint {
     private static func escapedPathComponent(_ value: String) -> String {
         value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? value
     }
-}
-
-nonisolated enum HomeSectionPath: String {
-    case checkpointTab = "tabs/checkpoints"
-    case detailTabs = "tabs/details"
-    case disclaimer
-    case featuredCard = "cards/featured"
-    case header
-    case portfolioCard = "cards/portfolio"
-    case quickInterpretation = "interpretations/quick"
-    case secondarySignals = "signals/secondary"
 }
 
 nonisolated enum PolicyFeedSectionPath: String {

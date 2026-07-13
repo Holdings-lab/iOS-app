@@ -5,3 +5,7 @@ BACKEND_BASE_URL = https:/$()/holdings-lab.me
 ML_SERVICE_BASE_URL = https:/$()/holdings-lab.me
 TRADING_SERVER_BASE_URL = https:/$()/holdings-lab.me
 AUTH_REFRESH_URL =
+
+// 증권사 크리덴셜 암호화용 서버 공개키. 서버 배포 전까지 비워두면 연동은 로컬 스텁으로 폴백한다.
+BROKERAGE_SERVER_KEY_ID =
+BROKERAGE_SERVER_PUBLIC_KEY =

@@ -34,6 +34,17 @@ nonisolated enum NetworkConfiguration {
         configuredURL(forInfoKey: "AUTH_REFRESH_URL")
     }
 
+    /// 증권사 크리덴셜 암호화용 서버 공개키 식별자(예: "server-pubkey-2026-07").
+    /// 서버가 키를 배포하기 전까지는 비어 있고, 이때 증권사 연동은 로컬 스텁으로 폴백한다.
+    static var brokerageServerKeyId: String? {
+        configuredString(forInfoKey: "BROKERAGE_SERVER_KEY_ID")
+    }
+
+    /// 서버 RSA 공개키(base64 인코딩된 DER — PKCS#1 또는 SPKI)
+    static var brokerageServerPublicKeyBase64: String? {
+        configuredString(forInfoKey: "BROKERAGE_SERVER_PUBLIC_KEY")
+    }
+
     static var tradingKisAccountNumber: String? {
         if let configured = configuredString(forInfoKey: "TRADING_KIS_ACCOUNT_NUMBER") {
             return configured
