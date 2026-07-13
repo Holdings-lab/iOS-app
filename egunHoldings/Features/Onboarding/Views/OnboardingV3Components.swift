@@ -276,6 +276,130 @@ struct OnboardingV3Radio: View {
     }
 }
 
+struct OnboardingV3OptionCard: View {
+    let symbol: String
+    let title: String
+    var subtitle: String?
+    var trailingText: String?
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(alignment: .top, spacing: 14) {
+                Circle()
+                    .fill(isSelected ? OnboardingV3Theme.selectedBackground : Color(hex: "F1F5F9"))
+                    .frame(width: 40, height: 40)
+                    .overlay {
+                        Image(systemName: symbol)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(isSelected ? OnboardingV3Theme.primary : OnboardingV3Theme.muted)
+                    }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.pretendard(16, weight: .bold))
+                        .foregroundStyle(Color.textPrimary)
+
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.pretendard(13, weight: .regular))
+                            .foregroundStyle(OnboardingV3Theme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                if let trailingText {
+                    Text(trailingText)
+                        .font(.pretendard(13, weight: .semibold))
+                        .foregroundStyle(isSelected ? OnboardingV3Theme.primary : OnboardingV3Theme.muted)
+                }
+
+                OnboardingV3Radio(isSelected: isSelected)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isSelected ? OnboardingV3Theme.selectedBackground : OnboardingV3Theme.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isSelected ? OnboardingV3Theme.primary : OnboardingV3Theme.border, lineWidth: isSelected ? 1.5 : 1)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct OnboardingV3FlowLayout: Layout {
+    let horizontalSpacing: CGFloat
+    let verticalSpacing: CGFloat
+
+    init(horizontalSpacing: CGFloat = 8, verticalSpacing: CGFloat = 10) {
+        self.horizontalSpacing = horizontalSpacing
+        self.verticalSpacing = verticalSpacing
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .greatestFiniteMagnitude
+        let layout = makeLayout(maxWidth: maxWidth, subviews: subviews)
+
+        return CGSize(
+            width: proposal.width ?? layout.width,
+            height: layout.height
+        )
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var xOffset: CGFloat = 0
+        var yOffset: CGFloat = 0
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+
+            if xOffset > 0, xOffset + size.width > bounds.width {
+                xOffset = 0
+                yOffset += rowHeight + verticalSpacing
+                rowHeight = 0
+            }
+
+            subview.place(
+                at: CGPoint(x: bounds.minX + xOffset, y: bounds.minY + yOffset),
+                proposal: ProposedViewSize(size)
+            )
+
+            xOffset += size.width + horizontalSpacing
+            rowHeight = max(rowHeight, size.height)
+        }
+    }
+
+    private func makeLayout(maxWidth: CGFloat, subviews: Subviews) -> (width: CGFloat, height: CGFloat) {
+        var xOffset: CGFloat = 0
+        var yOffset: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var measuredWidth: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+
+            if xOffset > 0, xOffset + size.width > maxWidth {
+                measuredWidth = max(measuredWidth, xOffset - horizontalSpacing)
+                xOffset = 0
+                yOffset += rowHeight + verticalSpacing
+                rowHeight = 0
+            }
+
+            xOffset += size.width + horizontalSpacing
+            rowHeight = max(rowHeight, size.height)
+        }
+
+        measuredWidth = max(measuredWidth, xOffset > 0 ? xOffset - horizontalSpacing : 0)
+
+        return (measuredWidth, yOffset + rowHeight)
+    }
+}
+
 struct OnboardingV3ScreenBackground: ViewModifier {
     func body(content: Content) -> some View {
         content

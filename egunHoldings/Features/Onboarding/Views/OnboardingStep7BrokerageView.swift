@@ -1,18 +1,37 @@
 import SwiftUI
 
-struct OnboardingPage3View: View {
+struct OnboardingStep7BrokerageView: View {
     @ObservedObject var viewModel: OnboardingFlowViewModel
+    let userId: Int64?
     let onBack: () -> Void
     let onNext: () -> Void
     let onSkip: () -> Void
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
     @State private var isSkipConfirmationPresented = false
+    @State private var isSubmitting = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
+
+    private var canSubmit: Bool {
+        viewModel.connectedInstitutionID != nil && viewModel.brokerageCredential.isComplete
+    }
+
+    private var primaryButtonTitle: String {
+        if viewModel.connectedInstitutionID == nil {
+            return "증권사를 선택해주세요"
+        }
+
+        if !viewModel.brokerageCredential.isComplete {
+            return "계좌 정보를 입력해주세요"
+        }
+
+        return "조회 전용으로 연결하기"
+    }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -46,6 +65,11 @@ struct OnboardingPage3View: View {
                         }
                     }
                 }
+
+                if viewModel.connectedInstitutionID != nil {
+                    BrokerageCredentialFields(credential: $viewModel.brokerageCredential)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
             .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
             .padding(.top, OnboardingV3Layout.progressContentTopPadding)
@@ -54,18 +78,18 @@ struct OnboardingPage3View: View {
             .frame(maxWidth: .infinity)
         }
         .trackOnboardingProgressScroll(isCollapsed: $isProgressCollapsed)
-        .onboardingProgressOverlay(step: 2, isCollapsed: isProgressCollapsed)
+        .onboardingProgressOverlay(step: 7, totalSteps: 8, isCollapsed: isProgressCollapsed)
         .safeAreaInset(edge: .bottom) {
             OnboardingV3BottomBar {
                 VStack(spacing: 10) {
-                    OnboardingV3PrimaryButton(title: "조회 전용으로 연결하기") {
-                        if viewModel.connectedInstitutionID == nil {
-                            viewModel.connectRecommendedBroker()
-                        }
-                        onNext()
+                    OnboardingV3PrimaryButton(
+                        title: isSubmitting ? "연결하는 중..." : primaryButtonTitle,
+                        isEnabled: canSubmit && !isSubmitting
+                    ) {
+                        submit()
                     }
 
-                    OnboardingV3SecondaryButton(title: "건너뛰기") {
+                    OnboardingV3SecondaryButton(title: "나중에 연결하기") {
                         isSkipConfirmationPresented = true
                     }
                 }
@@ -84,6 +108,69 @@ struct OnboardingPage3View: View {
             Button("계좌 연결하기", role: .cancel) {}
         }
         .onboardingV3Background()
+    }
+
+    private func submit() {
+        isSubmitting = true
+        Task {
+            await viewModel.submitBrokerageConnectionIfNeeded(userId: userId)
+            isSubmitting = false
+            onNext()
+        }
+    }
+}
+
+private struct BrokerageCredentialFields: View {
+    @Binding var credential: BrokerageCredentialInput
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("계좌 정보 입력")
+                .font(.pretendard(14, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
+
+            CredentialField(title: "증권사 아이디", text: $credential.brokerageID, isSecure: false)
+            CredentialField(title: "비밀번호", text: $credential.brokeragePassword, isSecure: true)
+            CredentialField(title: "계좌 비밀번호", text: $credential.accountPassword, isSecure: true)
+        }
+        .padding(16)
+        .background(OnboardingV3Theme.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(OnboardingV3Theme.border, lineWidth: 1)
+        }
+    }
+}
+
+private struct CredentialField: View {
+    let title: String
+    @Binding var text: String
+    let isSecure: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.pretendard(12, weight: .semibold))
+                .foregroundStyle(OnboardingV3Theme.muted)
+
+            Group {
+                if isSecure {
+                    SecureField("", text: $text)
+                } else {
+                    TextField("", text: $text)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+            }
+            .font(.pretendard(15, weight: .regular))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color(hex: "F8FAFF"), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(OnboardingV3Theme.border, lineWidth: 1)
+            }
+        }
     }
 }
 
@@ -296,6 +383,6 @@ private extension AccountInstitution {
 }
 
 #Preview {
-    OnboardingPage3View(viewModel: OnboardingFlowViewModel(), onBack: {}, onNext: {}, onSkip: {})
+    OnboardingStep7BrokerageView(viewModel: OnboardingFlowViewModel(), userId: nil, onBack: {}, onNext: {}, onSkip: {})
         .preferredColorScheme(.light)
 }

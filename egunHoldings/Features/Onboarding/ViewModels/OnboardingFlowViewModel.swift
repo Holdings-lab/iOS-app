@@ -3,11 +3,24 @@ import Foundation
 
 @MainActor
 final class OnboardingFlowViewModel: ObservableObject {
-    @Published private(set) var selectedKeywords: Set<InterestKeyword> = []
+    @Published var financialGoal: FinancialGoal = .seedMoney
+    @Published var targetAmount: Int64 = FinancialGoal.seedMoney.defaultTargetAmount
+    @Published var investmentHorizon: InvestmentHorizon?
+    @Published var maxDrawdownTolerance: MaxDrawdownTolerance?
+    @Published var investmentProfile: InvestmentProfile?
+    @Published private(set) var selectedWatchAssets: Set<WatchAssetSector> = []
     @Published private(set) var connectedInstitutionID: String?
+    @Published var brokerageCredential = BrokerageCredentialInput()
+    @Published private(set) var isBrokerageCredentialSubmitted = false
+    @Published private(set) var brokerageConnectionId: String?
 
-    var allKeywordCategories: [InterestKeywordCategory] {
-        InterestKeywordCategory.allCategories
+    private let brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol
+    private var hasCustomTargetAmount = false
+
+    init(
+        brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol = LiveBrokerageConnectionRepository()
+    ) {
+        self.brokerageConnectionRepository = brokerageConnectionRepository
     }
 
     var recommendedInstitution: AccountInstitution {
@@ -34,50 +47,52 @@ final class OnboardingFlowViewModel: ObservableObject {
         [AccountInstitution.koreaInvestmentID]
     }
 
-    var canAdvanceFromKeywordStep: Bool {
-        selectedKeywords.count >= 3
-    }
-
-    var keywordSelectionCount: Int {
-        selectedKeywords.count
-    }
-
-    var keywordNewsPreview: String {
-        switch orderedSelectedKeywords.first?.id {
-        case "qqq":
-            return "美 연준 금리 동결에 QQQ 0.8% 상승 마감"
-        case "nvidia":
-            return "엔비디아, AI 칩 수요 급증으로 분기 매출 신기록"
-        case "fomc":
-            return "FOMC 의사록 공개 — 금리 인하 시점 불확실성 지속"
-        case "tsla":
-            return "테슬라, 2분기 인도량 전망치 하회 우려"
-        case "xle":
-            return "유가 3% 급등, XLE 에너지 ETF 동반 상승"
-        default:
-            return "선택한 키워드 기반 시그널이 분석되고 있어요"
-        }
-    }
-
     var connectedInstitution: AccountInstitution? {
         guard let connectedInstitutionID else { return nil }
         return AuthMockData.brokerageInstitutions.first(where: { $0.id == connectedInstitutionID })
     }
 
-    func canConnect(_ institution: AccountInstitution) -> Bool {
-        connectableInstitutionIDs.contains(institution.id)
-    }
+    // MARK: - Step 1~2: 투자 목적 · 목표 금액
 
-    func toggleKeyword(_ keyword: InterestKeyword) {
-        if selectedKeywords.contains(keyword) {
-            selectedKeywords.remove(keyword)
-        } else {
-            selectedKeywords.insert(keyword)
+    func selectFinancialGoal(_ goal: FinancialGoal) {
+        financialGoal = goal
+        if !hasCustomTargetAmount {
+            targetAmount = goal.defaultTargetAmount
         }
     }
 
-    func connectRecommendedBroker() {
-        connectedInstitutionID = recommendedInstitution.id
+    func updateTargetAmount(_ amount: Int64) {
+        targetAmount = amount
+        hasCustomTargetAmount = amount != financialGoal.defaultTargetAmount
+    }
+
+    // MARK: - Step 5: 투자 성향 소프트컨펌
+
+    func profileConflictsWithDrawdown(_ profile: InvestmentProfile) -> Bool {
+        guard let maxDrawdownTolerance else { return false }
+        return !RiskProfileConsistency.isConsistent(profile: profile, tolerance: maxDrawdownTolerance)
+    }
+
+    // MARK: - Step 6: 관심 섹터
+
+    var canAdvanceFromWatchAssetsStep: Bool {
+        (1...5).contains(selectedWatchAssets.count)
+    }
+
+    func toggleWatchAsset(_ sector: WatchAssetSector) {
+        if selectedWatchAssets.contains(sector) {
+            selectedWatchAssets.remove(sector)
+            return
+        }
+
+        guard selectedWatchAssets.count < 5 else { return }
+        selectedWatchAssets.insert(sector)
+    }
+
+    // MARK: - Step 7: 계좌 연결
+
+    func canConnect(_ institution: AccountInstitution) -> Bool {
+        connectableInstitutionIDs.contains(institution.id)
     }
 
     func selectInstitution(_ institution: AccountInstitution) {
@@ -87,23 +102,116 @@ final class OnboardingFlowViewModel: ObservableObject {
 
     func skipBrokerageConnection() {
         connectedInstitutionID = nil
+        brokerageCredential = BrokerageCredentialInput()
+        isBrokerageCredentialSubmitted = false
+    }
+
+    // MARK: - Step 8: 완료 처리
+
+    /// 서버가 요청을 정상 수신했다는 응답을 받았을 때만 true를 반환한다. 실패/미응답이어도
+    /// 온보딩 자체는 막지 않되, 호출부(Step8 완료 화면)가 이 결과를 보고 목업 대기 여부를 결정한다.
+    func submitSettings(userId: Int64?) async -> Bool {
+        guard let userId else { return false }
+
+        do {
+            let body = try NetworkJSONCoding.encodeJSON(
+                OnboardingSettingsPatchRequestDTO(
+                    investmentHorizon: (investmentHorizon ?? .threeToFiveYears).rawValue,
+                    maxDrawdownTolerance: (maxDrawdownTolerance ?? .withinTen).percentValue,
+                    investmentProfile: (investmentProfile ?? .balanced).rawValue
+                )
+            )
+            _ = try await APIClientFactory.makeDefault().requestResult(
+                BackendEndpoint.updateMeSettings(userId: userId, body: body),
+                as: EmptyAPIResult.self
+            )
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    func submitWatchAssets(userId: Int64?) async -> Bool {
+        guard let userId else { return false }
+
+        do {
+            let body = try NetworkJSONCoding.encodeJSON(
+                WatchAssetsUpdateRequestDTO(sectors: selectedWatchAssets.map(\.rawValue))
+            )
+            _ = try await APIClientFactory.makeDefault().requestResult(
+                BackendEndpoint.updateWatchAssets(userId: userId, body: body),
+                as: EmptyAPIResult.self
+            )
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Step 7 "연결하기" 시점에 즉시 호출된다. 서버 공개키가 아직 배포되지 않았거나(BrokerageConnectionError.serverKeyUnavailable)
+    /// 요청이 실패하면 기존과 동일하게 짧은 대기 후 제출된 것으로 처리해 온보딩 진행은 막지 않는다.
+    func submitBrokerageConnectionIfNeeded(userId: Int64?) async {
+        guard let institutionID = connectedInstitutionID, brokerageCredential.isComplete else { return }
+
+        if let userId {
+            do {
+                let connection = try await brokerageConnectionRepository.connect(
+                    userId: userId,
+                    institutionID: institutionID,
+                    credential: BrokerageCredentialPayloadDTO(
+                        loginId: brokerageCredential.brokerageID,
+                        loginPassword: brokerageCredential.brokeragePassword,
+                        accountPassword: brokerageCredential.accountPassword
+                    )
+                )
+                brokerageConnectionId = connection.connectionId
+                isBrokerageCredentialSubmitted = true
+                return
+            } catch {
+                // 백엔드/공개키 미준비 — 아래 목업 경로로 폴백
+            }
+        }
+
+        try? await Task.sleep(nanoseconds: 400_000_000)
+        isBrokerageCredentialSubmitted = true
+    }
+
+    func submitGoal(userId: Int64?) async -> Bool {
+        guard let userId else { return false }
+
+        do {
+            let body = try NetworkJSONCoding.encodeJSON(
+                GoalUpdateRequestDTO(financialGoal: financialGoal.rawValue, targetAmount: targetAmount)
+            )
+            _ = try await APIClientFactory.makeDefault().requestResult(
+                BackendEndpoint.updateGoal(userId: userId, body: body),
+                as: EmptyAPIResult.self
+            )
+            return true
+        } catch {
+            return false
+        }
     }
 
     func makeOnboardingResult() -> OnboardingResult {
-        OnboardingResult(
+        let rebalancing = OnboardingRebalancingPreference(
+            investmentProfile: investmentProfile ?? .balanced,
+            investmentHorizon: investmentHorizon ?? .threeToFiveYears,
+            maxDrawdownTolerance: maxDrawdownTolerance ?? .withinTen
+        )
+
+        return OnboardingResult(
             connectedInstitutionIDs: connectedInstitutionID.map { [$0] } ?? [],
             selectedSectorIDs: [],
-            selectedKeywordIDs: orderedSelectedKeywords.map(\.id),
-            investmentStyleID: InvestmentStyleOption.balanced.rawValue,
-            rebalancingPreference: nil,
+            selectedKeywordIDs: [],
+            investmentStyleID: (investmentProfile ?? .balanced).legacyStyle.rawValue,
+            rebalancingPreference: rebalancing,
             selectedAssetSymbols: [],
-            primaryAssetSymbol: nil
+            primaryAssetSymbol: nil,
+            financialGoal: financialGoal.rawValue,
+            targetAmount: targetAmount,
+            selectedWatchAssetIDs: selectedWatchAssets.map(\.rawValue),
+            isBrokerageCredentialSubmitted: isBrokerageCredentialSubmitted
         )
-    }
-
-    private var orderedSelectedKeywords: [InterestKeyword] {
-        allKeywordCategories
-            .flatMap(\.keywords)
-            .filter { selectedKeywords.contains($0) }
     }
 }
