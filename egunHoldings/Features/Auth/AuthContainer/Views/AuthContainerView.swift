@@ -1,56 +1,26 @@
 import SwiftUI
 
 struct AuthContainerView: View {
-    let onLoginSuccess: (AppUserSession) -> Void
+    let onLoginSuccess: (LoginSession) -> Void
 
-    @StateObject private var viewModel = AuthViewModel()
+    @StateObject private var loginViewModel = LoginViewModel()
     @State private var showsSignUp = false
-    @State private var isLoginInFlight = false
 
     var body: some View {
         Group {
             if showsSignUp {
                 SignUpView(
-                    errorMessage: viewModel.authErrorMessage,
                     onBackToLogin: closeSignup,
-                    onResetError: {
-                        viewModel.resetAuthError()
-                    },
-                    onSignUp: { name, email, password, confirmPassword, agreed in
-                        await viewModel.signUp(
-                            name: name,
-                            email: email,
-                            password: password,
-                            confirmPassword: confirmPassword,
-                            agreedToTerms: agreed
-                        )
-                    },
                     onCompleted: { _ in
                         closeSignup()
                     }
                 )
             } else {
                 LoginView(
-                    errorMessage: viewModel.authErrorMessage,
-                    isLoading: isLoginInFlight,
-                    onLogin: { email, password in
-                        guard !isLoginInFlight else { return }
-                        isLoginInFlight = true
-
-                        Task {
-                            if let session = await viewModel.login(email: email, password: password) {
-                                onLoginSuccess(session)
-                                return
-                            }
-
-                            isLoginInFlight = false
-                        }
-                    },
-                    onSocialLogin: { provider in
-                        viewModel.login(with: provider)
-                    },
+                    viewModel: loginViewModel,
+                    onLoginSuccess: onLoginSuccess,
                     onTapSignUp: {
-                        viewModel.resetAuthError()
+                        loginViewModel.resetError()
                         withAnimation(.easeInOut(duration: 0.2)) {
                             showsSignUp = true
                         }
@@ -61,8 +31,7 @@ struct AuthContainerView: View {
     }
 
     private func closeSignup() {
-        isLoginInFlight = false
-        viewModel.resetAuthError()
+        loginViewModel.resetError()
         withAnimation(.easeInOut(duration: 0.2)) {
             showsSignUp = false
         }

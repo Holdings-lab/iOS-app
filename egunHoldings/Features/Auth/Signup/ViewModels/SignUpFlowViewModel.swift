@@ -38,15 +38,22 @@ final class SignUpFlowViewModel: ObservableObject {
     @Published private(set) var otpShakeTrigger = 0
     @Published private(set) var password: String = ""
     @Published private(set) var confirmPassword: String = ""
+    @Published private(set) var isSubmitting = false
+    @Published private(set) var errorMessage: String?
 
     let verificationTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     let consentDefinitions: [SignupConsentDefinition]
     let availableDomains = SignupEmailDomainOption.allCases
 
-    private let verificationRepository: EmailVerificationRepositoryProtocol
+    private let repository: RegistrationRepositoryProtocol & EmailVerificationRepositoryProtocol
+    private let accountStore: AuthAccountStoring
 
-    init(verificationRepository: EmailVerificationRepositoryProtocol? = nil) {
-        self.verificationRepository = verificationRepository ?? LiveAuthRepository()
+    init(
+        repository: (RegistrationRepositoryProtocol & EmailVerificationRepositoryProtocol)? = nil,
+        accountStore: AuthAccountStoring? = nil
+    ) {
+        self.repository = repository ?? LiveAuthRepository()
+        self.accountStore = accountStore ?? AuthAccountStore()
         consentDefinitions = [
             SignupConsentDefinition(
                 id: "service",
@@ -137,6 +144,7 @@ final class SignUpFlowViewModel: ObservableObject {
 
     func navigateBack() {
         guard !path.isEmpty else { return }
+        errorMessage = nil
         path.removeLast()
     }
 
@@ -213,7 +221,7 @@ final class SignUpFlowViewModel: ObservableObject {
 
         Task {
             do {
-                try await verificationRepository.requestVerificationCode(for: email)
+                try await repository.requestVerificationCode(for: email)
                 hasSentCode = true
                 isEmailVerified = false
                 otpCode = ""
@@ -254,7 +262,7 @@ final class SignUpFlowViewModel: ObservableObject {
 
         Task {
             do {
-                try await verificationRepository.verifyCode(enteredCode, for: email)
+                try await repository.verifyCode(enteredCode, for: email)
                 isEmailVerified = true
                 emailFeedbackMessage = "인증이 완료됐어요."
                 emailFeedbackTone = .success
@@ -284,22 +292,83 @@ final class SignUpFlowViewModel: ObservableObject {
         resetEmailVerificationState()
     }
 
-    func finishSignup(
-        using action: (_ name: String, _ email: String, _ password: String, _ confirmPassword: String, _ agreed: Bool) async -> Bool
-    ) async -> Bool {
+    func submitSignup() async -> Bool {
+        guard !isSubmitting else { return false }
+
+        errorMessage = nil
+
+        guard hasAgreedRequiredTerms else {
+            errorMessage = "이용약관 및 개인정보처리방침 동의가 필요합니다."
+            return false
+        }
+        guard isValidSignUpPassword(password) else {
+            errorMessage = "비밀번호는 8~16자의 영문, 숫자, 특수문자를 포함해야 합니다."
+            return false
+        }
+        guard password == confirmPassword else {
+            errorMessage = "비밀번호와 비밀번호 확인이 일치하지 않습니다."
+            return false
+        }
+
+        isSubmitting = true
+        defer { isSubmitting = false }
+
+        do {
+            let account = try await repository.register(
+                email: emailAddress,
+                nickname: resolvedNickname,
+                password: password
+            )
+
+            upsertAccount(
+                RegisteredAuthAccount(
+                    userId: account.userId,
+                    userName: account.nickname,
+                    email: account.email,
+                    onboardingCompleted: false,
+                    onboardingResult: nil,
+                    brokerBalanceSnapshot: nil
+                )
+            )
+            return true
+        } catch {
+            errorMessage = Self.makeErrorMessage(
+                for: error,
+                fallback: "회원가입에 실패했습니다. 입력 정보를 확인해주세요."
+            )
+            return false
+        }
+    }
+
+    private func upsertAccount(_ account: RegisteredAuthAccount) {
+        var accounts = accountStore.loadAll()
+
+        if let index = accounts.firstIndex(where: { $0.normalizedEmail == account.normalizedEmail }) {
+            accounts[index] = account
+        } else {
+            accounts.append(account)
+        }
+
+        accountStore.saveAll(accounts)
+    }
+
+    private var resolvedNickname: String {
         let derivedName = emailLocalPart
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
 
-        let safeName = derivedName.isEmpty ? "투자자" : derivedName
+        return derivedName.isEmpty ? "투자자" : derivedName
+    }
 
-        return await action(
-            safeName,
-            emailAddress,
-            password,
-            confirmPassword,
-            hasAgreedRequiredTerms
-        )
+    private func isValidSignUpPassword(_ password: String) -> Bool {
+        guard password.count >= 8, password.count <= 16 else {
+            return false
+        }
+
+        let hasLetter = password.range(of: "[A-Za-z]", options: .regularExpression) != nil
+        let hasNumber = password.range(of: "[0-9]", options: .regularExpression) != nil
+        let hasSpecial = password.range(of: "[^A-Za-z0-9]", options: .regularExpression) != nil
+        return hasLetter && hasNumber && hasSpecial
     }
 
     private func resetEmailVerificationStateIfNeeded() {
@@ -320,7 +389,16 @@ final class SignUpFlowViewModel: ObservableObject {
     private static func makeErrorMessage(for error: Error, fallback: String) -> String {
         if let networkError = error as? NetworkError {
             switch networkError {
-            case .apiFailure, .httpStatus:
+            case .apiFailure(_, let code, _):
+                switch code {
+                case "AUTH_EMAIL_DUPLICATED":
+                    return "이미 가입된 이메일입니다. 로그인하거나 다른 이메일을 사용해주세요."
+                case "AUTH_EMAIL_VERIFICATION_REQUIRED", "AUTH_EMAIL_NOT_VERIFIED":
+                    return "이메일 인증을 완료한 뒤 다시 시도해주세요."
+                default:
+                    return AppVocabulary.ErrorMessage.userFacing(for: networkError, fallback: fallback)
+                }
+            case .httpStatus:
                 return AppVocabulary.ErrorMessage.userFacing(for: networkError, fallback: fallback)
             case .invalidURL:
                 return AppVocabulary.ErrorMessage.unknown

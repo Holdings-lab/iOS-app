@@ -36,7 +36,6 @@ struct AuthMockData {
             userId: 1,
             userName: "정책고수",
             email: "investor@policyfinance.app",
-            password: "demo1234",
             onboardingCompleted: true,
             onboardingResult: defaultExistingUserOnboarding,
             brokerBalanceSnapshot: nil
@@ -45,7 +44,6 @@ struct AuthMockData {
             userId: 2,
             userName: "온보딩테스트",
             email: "eom175@naver.com",
-            password: "11111111",
             onboardingCompleted: false,
             onboardingResult: nil,
             brokerBalanceSnapshot: nil

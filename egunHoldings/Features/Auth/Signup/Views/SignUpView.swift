@@ -1,26 +1,16 @@
 import SwiftUI
 
 struct SignUpView: View {
-    let errorMessage: String?
     let onBackToLogin: () -> Void
-    let onResetError: () -> Void
-    let onSignUp: (_ name: String, _ email: String, _ password: String, _ confirmPassword: String, _ agreed: Bool) async -> Bool
     let onCompleted: (String) -> Void
 
     @StateObject private var viewModel: SignUpFlowViewModel
-    @State private var isSubmitting = false
 
     init(
-        errorMessage: String?,
         onBackToLogin: @escaping () -> Void,
-        onResetError: @escaping () -> Void,
-        onSignUp: @escaping (_ name: String, _ email: String, _ password: String, _ confirmPassword: String, _ agreed: Bool) async -> Bool,
         onCompleted: @escaping (String) -> Void
     ) {
-        self.errorMessage = errorMessage
         self.onBackToLogin = onBackToLogin
-        self.onResetError = onResetError
-        self.onSignUp = onSignUp
         self.onCompleted = onCompleted
         _viewModel = StateObject(wrappedValue: SignUpFlowViewModel())
     }
@@ -86,7 +76,7 @@ struct SignUpView: View {
                             get: { viewModel.confirmPassword },
                             set: { viewModel.updateConfirmPassword($0) }
                         ),
-                        errorMessage: errorMessage,
+                        errorMessage: viewModel.errorMessage,
                         onBack: navigateBack,
                         onComplete: finishSignup
                     )
@@ -105,21 +95,12 @@ struct SignUpView: View {
     }
 
     private func navigateBack() {
-        onResetError()
         viewModel.navigateBack()
     }
 
     private func finishSignup() {
-        guard !isSubmitting else { return }
-
-        onResetError()
-
         Task {
-            isSubmitting = true
-            let didSignUp = await viewModel.finishSignup(using: onSignUp)
-            isSubmitting = false
-
-            guard didSignUp else { return }
+            guard await viewModel.submitSignup() else { return }
             viewModel.moveToComplete()
         }
     }
@@ -127,10 +108,7 @@ struct SignUpView: View {
 
 #Preview {
     SignUpView(
-        errorMessage: nil,
         onBackToLogin: {},
-        onResetError: {},
-        onSignUp: { _, _, _, _, _ in true },
         onCompleted: { _ in }
     )
 }
