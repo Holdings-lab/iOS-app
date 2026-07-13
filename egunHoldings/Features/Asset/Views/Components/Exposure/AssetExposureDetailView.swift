@@ -92,7 +92,7 @@ struct AssetExposureDestinationView: View {
     }
 }
 
-private struct AssetAccountCard: View {
+struct AssetAccountCard: View {
     let account: AssetAccount
     let expandsHoldings: Bool
 
@@ -179,7 +179,7 @@ private struct CompactHoldingRow: View {
     }
 }
 
-private struct PolicyTagPillRow: View {
+struct PolicyTagPillRow: View {
     let tags: [AssetPolicyTag]
 
     var body: some View {
@@ -198,7 +198,7 @@ private struct PolicyTagPillRow: View {
     }
 }
 
-private struct ExposureMetricCard: View {
+struct ExposureMetricCard: View {
     let metric: AssetExposureMetric
 
     var body: some View {
@@ -240,7 +240,7 @@ private struct ExposureMetricCard: View {
     }
 }
 
-private struct AssetHoldingMatrixRow: View {
+struct AssetHoldingMatrixRow: View {
     let row: AssetHoldingRow
 
     var body: some View {
