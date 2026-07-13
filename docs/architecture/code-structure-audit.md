@@ -50,9 +50,7 @@ Onboarding/Views
 
 다음 파일은 화면 조합, 상태 표현, 세부 컴포넌트가 한 파일에 함께 있어 탐색 비용이 크다.
 
-- `Signal/Views/PolSignalSharedViews.swift`: 1,034줄
 - `Newsroom/Views/Components/PolicyNewsInsightSheet.swift`: 993줄
-- `Signal/Views/SignalView.swift`: 980줄
 - `Today/Views/TodayView.swift`: 907줄
 - `Asset/Views/Components/Exposure/AssetExposureOverviewSection.swift`: 709줄
 - `Asset/Views/Components/Rebalance/AssetRebalanceSection.swift`: 657줄
@@ -60,6 +58,13 @@ Onboarding/Views
 화면 진입점은 상태와 섹션 조합만 담당하고, 독립적인 섹션은
 `Views/Components/<Subfeature>` 아래로 이동한다. 한 파일에 여러 독립 화면 상태나
 여러 재사용 가능한 컴포넌트가 있으면 분리한다.
+
+완료한 분리:
+
+- `PolSignalSharedViews.swift`: 1,034줄에서 공용 컴포넌트 496줄로 축소
+- `PolSignalDashboardViews.swift`: Today 브리핑·자산 스냅샷 539줄 분리
+- `SignalView.swift`: 980줄에서 화면 진입점 445줄로 축소
+- `SignalDetailViews.swift`: 상세 화면·조정 제안 sheet 537줄 분리
 
 ### P1: 기능별 계층의 불일치
 
@@ -105,4 +110,3 @@ Features/<Feature>/
 - iOS Simulator Debug build: 통과
 - 빌드 명령:
   `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project egunHoldings.xcodeproj -scheme egunHoldings -configuration Debug -destination 'generic/platform=iOS Simulator' build`
-
