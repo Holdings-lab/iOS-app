@@ -2,7 +2,7 @@ import SwiftUI
 
 enum RootTab: Hashable {
     case today
-    case signal
+    case newsroom
     case asset
 }
 
@@ -13,8 +13,7 @@ struct RootTabView: View {
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     @State private var selectedTab: RootTab = .today
     @State private var todaySignalRoute: PolSignalRoute?
-    @State private var signalRoute: PolSignalRoute?
-    @State private var signalViewIdentity = UUID()
+    @State private var presentedSignalRoute: PolSignalRoute?
     @StateObject private var exchangeRateViewModel = ExchangeRateViewModel()
     @ObservedObject private var notificationCenter = AppNotificationCenter.shared
 
@@ -42,6 +41,9 @@ struct RootTabView: View {
                 onAssetTabRequested: {
                     selectedTab = .asset
                 },
+                onNewsroomTabRequested: {
+                    selectedTab = .newsroom
+                },
                 onSignalRouteRequested: { route in
                     openSignal(route)
                 },
@@ -55,11 +57,18 @@ struct RootTabView: View {
                 Label("오늘", systemImage: "sun.max.fill")
             }
 
-            SignalView(userId: userId, initialRoute: signalRoute, externalRoute: $signalRoute)
-                .id(signalViewIdentity)
-            .tag(RootTab.signal)
+            NavigationStack {
+                NewsroomView(
+                    userId: userId,
+                    userAssetProfile: userAssetProfile,
+                    onAssetTabRequested: {
+                        selectedTab = .asset
+                    }
+                )
+            }
+            .tag(RootTab.newsroom)
             .tabItem {
-                Label("시그널", systemImage: "waveform.path.ecg")
+                Label("뉴스룸", systemImage: "newspaper.fill")
             }
 
             NavigationStack {
@@ -86,12 +95,20 @@ struct RootTabView: View {
         .onChange(of: notificationCenter.pendingPushRoute) { _, _ in
             consumePendingPushRoute()
         }
+        .fullScreenCover(isPresented: Binding(
+            get: { presentedSignalRoute != nil },
+            set: { isPresented in
+                if !isPresented { presentedSignalRoute = nil }
+            }
+        )) {
+            if let route = presentedSignalRoute {
+                SignalView(userId: userId, initialRoute: route)
+            }
+        }
     }
 
     private func openSignal(_ route: PolSignalRoute) {
-        signalRoute = route
-        signalViewIdentity = UUID()
-        selectedTab = .signal
+        presentedSignalRoute = route
     }
 
     private func openTodaySignal(_ route: PolSignalRoute) {

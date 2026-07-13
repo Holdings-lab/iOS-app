@@ -19,7 +19,7 @@ final class AppRouter: ObservableObject {
         accountStore: AuthAccountStoring? = nil,
         brokerBalanceRepository: BrokerBalanceRepositoryProtocol? = nil
     ) {
-        self.store = store ?? AuthSessionStore()
+        self.store = store ?? KeychainAuthSessionStore()
         self.accountStore = accountStore ?? AuthAccountStore()
         self.brokerBalanceRepository = brokerBalanceRepository ?? KisSandboxBalanceRepository()
         bootstrap()
@@ -49,7 +49,20 @@ final class AppRouter: ObservableObject {
         }
     }
 
-    func handleLoginSuccess(session newSession: AppUserSession) {
+    func handleLoginSuccess(loginSession: LoginSession) {
+        let existingAccount = registeredAccount(for: loginSession.email)
+        let newSession = AppUserSession(
+            userId: loginSession.userId,
+            token: loginSession.accessToken,
+            refreshToken: loginSession.refreshToken,
+            expiresAt: Date().addingTimeInterval(60 * 60 * 24 * 14),
+            userName: loginSession.nickname,
+            email: loginSession.email,
+            onboardingCompleted: loginSession.onboardingCompleted,
+            onboardingResult: existingAccount?.onboardingResult,
+            brokerBalanceSnapshot: existingAccount?.brokerBalanceSnapshot
+        )
+
         let isNewUser = newSession.onboardingCompleted == false
         applySession(newSession)
         route = isNewUser ? .onboarding : .main
