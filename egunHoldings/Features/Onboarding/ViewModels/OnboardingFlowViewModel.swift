@@ -14,12 +14,15 @@ final class OnboardingFlowViewModel: ObservableObject {
     @Published private(set) var isBrokerageCredentialSubmitted = false
     @Published private(set) var brokerageConnectionId: String?
 
+    private let onboardingRepository: OnboardingRepositoryProtocol
     private let brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol
     private var hasCustomTargetAmount = false
 
     init(
+        onboardingRepository: OnboardingRepositoryProtocol = LiveOnboardingRepository(),
         brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol = LiveBrokerageConnectionRepository()
     ) {
+        self.onboardingRepository = onboardingRepository
         self.brokerageConnectionRepository = brokerageConnectionRepository
     }
 
@@ -114,16 +117,11 @@ final class OnboardingFlowViewModel: ObservableObject {
         guard let userId else { return false }
 
         do {
-            let body = try NetworkJSONCoding.encodeJSON(
-                OnboardingSettingsPatchRequestDTO(
-                    investmentHorizon: (investmentHorizon ?? .threeToFiveYears).rawValue,
-                    maxDrawdownTolerance: (maxDrawdownTolerance ?? .withinTen).percentValue,
-                    investmentProfile: (investmentProfile ?? .balanced).rawValue
-                )
-            )
-            _ = try await APIClientFactory.makeDefault().requestResult(
-                BackendEndpoint.updateMeSettings(userId: userId, body: body),
-                as: EmptyAPIResult.self
+            try await onboardingRepository.updateSettings(
+                userId: userId,
+                investmentHorizon: investmentHorizon ?? .threeToFiveYears,
+                maxDrawdownTolerance: maxDrawdownTolerance ?? .withinTen,
+                investmentProfile: investmentProfile ?? .balanced
             )
             return true
         } catch {
@@ -135,12 +133,9 @@ final class OnboardingFlowViewModel: ObservableObject {
         guard let userId else { return false }
 
         do {
-            let body = try NetworkJSONCoding.encodeJSON(
-                WatchAssetsUpdateRequestDTO(sectors: selectedWatchAssets.map(\.rawValue))
-            )
-            _ = try await APIClientFactory.makeDefault().requestResult(
-                BackendEndpoint.updateWatchAssets(userId: userId, body: body),
-                as: EmptyAPIResult.self
+            try await onboardingRepository.updateWatchAssets(
+                userId: userId,
+                sectors: Array(selectedWatchAssets)
             )
             return true
         } catch {
@@ -180,12 +175,10 @@ final class OnboardingFlowViewModel: ObservableObject {
         guard let userId else { return false }
 
         do {
-            let body = try NetworkJSONCoding.encodeJSON(
-                GoalUpdateRequestDTO(financialGoal: financialGoal.rawValue, targetAmount: targetAmount)
-            )
-            _ = try await APIClientFactory.makeDefault().requestResult(
-                BackendEndpoint.updateGoal(userId: userId, body: body),
-                as: EmptyAPIResult.self
+            try await onboardingRepository.updateGoal(
+                userId: userId,
+                financialGoal: financialGoal,
+                targetAmount: targetAmount
             )
             return true
         } catch {
