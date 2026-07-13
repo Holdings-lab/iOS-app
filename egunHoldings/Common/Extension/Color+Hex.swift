@@ -28,9 +28,9 @@ extension Color {
 
     // Stockit Light — Text
     nonisolated static let textPrimary    = Color(hex: "0A0E27")
-    nonisolated static let textSecondary  = Color(hex: "8B92A8")
-    nonisolated static let textTertiary   = Color(hex: "8B92A8")
-    nonisolated static let textQuaternary = Color(hex: "AEB5C6")
+    nonisolated static let textSecondary  = Color(hex: "475569")  // 흰 카드 위 7.6:1 — 읽는 보조 텍스트
+    nonisolated static let textTertiary   = Color(hex: "64748B")  // 4.8:1 — 메타 정보(출처·시간·기준일)
+    nonisolated static let textQuaternary = Color(hex: "8B92A8")  // 셰브런·구분자 등 장식 전용
     nonisolated static let textDisabled   = Color(hex: "C8CEDB")
     nonisolated static let textOnAccent   = Color.white
 
