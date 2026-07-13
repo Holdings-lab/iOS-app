@@ -1,130 +1,45 @@
 import SwiftUI
 
-// MARK: - Enums
+// MARK: - Briefing (Section 1)
 
-enum PSPolicyStatus: String {
-    case scheduled = "예정"
-    case announced = "발표"
-    case changed   = "변경"
-    case delayed   = "지연"
+enum TodayBriefingSeverity {
+    case calm, watch, alert
 
-    var color: Color {
+    /// 4px left accent border color. nil = no accent (calm day).
+    var accentColor: Color? {
         switch self {
-        case .scheduled: return PSColor.electricBlue
-        case .announced: return PSColor.emerald
-        case .changed:   return PSColor.yellow
-        case .delayed:   return PSColor.red
+        case .calm:  return nil
+        case .watch: return Color.warning
+        case .alert: return Color.trendDown
+        }
+    }
+
+    /// Color of the large drawdown-from-peak number. On a calm day the sign of the value decides
+    /// direction (negative → brand, positive → down/red, zero → default text); watch/alert always
+    /// override with their own fixed color regardless of sign.
+    func drawdownColor(for percent: Double) -> Color {
+        switch self {
+        case .calm:
+            if percent > 0 { return Color.trendDown }
+            if percent < 0 { return Color.brand }
+            return Color.textPrimary
+        case .watch: return Color.warning
+        case .alert: return Color.trendDown
         }
     }
 }
 
-enum TrendDirection {
-    case positive, negative, mixed
-
-    var color: Color {
-        switch self {
-        case .positive: return PSColor.emerald
-        case .negative: return PSColor.red
-        case .mixed:    return PSColor.yellow
-        }
-    }
-
-    var label: String {
-        switch self {
-        case .positive: return "긍정"
-        case .negative: return "부정"
-        case .mixed:    return "혼조"
-        }
-    }
+struct TodayBriefing {
+    /// Today's intraday move, e.g. +0.4. Distinct metric from drawdownFromPeakPercent.
+    let todayChangePercent: Double
+    /// Distance from the historical peak, always <= 0, e.g. -9.0.
+    let drawdownFromPeakPercent: Double
+    let severity: TodayBriefingSeverity
+    /// Always non-empty, even on a calm day — "nothing to check" is itself the daily value.
+    let message: String
 }
 
-enum PSImportance: String {
-    case high   = "높음"
-    case medium = "중간"
-    case low    = "낮음"
-
-    var color: Color {
-        switch self {
-        case .high:   return PSColor.red
-        case .medium: return PSColor.yellow
-        case .low:    return PSColor.gray
-        }
-    }
-}
-
-enum NewsRelevance {
-    case high, medium, low
-
-    var label: String {
-        switch self {
-        case .high:   return "중요"
-        case .medium: return "보통"
-        case .low:    return "참고"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .high:   return PSColor.electricBlue
-        case .medium: return PSColor.yellow
-        case .low:    return PSColor.gray
-        }
-    }
-}
-
-// MARK: - Core Models
-
-struct ImpactFlow {
-    let steps: [String]
-
-    var displayText: String {
-        steps.joined(separator: " → ")
-    }
-}
-
-struct TodayPolicyEvent: Identifiable {
-    let id: Int
-    let title: String
-    let institution: String
-    let dDay: String
-    let date: String
-    let status: PSPolicyStatus
-    let color: Color
-    let myExposure: Int
-    let relatedAssets: [String]
-    let summary: String
-    let direction: TrendDirection
-    let evidence: [String]
-    let counterEvidence: String
-    let invalidationConditions: [String]
-    let sources: [String]
-    let verified: Bool
-    let updatedAt: String
-    let impactFlow: ImpactFlow
-    let timelag: String
-    let confidence: Int
-}
-
-struct TodayCheckpoint: Identifiable {
-    let id: String
-    let text: String
-    let metric: String
-    let baseline: String
-    let importance: PSImportance
-    var alertOn: Bool
-    var completed: Bool
-    let linkedPolicyId: Int
-    let linkedPolicyTitle: String
-    let relatedAssets: [String]
-    let conditionMet: String
-    let conditionNotMet: String
-}
-
-struct TodayThemeExposure {
-    let theme: String
-    let intensity: PSImportance
-    let color: Color
-}
+// MARK: - Holdings Top3 (Section 2)
 
 struct TodayHolding: Identifiable {
     let id: String
@@ -132,89 +47,52 @@ struct TodayHolding: Identifiable {
     let ticker: String
     let category: String
     let weight: Int
-    let value: Int
-    let change: Double
-    let exposedThemes: [TodayThemeExposure]
-    let color: Color
 }
 
-struct TodayNewsItem: Identifiable {
-    let id: Int
-    let title: String
-    let source: String
-    let time: String
-    let summary: String
-    let relatedAssets: [String]
-    let relevance: NewsRelevance
-    let direction: TrendDirection
-    let myAssetImpact: String
-    let checkCondition: String
-    let whyIgnore: String?
-    var saved: Bool
-    let fullText: String
-}
+// MARK: - Goal Progress (Section 3)
 
-struct TodayJudgment {
-    let title: String
-    let type: JudgmentType
-    let myExposure: Int
-    let validUntil: String
-    let invalidationCondition: String
-    let forEvidence: [String]
-    let againstEvidence: [String]
-    let deliveryPath: String
-}
-
-struct TodayExposureItem {
-    let theme: String
-    let pct: Int
-    let color: Color
-}
-
-struct TodayPortfolioSummary {
-    let totalAsset: Int
-    let todayChange: Double
-    let todayChangeAmt: Int
-    let cashDefense: Int
-    let dollarDefense: Int
-    let overtradeRisk: String
-    let topExposures: [TodayExposureItem]
-    let riskLevel: String
-    var weeklySparklinePoints: [Double] = []
-}
-
-enum TodayAPIConnectionKind {
-    case connected
-    case mock
-    case pending
-    case fallback
+enum TodayGoalStatus {
+    case justStarted, ahead, onTrack, behind
 
     var label: String {
         switch self {
-        case .connected: return "API"
-        case .mock: return "Mock"
-        case .pending: return "연결 예정"
-        case .fallback: return "Fallback"
+        case .justStarted: return "아직 판단 이르러요"
+        case .ahead:        return "계획보다 앞서는 중"
+        case .onTrack:       return "계획대로 진행 중"
+        case .behind:        return "계획보다 늦어지는 중"
         }
     }
 
+    /// Separate color axis from TodayBriefingSeverity — must not share meaning with watch/alert.
     var color: Color {
         switch self {
-        case .connected: return PSColor.emerald
-        case .mock: return PSColor.yellow
-        case .pending: return PSColor.gray
-        case .fallback: return PSColor.red
+        case .justStarted: return Color.textTertiary
+        case .ahead:        return Color.brand
+        case .onTrack:       return Color.trendUp
+        case .behind:        return Color.warning
         }
     }
 }
 
-struct TodayAPIConnectionStatus: Identifiable {
+struct TodayGoalProgress {
+    /// 서버가 완성된 라벨 문자열을 그대로 내려준다(e.g. "은퇴 자금 목표") — 클라이언트가 FinancialGoal
+    /// enum으로 재매핑하지 않는다.
+    let goalLabel: String
+    let progressPercent: Int
+    let status: TodayGoalStatus
+    let scheduleDeltaText: String
+}
+
+// MARK: - News (Section 4)
+
+struct TodayNewsItem: Identifiable {
     let id: String
     let title: String
-    let endpoint: String
-    let detail: String
-    let kind: TodayAPIConnectionKind
+    let summary: String
+    let ticker: String?
 }
+
+// MARK: - Load State & Dashboard
 
 enum TodayLoadState: Equatable {
     case idle
@@ -226,56 +104,9 @@ enum TodayLoadState: Equatable {
 struct TodayDashboard {
     let userAssetProfile: UserAssetProfile
     let portfolioSnapshot: PortfolioSnapshot
-    let judgment: TodayJudgment
-    let portfolio: TodayPortfolioSummary
-    let policyEvents: [TodayPolicyEvent]
+    let isAccountLinked: Bool
+    let briefing: TodayBriefing
     let holdings: [TodayHolding]
-    let noActionReasons: [String]
-    let noActionWatchCondition: String
-    let primaryCheckpointText: String
-    let dataUpdatedAt: String
-    let dataSources: [String]
-    let aiSummaryStatus: String
-    let themeSignals: [PortfolioThemeSignal]
-    let policyReadings: [PolSignalPolicyReading]
-    let adjustmentProposal: PolSignalAdjustmentProposal?
-    let apiConnectionStatuses: [TodayAPIConnectionStatus]
-
-    var topPolicy: TodayPolicyEvent? {
-        policyEvents.max { $0.myExposure < $1.myExposure }
-    }
-}
-
-struct TodayDecisionLane: Identifiable {
-    let id: String
-    let type: JudgmentType
-    let title: String
-    let relatedAssets: [String]
-    let validUntil: String
-}
-
-// MARK: - Sheet Identity
-
-enum TodaySheet: Identifiable {
-    case settings
-    case dataStatus
-    case quickReason
-    case saveCheckpoint
-    case snooze
-    case exposureTheme(TodayExposureItem)
-    case policyDetail(TodayPolicyEvent)
-    case policyList
-
-    var id: String {
-        switch self {
-        case .settings:              return "settings"
-        case .dataStatus:            return "dataStatus"
-        case .quickReason:           return "quickReason"
-        case .saveCheckpoint:        return "saveCheckpoint"
-        case .snooze:                return "snooze"
-        case .exposureTheme(let i):  return "exposure-\(i.theme)"
-        case .policyDetail(let p):   return "policy-\(p.id)"
-        case .policyList:            return "policyList"
-        }
-    }
+    let goalProgress: TodayGoalProgress?
+    let newsItems: [TodayNewsItem]
 }
