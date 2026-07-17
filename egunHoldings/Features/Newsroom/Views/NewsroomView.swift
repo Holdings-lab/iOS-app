@@ -120,11 +120,16 @@ struct NewsroomView: View {
             }
         }
 
-        // 2. 시장 공통 스토리 — 없으면 섹션 숨김
-        if let marketStory = digest.marketStory {
-            NewsroomMarketStoryCard(story: marketStory) {
-                presentedDetailContent = .marketStory(marketStory, portfolioTodayChangePercent: digest.portfolioTodayChangePercent)
+        // 2. 시장 공통 스토리 — watch/alert는 상단 브리핑이 같은 상세 진입을 맡아 중복을 피한다.
+        switch digest.severity {
+        case .calm:
+            if let marketStory = digest.marketStory {
+                NewsroomMarketStoryCard(story: marketStory) {
+                    presentedDetailContent = .marketStory(marketStory, portfolioTodayChangePercent: digest.portfolioTodayChangePercent)
+                }
             }
+        case .watch, .alert:
+            EmptyView()
         }
 
         // 3. 내 종목 — materiality high → low → 조용 순

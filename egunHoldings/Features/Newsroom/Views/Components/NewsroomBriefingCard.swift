@@ -74,7 +74,21 @@ struct NewsroomBriefingCard: View {
                     }
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.muted, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .background(Color.muted, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+
+                if isTappable {
+                    HStack(spacing: 5) {
+                        Text("시장 배경 보기")
+                            .font(.pretendard(12.5, weight: .bold))
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+
+                        Spacer(minLength: 4)
+                    }
+                    .foregroundStyle(Color.textSecondary)
+                    .padding(.top, 2)
                 }
             }
             .padding(.vertical, 16)
