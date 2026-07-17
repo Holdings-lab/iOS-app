@@ -44,7 +44,6 @@ private struct NewsroomLearningRailCard: View {
             Text(item.title)
                 .font(.pretendard(13.5, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
-                .lineLimit(2)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -57,7 +56,8 @@ private struct NewsroomLearningRailCard: View {
                 .background(Color.muted, in: Capsule())
         }
         .padding(12)
-        .frame(width: 148, height: 148, alignment: .topLeading)
+        .frame(width: 156, alignment: .topLeading)
+        .frame(minHeight: 148, alignment: .topLeading)
         .background(Color.elevated, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)

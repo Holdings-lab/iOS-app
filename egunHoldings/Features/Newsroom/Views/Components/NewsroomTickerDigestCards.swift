@@ -118,7 +118,8 @@ struct NewsroomTickerDigestCompactRow: View {
                 Text(digest.headline ?? digest.name)
                     .font(.pretendard(13.5, weight: .medium))
                     .foregroundStyle(Color.textPrimary)
-                    .lineLimit(1)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Image(systemName: "chevron.right")
@@ -126,7 +127,8 @@ struct NewsroomTickerDigestCompactRow: View {
                     .foregroundStyle(Color.textQuaternary)
             }
             .padding(.horizontal, 14)
-            .frame(height: 48)
+            .padding(.vertical, 12)
+            .frame(minHeight: 48)
         }
         .buttonStyle(PressScaleButtonStyle())
         .background(Color.elevated, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
@@ -151,21 +153,22 @@ struct NewsroomTickerQuietRow: View {
                 .foregroundStyle(Color.textPrimary)
                 .frame(width: 52, alignment: .leading)
 
-            HStack(spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(digest.quietStatusText)
                     .font(.pretendard(13.5, weight: .semibold))
                     .foregroundStyle(Color.textPrimary)
 
-                Text("· 지켜보고 있어요")
+                Text("계속 지켜보고 있어요")
                     .font(.pretendard(12.5, weight: .medium))
                     .foregroundStyle(Color.textSecondary)
             }
-            .lineLimit(1)
+            .fixedSize(horizontal: false, vertical: true)
 
             Spacer(minLength: 4)
         }
         .padding(.horizontal, 14)
-        .frame(height: 48)
+        .padding(.vertical, 10)
+        .frame(minHeight: 48)
         .background(Color.elevated, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
