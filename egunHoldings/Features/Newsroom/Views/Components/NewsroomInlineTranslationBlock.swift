@@ -6,7 +6,6 @@ struct NewsroomInlineTranslationBlock: View {
     let content: String
 
     @State private var isExpanded = false
-    @State private var isLoading = false
 
     var body: some View {
         // 토글 버튼과 번역 본문이 배경 한 장을 공유하는 단일 카드 —
@@ -35,17 +34,11 @@ struct NewsroomInlineTranslationBlock: View {
                     .overlay(Color.hairline)
                     .padding(.horizontal, 14)
 
-                Group {
-                    if isLoading {
-                        loadingSkeleton
-                    } else {
-                        Text(content)
-                            .font(.pretendard(14.5, weight: .medium))
-                            .foregroundStyle(Color.textPrimary)
-                            .lineSpacing(6)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
+                Text(content)
+                    .font(.pretendard(14.5, weight: .medium))
+                    .foregroundStyle(Color.textPrimary)
+                    .lineSpacing(6)
+                    .fixedSize(horizontal: false, vertical: true)
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .transition(.opacity.combined(with: .move(edge: .top)))
@@ -54,27 +47,9 @@ struct NewsroomInlineTranslationBlock: View {
         .background(Color.brandTintBg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private var loadingSkeleton: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            RoundedRectangle(cornerRadius: 6).fill(Color.divider).frame(height: 13)
-            RoundedRectangle(cornerRadius: 6).fill(Color.divider).frame(width: 180, height: 13)
-        }
-        .redacted(reason: .placeholder)
-    }
-
     private func toggle() {
         withAnimation(.easeInOut(duration: 0.18)) {
             isExpanded.toggle()
-        }
-
-        guard isExpanded else { return }
-        isLoading = true
-
-        Task {
-            try? await Task.sleep(nanoseconds: 400_000_000)
-            withAnimation(.easeInOut(duration: 0.16)) {
-                isLoading = false
-            }
         }
     }
 }
