@@ -23,7 +23,7 @@ struct NewsroomInlineTranslationBlock: View {
                 }
                 .foregroundStyle(Color.brand)
                 .padding(.horizontal, 14)
-                .frame(height: 42)
+                .frame(minHeight: 44)
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
             }

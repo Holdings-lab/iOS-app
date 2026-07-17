@@ -143,7 +143,8 @@ struct NewsroomLearningCardDetailSheet: View {
                     Text(relatedDigestTitle(content))
                         .font(.pretendard(13.5, weight: .bold))
                         .foregroundStyle(Color.textPrimary)
-                        .lineLimit(1)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Spacer(minLength: 4)
