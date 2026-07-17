@@ -146,6 +146,8 @@ struct NewsroomDigestDetailView: View {
                     .font(.pretendard(11, weight: .semibold))
                     .foregroundStyle(Color.textQuaternary)
                     .padding(.top, 2)
+
+                severityContextBadge
             }
 
         case .marketStory(_, let portfolioTodayChangePercent):
@@ -163,19 +165,38 @@ struct NewsroomDigestDetailView: View {
                     .font(.pretendard(11, weight: .semibold))
                     .foregroundStyle(Color.textQuaternary)
                     .padding(.top, 2)
+
+                severityContextBadge
             }
         }
     }
 
-    /// 오늘탭 규칙 재사용: calm이면 부호 기반, watch/alert면 severity 색 고정.
-    /// `drawdownColor`는 고점 대비 낙폭용(양수=빨강)이라 일일 등락엔 calm에서 그대로 쓸 수 없다.
+    /// 일일 등락의 방향과 시장 상태는 서로 다른 정보 축이다.
+    /// 숫자는 항상 상승/하락 방향 색을 쓰고, watch/alert는 별도 문구 배지로 전달한다.
     private func headerNumberColor(for value: Double) -> Color {
+        NewsroomPercentFormat.color(for: value)
+    }
+
+    @ViewBuilder
+    private var severityContextBadge: some View {
         switch severity {
         case .calm:
-            return NewsroomPercentFormat.color(for: value)
-        case .watch, .alert:
-            return severity.drawdownColor(for: value)
+            EmptyView()
+        case .watch:
+            severityBadge(text: "변동성 확인 구간", tint: Color.warning)
+        case .alert:
+            severityBadge(text: "변동성이 큰 구간", tint: Color.trendDown)
         }
+    }
+
+    private func severityBadge(text: String, tint: Color) -> some View {
+        Text(text)
+                .font(.pretendard(10.5, weight: .bold))
+                .foregroundStyle(tint)
+                .padding(.horizontal, 9)
+                .frame(height: 24)
+                .background(tint.opacity(0.10), in: Capsule(style: .continuous))
+                .padding(.top, 4)
     }
 
     private var newFactsSection: some View {
