@@ -7,8 +7,12 @@ enum NewsroomDigestScenario: String, CaseIterable, Identifiable {
     case calmAllQuiet
     /// B. calm + 일부 종목만 뉴스 (히어로/컴팩트/조용 혼재)
     case calmMixed
-    /// C. alert + materiality high 다이제스트 포함
+    /// C. 두 개 이상 보유 종목에 겹친 공통 이슈 포함
     case alert
+    /// 이전 캐시를 오프라인 표기와 함께 보여주는 상태.
+    case cachedOffline
+    /// 첫 자산 등록 직후 온디맨드 다이제스트를 만드는 상태.
+    case firstGeneration
     /// 네트워크 에러 — payload가 아니라 Repository 에러로 재현 (상세 가이드 §4.4)
     case loadFailure
 
@@ -21,7 +25,11 @@ enum NewsroomDigestScenario: String, CaseIterable, Identifiable {
         case .calmMixed:
             return "일부 종목 뉴스"
         case .alert:
-            return "변동 이슈 발생"
+            return "포트폴리오 공통 이슈"
+        case .cachedOffline:
+            return "오프라인 캐시"
+        case .firstGeneration:
+            return "첫 브리핑 생성"
         case .loadFailure:
             return "네트워크 에러"
         }
@@ -38,6 +46,10 @@ nonisolated struct MockNewsroomDigestRepository: NewsroomDigestRepositoryProtoco
         self.scenario = scenario
     }
 
+    var showsFirstGenerationState: Bool {
+        scenario == .firstGeneration
+    }
+
     func fetchDigest(userAssetProfile: UserAssetProfile) async throws -> NewsroomDigest {
         try? await Task.sleep(nanoseconds: 350_000_000)
 
@@ -48,6 +60,10 @@ nonisolated struct MockNewsroomDigestRepository: NewsroomDigestRepositoryProtoco
             return NewsroomDigestMockData.calmMixed
         case .alert:
             return NewsroomDigestMockData.alert
+        case .cachedOffline:
+            return NewsroomDigestMockData.cachedOffline
+        case .firstGeneration:
+            return NewsroomDigestMockData.calmMixed
         case .loadFailure:
             throw URLError(.notConnectedToInternet)
         }

@@ -72,18 +72,6 @@ struct NewsroomAssetTag: Identifiable {
     var id: String { title }
 }
 
-struct NewsroomLearningContent: Identifiable, Equatable {
-    let id: String
-    let author: String
-    let publishedText: String
-    let title: String
-    let summary: String
-    let category: PolicyNewsCategory
-    let readTimeText: String
-    let commentCount: Int
-    let heroSystemImage: String
-}
-
 extension PolicyNewsCategory {
     var newsroomIconName: String {
         switch self {

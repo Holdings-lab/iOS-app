@@ -1,14 +1,9 @@
 import SwiftUI
 
-/// 다이제스트 상세 (§3). 종목 다이제스트와 시장 스토리가 같은 템플릿을 공유한다.
-/// 하나의 짧은 기사처럼 위에서 아래로 읽힌다 — 섹션 라벨·질문 헤더 없이
-/// 블록의 순서와 시각 위계만으로 흐름을 만든다.
+/// 리스트 페이로드만으로 그리는 종목 상세. 별도 네트워크 요청이나 로딩 상태가 없다.
 struct NewsroomDigestDetailView: View {
-    let content: NewsroomDetailContent
-    let severity: TodayBriefingSeverity
+    let digest: NewsroomTickerDigest
     let referenceText: String
-    let relatedLearningContent: NewsroomLearningContent?
-    let onSelectLearningContent: (NewsroomLearningContent) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var isTitleVisible = false
@@ -22,47 +17,34 @@ struct NewsroomDigestDetailView: View {
                 topBar
 
                 ScrollView(.vertical, showsIndicators: false) {
-                    // 균일 spacing 대신 그룹 단위 리듬 —
-                    // 헤더 ↔ 기사 블록 32(디바이더 기준 16+16), 이후 카드들 28, 푸터 20.
                     VStack(alignment: .leading, spacing: 0) {
-                        headerBlock
+                        assetHeader
 
-                        Divider().overlay(Color.hairline)
-                            .padding(.top, 16)
+                        Divider()
+                            .overlay(Color.hairline)
+                            .padding(.vertical, 18)
 
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(headline)
-                                .font(.pretendard(23, weight: .bold))
-                                .foregroundStyle(Color.textPrimary)
-                                .lineSpacing(3)
-                                .fixedSize(horizontal: false, vertical: true)
+                        Text(digest.headline ?? digest.name)
+                            .font(.pretendard(23, weight: .bold))
+                            .foregroundStyle(Color.textPrimary)
+                            .lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
 
-                            if let summary {
-                                Text(summary)
-                                    .font(.pretendard(16, weight: .regular))
-                                    .foregroundStyle(Color.textPrimary)
-                                    .lineSpacing(7)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
+                        representativeImage
+                            .padding(.top, 18)
 
-                            if !newFacts.isEmpty {
-                                newFactsSection
-                            }
-                        }
-                        .padding(.top, 16)
-
-                        if let translationText {
-                            NewsroomInlineTranslationBlock(content: translationText)
-                                .padding(.top, 28)
+                        if let aiView = digest.aiView {
+                            aiViewSection(aiView)
+                                .padding(.top, 24)
                         }
 
-                        if let relatedLearningContent {
-                            learningLinkCard(relatedLearningContent)
-                                .padding(.top, 28)
+                        if digest.summary != nil || !digest.newFacts.isEmpty {
+                            summarySection
+                                .padding(.top, 26)
                         }
 
-                        if !articles.isEmpty {
-                            articlesSection
+                        if !digest.articles.isEmpty {
+                            sourcesSection
                                 .padding(.top, 28)
                         }
 
@@ -88,15 +70,13 @@ struct NewsroomDigestDetailView: View {
         }
     }
 
-    // MARK: - Top Bar (스크롤 시 타이틀 표시)
-
     private var topBar: some View {
         HStack {
             LiquidGlassBackButton(action: { dismiss() })
 
             Spacer()
 
-            Text(topBarTitleText)
+            Text(digest.ticker)
                 .font(.pretendard(15, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
                 .opacity(isTitleVisible ? 1 : 0)
@@ -112,14 +92,12 @@ struct NewsroomDigestDetailView: View {
         .background(Color.canvas.opacity(0.96))
     }
 
-    // MARK: - Header Block (§3 — 종목명+등락 = 주식앱의 익숙한 문법)
+    private var assetHeader: some View {
+        HStack(alignment: .top, spacing: 12) {
+            NewsroomTickerLogo(digest: digest, size: 44)
 
-    @ViewBuilder
-    private var headerBlock: some View {
-        switch content {
-        case .ticker(let digest):
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
+                HStack(spacing: 7) {
                     Text(digest.ticker)
                         .font(.pretendard(15, weight: .bold))
                         .foregroundStyle(Color.textPrimary)
@@ -129,158 +107,143 @@ struct NewsroomDigestDetailView: View {
                         .foregroundStyle(Color.textTertiary)
                 }
 
-                if let priceChangePercent = digest.priceChangePercent {
-                    Text("오늘 \(NewsroomPercentFormat.signed(priceChangePercent))")
+                if let priceChange = digest.priceChangePercent {
+                    Text("오늘 \(NewsroomPercentFormat.signed(priceChange))")
                         .font(.pretendard(26, weight: .bold))
-                        .foregroundStyle(headerNumberColor(for: priceChangePercent))
+                        .foregroundStyle(NewsroomPercentFormat.color(for: priceChange))
                         .monospacedDigit()
+                }
 
-                    if let impact = digest.portfolioImpactPercent {
-                        Text("내 자산의 \(digest.portfolioWeightPercent)% · 총자산 기준 \(NewsroomPercentFormat.signedImpact(impact))")
-                            .font(.pretendard(12.5, weight: .semibold))
-                            .foregroundStyle(Color.textSecondary)
+                if let impact = digest.portfolioImpactPercent {
+                    Text("내 자산의 \(digest.portfolioWeightPercent)% · 총자산 기준 \(NewsroomPercentFormat.signedImpact(impact))")
+                        .font(.pretendard(12.5, weight: .semibold))
+                        .foregroundStyle(Color.textSecondary)
+                }
+
+                Text(referenceText)
+                    .font(.pretendard(11, weight: .semibold))
+                    .foregroundStyle(Color.textQuaternary)
+                    .padding(.top, 2)
+            }
+        }
+    }
+
+    private var representativeImage: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Group {
+                if let imageURL = digest.representativeImageURL {
+                    AsyncImage(url: imageURL) { phase in
+                        if let image = phase.image {
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        } else {
+                            imageFallback
+                        }
+                    }
+                } else {
+                    imageFallback
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 190)
+            .background(Color.muted)
+            .clipShape(RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
+            .clipped()
+
+            if let attribution = digest.imageAttribution, digest.representativeImageURL != nil {
+                Text("사진: \(attribution)")
+                    .font(.pretendard(10.5, weight: .medium))
+                    .foregroundStyle(Color.textQuaternary)
+            }
+        }
+    }
+
+    private var imageFallback: some View {
+        VStack(spacing: 10) {
+            NewsroomTickerLogo(digest: digest, size: 72)
+            Text(digest.name)
+                .font(.pretendard(14, weight: .bold))
+                .foregroundStyle(Color.textSecondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.brandTintBg.opacity(0.6))
+    }
+
+    private func aiViewSection(_ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12, weight: .bold))
+                Text("AI는 이렇게 판단했어요")
+                    .font(.pretendard(14.5, weight: .bold))
+            }
+            .foregroundStyle(Color.brand)
+
+            Text(text)
+                .font(.pretendard(14.5, weight: .medium))
+                .foregroundStyle(Color.textPrimary)
+                .lineSpacing(5)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("본 내용은 투자 판단의 근거가 아닙니다.")
+                .font(.pretendard(10.5, weight: .medium))
+                .foregroundStyle(Color.textTertiary)
+        }
+        .padding(15)
+        .background(Color.brandTintBg, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
+    }
+
+    private var summarySection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if let summary = digest.summary {
+                Text(summary)
+                    .font(.pretendard(16, weight: .regular))
+                    .foregroundStyle(Color.textPrimary)
+                    .lineSpacing(7)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if !digest.newFacts.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("새로 알려진 내용")
+                        .font(.pretendard(14.5, weight: .bold))
+                        .foregroundStyle(Color.textPrimary)
+
+                    ForEach(Array(digest.newFacts.enumerated()), id: \.offset) { _, fact in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("•")
+                                .font(.pretendard(14, weight: .bold))
+                                .foregroundStyle(Color.textTertiary)
+
+                            Text(fact)
+                                .font(.pretendard(14.5, weight: .medium))
+                                .foregroundStyle(Color.textPrimary)
+                                .lineSpacing(4)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
-
-                Text(referenceText)
-                    .font(.pretendard(11, weight: .semibold))
-                    .foregroundStyle(Color.textQuaternary)
-                    .padding(.top, 2)
-
-                severityContextBadge
-            }
-
-        case .marketStory(_, let portfolioTodayChangePercent):
-            VStack(alignment: .leading, spacing: 4) {
-                Text("내 자산 전체")
-                    .font(.pretendard(13, weight: .bold))
-                    .foregroundStyle(Color.textTertiary)
-
-                Text("오늘 \(NewsroomPercentFormat.signed(portfolioTodayChangePercent))")
-                    .font(.pretendard(26, weight: .bold))
-                    .foregroundStyle(headerNumberColor(for: portfolioTodayChangePercent))
-                    .monospacedDigit()
-
-                Text(referenceText)
-                    .font(.pretendard(11, weight: .semibold))
-                    .foregroundStyle(Color.textQuaternary)
-                    .padding(.top, 2)
-
-                severityContextBadge
             }
         }
     }
 
-    /// 일일 등락의 방향과 시장 상태는 서로 다른 정보 축이다.
-    /// 숫자는 항상 상승/하락 방향 색을 쓰고, watch/alert는 별도 문구 배지로 전달한다.
-    private func headerNumberColor(for value: Double) -> Color {
-        NewsroomPercentFormat.color(for: value)
-    }
-
-    @ViewBuilder
-    private var severityContextBadge: some View {
-        switch severity {
-        case .calm:
-            EmptyView()
-        case .watch:
-            severityBadge(text: "변동성 확인 구간", tint: Color.warning)
-        case .alert:
-            severityBadge(text: "변동성이 큰 구간", tint: Color.trendDown)
-        }
-    }
-
-    private func severityBadge(text: String, tint: Color) -> some View {
-        Text(text)
-                .font(.pretendard(10.5, weight: .bold))
-                .foregroundStyle(tint)
-                .padding(.horizontal, 9)
-                .frame(height: 24)
-                .background(tint.opacity(0.10), in: Capsule(style: .continuous))
-                .padding(.top, 4)
-    }
-
-    private var newFactsSection: some View {
+    private var sourcesSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("새로 알려진 내용")
-                .font(.pretendard(14.5, weight: .bold))
-                .foregroundStyle(Color.textPrimary)
-
-            ForEach(Array(newFacts.enumerated()), id: \.offset) { _, fact in
-                HStack(alignment: .top, spacing: 8) {
-                    Text("•")
-                        .font(.pretendard(14, weight: .bold))
-                        .foregroundStyle(Color.textTertiary)
-
-                    Text(fact)
-                        .font(.pretendard(14.5, weight: .medium))
-                        .foregroundStyle(Color.textPrimary)
-                        .lineSpacing(4)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-        }
-    }
-
-    private func learningLinkCard(_ item: NewsroomLearningContent) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("함께 보면 좋아요")
-                .font(.pretendard(12, weight: .bold))
-                .foregroundStyle(Color.textTertiary)
-
-            Button {
-                onSelectLearningContent(item)
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: item.heroSystemImage)
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(item.category.color)
-                        .frame(width: 32, height: 32)
-                        .background(item.category.color.opacity(0.12), in: Circle())
-
-                    Text(item.title)
-                        .font(.pretendard(13, weight: .bold))
-                        .foregroundStyle(Color.textPrimary)
-                        .lineLimit(1)
-
-                    Text("· \(item.readTimeText)")
-                        .font(.pretendard(11.5, weight: .semibold))
-                        .foregroundStyle(Color.textTertiary)
-
-                    Spacer(minLength: 4)
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Color.textQuaternary)
-                }
-                .padding(12)
-                .background(Color.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(Color.hairline, lineWidth: 1)
-                }
-            }
-            .buttonStyle(PressScaleButtonStyle())
-        }
-    }
-
-    private var articlesSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("근거 기사 \(articles.count)")
+            Text("출처")
                 .font(.pretendard(14.5, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
 
             VStack(spacing: 0) {
-                ForEach(Array(articles.enumerated()), id: \.element.id) { index, article in
+                ForEach(Array(digest.articles.enumerated()), id: \.element.id) { index, article in
                     if index > 0 {
                         Divider().overlay(Color.hairline)
                     }
 
                     Button {
-                        if let url = article.url {
-                            presentedArticleURL = url
-                        }
+                        if let url = article.url { presentedArticleURL = url }
                     } label: {
-                        HStack(alignment: .center, spacing: 10) {
+                        HStack(spacing: 10) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(article.title)
                                     .font(.pretendard(14, weight: .semibold))
@@ -295,16 +258,17 @@ struct NewsroomDigestDetailView: View {
 
                             Spacer(minLength: 4)
 
-                            Image(systemName: "chevron.right")
+                            Image(systemName: "arrow.up.right")
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundStyle(Color.textQuaternary)
                         }
                         .padding(.vertical, 12)
                     }
                     .buttonStyle(.plain)
+                    .disabled(article.url == nil)
                 }
             }
-            .padding(14)
+            .padding(.horizontal, 14)
             .background(Color.elevated, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
@@ -314,91 +278,20 @@ struct NewsroomDigestDetailView: View {
     }
 
     private var footer: some View {
-        Text("\(referenceText) · AI가 여러 기사를 요약했어요. 원문과 다를 수 있어요")
+        Text("\(referenceText) · AI가 여러 기사를 요약했어요. 원문과 다를 수 있어요.")
             .font(.pretendard(11, weight: .medium))
             .foregroundStyle(Color.textTertiary)
             .lineSpacing(3)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
-
-    // MARK: - Content 분기 헬퍼
-
-    private var topBarTitleText: String {
-        switch content {
-        case .ticker(let digest):
-            return digest.ticker
-        case .marketStory(let story, _):
-            return story.headline
-        }
-    }
-
-    private var headline: String {
-        switch content {
-        case .ticker(let digest):
-            return digest.headline ?? digest.name
-        case .marketStory(let story, _):
-            return story.headline
-        }
-    }
-
-    private var summary: String? {
-        switch content {
-        case .ticker(let digest):
-            return digest.summary
-        case .marketStory(let story, _):
-            return story.summary
-        }
-    }
-
-    private var newFacts: [String] {
-        switch content {
-        case .ticker(let digest):
-            return digest.newFacts
-        case .marketStory:
-            return []
-        }
-    }
-
-    private var translationText: String? {
-        switch content {
-        case .ticker(let digest):
-            return digest.translationText
-        case .marketStory(let story, _):
-            return story.translationText
-        }
-    }
-
-    private var articles: [NewsroomDigestArticle] {
-        switch content {
-        case .ticker(let digest):
-            return digest.articles
-        case .marketStory:
-            return []
-        }
-    }
 }
 
-#Preview("종목 상세 (alert)") {
+#Preview {
     NavigationStack {
         NewsroomDigestDetailView(
-            content: .ticker(NewsroomDigestMockData.alert.tickerDigests[0]),
-            severity: .alert,
-            referenceText: NewsroomDigestMockData.alert.referenceText,
-            relatedLearningContent: NewsroomConceptCards.cpiExplained,
-            onSelectLearningContent: { _ in }
-        )
-    }
-}
-
-#Preview("종목 상세 (번역 있음)") {
-    NavigationStack {
-        NewsroomDigestDetailView(
-            content: .ticker(NewsroomDigestMockData.calmMixed.tickerDigests[0]),
-            severity: .calm,
-            referenceText: NewsroomDigestMockData.calmMixed.referenceText,
-            relatedLearningContent: NewsroomConceptCards.earningsSeason,
-            onSelectLearningContent: { _ in }
+            digest: NewsroomDigestMockData.calmMixed.tickerDigests[0],
+            referenceText: NewsroomDigestMockData.calmMixed.referenceText
         )
     }
 }

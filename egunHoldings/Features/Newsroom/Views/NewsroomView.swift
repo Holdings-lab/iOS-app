@@ -1,16 +1,14 @@
 import SwiftUI
+import UIKit
 
-/// 뉴스룸 — 이해의 공간.
-/// 오늘탭 = 사실(무슨 일이 있었나) / 뉴스룸 = 이해(왜, 나에게 무슨 의미인가).
-/// 무한 스크롤·페이지네이션 없음. 콘텐츠는 항상 유한하고, 끝이 보인다 (§1.6).
+/// 보유 종목 24시간 뉴스를 종목 단위로 종합한 유한한 일일 브리핑.
 @MainActor
 struct NewsroomView: View {
     let userAssetProfile: UserAssetProfile
     var onAssetTabRequested: () -> Void = {}
 
     @StateObject private var viewModel: NewsroomDigestViewModel
-    @State private var presentedDetailContent: NewsroomDetailContent?
-    @State private var presentedLearningContent: NewsroomLearningContent?
+    @State private var presentedTickerDigest: NewsroomTickerDigest?
 
     init(
         userId: Int64? = nil,
@@ -32,9 +30,10 @@ struct NewsroomView: View {
             ) {
                 header
 
-                // 보유 종목 0은 payload가 아니라 프로필로 판단한다 — 다이제스트 요청 자체를 하지 않는다.
                 if userAssetProfile.holdings.isEmpty {
-                    noHoldingsCard
+                    NewsroomNoHoldingsCard(onRegister: onAssetTabRequested)
+                } else if viewModel.isPreparingFirstBriefing {
+                    NewsroomFirstGenerationCard(holdingCount: userAssetProfile.holdings.count)
                 } else if viewModel.isLoading && viewModel.digest == nil {
                     NewsroomDigestSkeleton()
                 } else if let errorMessage = viewModel.errorMessage, viewModel.digest == nil {
@@ -47,7 +46,10 @@ struct NewsroomView: View {
             }
             .refreshable {
                 guard !userAssetProfile.holdings.isEmpty else { return }
-                await viewModel.refresh(userAssetProfile: userAssetProfile)
+                let didUpdate = await viewModel.refresh(userAssetProfile: userAssetProfile)
+                if didUpdate {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
             }
 
             if let refreshStatusMessage = viewModel.refreshStatusMessage {
@@ -58,20 +60,10 @@ struct NewsroomView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.refreshStatusMessage)
         .policyFinanceLightTabChrome()
-        .navigationDestination(item: $presentedDetailContent) { content in
+        .navigationDestination(item: $presentedTickerDigest) { digest in
             NewsroomDigestDetailView(
-                content: content,
-                severity: viewModel.digest?.severity ?? .calm,
-                referenceText: viewModel.digest?.referenceText ?? "",
-                relatedLearningContent: relatedLearningContent(for: content),
-                onSelectLearningContent: { presentedLearningContent = $0 }
-            )
-        }
-        .sheet(item: $presentedLearningContent) { item in
-            NewsroomLearningCardDetailSheet(
-                item: item,
-                relatedDigest: viewModel.relatedDigestContent(for: item),
-                onOpenRelatedDigest: { presentedDetailContent = $0 }
+                digest: digest,
+                referenceText: viewModel.digest?.referenceText ?? ""
             )
         }
         .onAppear {
@@ -87,93 +79,55 @@ struct NewsroomView: View {
         #endif
     }
 
-    // MARK: - Header (§1.1 — 타이틀 + 기준 시각 라인은 항상 노출)
-
     private var header: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 4) {
             Text("뉴스룸")
                 .font(.pretendard(22, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
                 .tracking(-0.5)
 
-            if let digest = viewModel.digest, !userAssetProfile.holdings.isEmpty {
+            if let digest = viewModel.digest {
                 Text("\(digest.referenceText) · \(digest.nextUpdateText)")
                     .font(.pretendard(12.5, weight: .medium))
-                    .foregroundStyle(Color.textTertiary)
+                    .foregroundStyle(digest.isOffline ? Color.warning : Color.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("무슨 일이 있었는지, 나에게 어떤 의미인지")
+                Text("보유 자산의 지난 24시간을 하나의 브리핑으로 정리해요")
                     .font(.pretendard(12.5, weight: .medium))
                     .foregroundStyle(Color.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Digest Content
-
     @ViewBuilder
     private func digestContent(_ digest: NewsroomDigest) -> some View {
-        // 1. 상태 브리핑
-        NewsroomBriefingCard(digest: digest) {
-            if let marketStory = digest.marketStory {
-                presentedDetailContent = .marketStory(marketStory, portfolioTodayChangePercent: digest.portfolioTodayChangePercent)
-            }
+        if let macroIssue = digest.macroIssue {
+            NewsroomMacroIssueBanner(issue: macroIssue)
         }
 
-        // 2. 시장 공통 스토리 — watch/alert는 상단 브리핑이 같은 상세 진입을 맡아 중복을 피한다.
-        switch digest.severity {
-        case .calm:
-            if let marketStory = digest.marketStory {
-                NewsroomMarketStoryCard(story: marketStory) {
-                    presentedDetailContent = .marketStory(marketStory, portfolioTodayChangePercent: digest.portfolioTodayChangePercent)
-                }
-            }
-        case .watch, .alert:
-            EmptyView()
-        }
+        tickerSection(digest)
 
-        // 3. 내 종목 — materiality high → low → 조용 순
-        if !digest.tickerDigests.isEmpty {
-            tickerSection(digest)
-        }
-
-        // 4. 학습 콘텐츠 — 독립 피드가 아니라 오늘 이야기와 페어링
-        let learningItems = viewModel.pairedLearningContents()
-        if !learningItems.isEmpty {
-            NewsroomLearningCardRail(items: learningItems) { presentedLearningContent = $0 }
-        }
-
-        // 종료 마커 — 이 아래엔 아무것도 두지 않는다
-        NewsroomEndMarker(heartbeatText: digest.heartbeatText)
+        NewsroomEndMarker(heartbeatText: nil)
     }
 
     private func tickerSection(_ digest: NewsroomDigest) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("내 종목")
+            Text("내 보유 종목")
                 .font(.pretendard(16, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
 
             ForEach(digest.sortedTickerDigests) { tickerDigest in
-                NewsroomTickerDigestRow.make(for: tickerDigest) {
-                    presentedDetailContent = .ticker(tickerDigest)
+                NewsroomTickerDigestRow.make(
+                    for: tickerDigest,
+                    isHero: digest.heroTickerIDs.contains(tickerDigest.id)
+                ) {
+                    presentedTickerDigest = tickerDigest
                 }
             }
         }
     }
-
-    // MARK: - 종목 0개 (§4.4)
-
-    private var noHoldingsCard: some View {
-        TodayEmptyStateCard(
-            iconName: "newspaper",
-            title: "종목을 등록하면 관련 소식을 모아드려요",
-            subtitle: "보유 종목을 등록하면 그 종목과 관련된 이야기만 정리해서 보여드려요.",
-            ctaTitle: "종목 등록하기",
-            onCTA: onAssetTabRequested
-        )
-    }
-
-    // MARK: - Pull-to-refresh 토스트 (§4.1)
 
     private func refreshToast(_ message: String) -> some View {
         Text(message)
@@ -185,23 +139,7 @@ struct NewsroomView: View {
             .frame(maxWidth: .infinity)
     }
 
-    // MARK: - 학습 카드 역링크 매칭
-
-    private func relatedLearningContent(for content: NewsroomDetailContent) -> NewsroomLearningContent? {
-        let topics: Set<PolicyNewsCategory>
-        switch content {
-        case .ticker(let digest):
-            topics = Set(digest.topicCategories)
-        case .marketStory(let story, _):
-            topics = Set(story.topicCategories)
-        }
-
-        guard !topics.isEmpty else { return nil }
-        return viewModel.digest?.learningCards.first { topics.contains($0.category) }
-    }
-
     #if DEBUG
-    /// UI/UX 검증용 Mock 시나리오 전환 메뉴 — 릴리스 빌드에는 포함되지 않는다.
     private var scenarioMenu: some View {
         Menu {
             ForEach(NewsroomDigestScenario.allCases) { scenario in
@@ -218,18 +156,7 @@ struct NewsroomView: View {
     #endif
 }
 
-#Preview("조용한 주간 (기본)") {
-    NavigationStack {
-        NewsroomView(
-            userAssetProfile: AppMockData.userAssetProfile,
-            viewModel: NewsroomDigestViewModel(
-                repository: MockNewsroomDigestRepository(scenario: .calmAllQuiet)
-            )
-        )
-    }
-}
-
-#Preview("일부 종목 뉴스") {
+#Preview("뉴스 혼재") {
     NavigationStack {
         NewsroomView(
             userAssetProfile: AppMockData.userAssetProfile,
@@ -240,7 +167,7 @@ struct NewsroomView: View {
     }
 }
 
-#Preview("변동 이슈 발생") {
+#Preview("포트폴리오 공통 이슈") {
     NavigationStack {
         NewsroomView(
             userAssetProfile: AppMockData.userAssetProfile,
