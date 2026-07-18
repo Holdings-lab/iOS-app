@@ -34,7 +34,7 @@ struct NewsroomDigestDetailView: View {
                             .padding(.top, 18)
 
                         if let aiView = digest.aiView {
-                            aiViewSection(aiView)
+                            NewsroomAIJudgmentSection(text: aiView)
                                 .padding(.top, 24)
                         }
 
@@ -170,30 +170,6 @@ struct NewsroomDigestDetailView: View {
         .background(Color.brandTintBg.opacity(0.6))
     }
 
-    private func aiViewSection(_ text: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 12, weight: .bold))
-                Text("AI는 이렇게 판단했어요")
-                    .font(.pretendard(14.5, weight: .bold))
-            }
-            .foregroundStyle(Color.brand)
-
-            Text(text)
-                .font(.pretendard(14.5, weight: .medium))
-                .foregroundStyle(Color.textPrimary)
-                .lineSpacing(5)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text("본 내용은 투자 판단의 근거가 아닙니다.")
-                .font(.pretendard(10.5, weight: .medium))
-                .foregroundStyle(Color.textTertiary)
-        }
-        .padding(15)
-        .background(Color.brandTintBg, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
-    }
-
     private var summarySection: some View {
         VStack(alignment: .leading, spacing: 18) {
             if let summary = digest.summary {
@@ -284,6 +260,52 @@ struct NewsroomDigestDetailView: View {
             .lineSpacing(3)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// AI판단 섹션 전용 뷰. 화면 진입 시 1회성으로만 나타난다 — 루프 애니메이션이나
+/// 타자기 효과는 쓰지 않는다: 이 콘텐츠는 전날 배치로 이미 생성돼 캐시된 것이라,
+/// "지금 실시간으로 생성 중"처럼 보이는 연출은 §5 날짜 정직성 원칙과 충돌한다.
+/// 아이콘의 스케일 팝도 등장 시 한 번만 재생되고 끝난다(반복 반짝임 금지, §3.5).
+private struct NewsroomAIJudgmentSection: View {
+    let text: String
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var hasAppeared = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12, weight: .bold))
+                    .scaleEffect(hasAppeared ? 1 : 0.78)
+                    .animation(
+                        reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.72),
+                        value: hasAppeared
+                    )
+                Text("AI는 이렇게 판단했어요")
+                    .font(.pretendard(14.5, weight: .bold))
+            }
+            .foregroundStyle(Color.brand)
+
+            Text(text)
+                .font(.pretendard(14.5, weight: .medium))
+                .foregroundStyle(Color.textPrimary)
+                .lineSpacing(5)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("본 내용은 투자 판단의 근거가 아닙니다.")
+                .font(.pretendard(10.5, weight: .medium))
+                .foregroundStyle(Color.textTertiary)
+        }
+        .padding(15)
+        .background(Color.brandTintBg, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
+        .opacity(hasAppeared ? 1 : 0)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: hasAppeared)
+        .onAppear {
+            guard !hasAppeared else { return }
+            hasAppeared = true
+        }
     }
 }
 
