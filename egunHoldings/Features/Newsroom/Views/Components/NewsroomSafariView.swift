@@ -13,6 +13,8 @@ struct NewsroomSafariView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
 }
 
-extension URL: Identifiable {
-    public var id: String { absoluteString }
+struct NewsroomSafariDestination: Identifiable, Equatable {
+    let url: URL
+
+    var id: String { url.absoluteString }
 }

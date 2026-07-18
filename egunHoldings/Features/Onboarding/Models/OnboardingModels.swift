@@ -166,7 +166,7 @@ extension MaxDrawdownTolerance {
     }
 
     /// 서버 API는 이 값을 문자열 enum이 아닌 순수 숫자(5/10/20/30)로 받는다.
-    var percentValue: Int {
+    nonisolated var percentValue: Int {
         switch self {
         case .withinFive: return 5
         case .withinTen: return 10

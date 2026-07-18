@@ -131,13 +131,14 @@ struct SettingsRootView: View {
                             .background(Color.brandTintBg, in: Capsule())
                     }
 
-                    (
+                    HStack(spacing: 0) {
                         Text("계좌 \(viewModel.connectedCount)개 연결됨")
                             .foregroundStyle(Color.textSecondary)
-                        + (viewModel.issueCount > 0
-                           ? Text(" · 확인 필요 \(viewModel.issueCount)건").foregroundStyle(Color.warning)
-                           : Text(""))
-                    )
+                        if viewModel.issueCount > 0 {
+                            Text(" · 확인 필요 \(viewModel.issueCount)건")
+                                .foregroundStyle(Color.warning)
+                        }
+                    }
                     .font(.pretendard(12.5, weight: .medium))
                 }
 

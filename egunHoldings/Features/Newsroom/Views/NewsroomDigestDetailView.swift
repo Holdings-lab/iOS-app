@@ -7,7 +7,7 @@ struct NewsroomDigestDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var isTitleVisible = false
-    @State private var presentedArticleURL: URL?
+    @State private var presentedArticle: NewsroomSafariDestination?
 
     var body: some View {
         ZStack {
@@ -64,8 +64,8 @@ struct NewsroomDigestDetailView: View {
         }
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
-        .sheet(item: $presentedArticleURL) { url in
-            NewsroomSafariView(url: url)
+        .sheet(item: $presentedArticle) { destination in
+            NewsroomSafariView(url: destination.url)
                 .ignoresSafeArea()
         }
     }
@@ -217,7 +217,9 @@ struct NewsroomDigestDetailView: View {
                     }
 
                     Button {
-                        if let url = article.url { presentedArticleURL = url }
+                        if let url = article.url {
+                            presentedArticle = NewsroomSafariDestination(url: url)
+                        }
                     } label: {
                         HStack(spacing: 10) {
                             VStack(alignment: .leading, spacing: 3) {

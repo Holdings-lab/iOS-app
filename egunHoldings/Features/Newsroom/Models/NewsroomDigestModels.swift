@@ -89,7 +89,7 @@ struct NewsroomDigestArticle: Identifiable, Equatable, Hashable {
 // MARK: - Date formatting
 
 enum NewsroomDigestDateFormat {
-    nonisolated(unsafe) private static let referenceFormatter: DateFormatter = {
+    private static let referenceFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ko_KR")
         formatter.dateFormat = "M월 d일 HH:mm"
