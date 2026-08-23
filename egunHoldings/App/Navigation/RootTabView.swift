@@ -70,11 +70,7 @@ struct RootTabView: View {
 
             NavigationStack {
                 AssetView(
-                    userId: userId,
-                    brokerBalanceSnapshot: brokerBalanceSnapshot,
-                    onAdjustmentRequested: {
-                        openSignal(.adjustment)
-                    }
+                    brokerBalanceSnapshot: brokerBalanceSnapshot
                 )
             }
             .tag(RootTab.asset)

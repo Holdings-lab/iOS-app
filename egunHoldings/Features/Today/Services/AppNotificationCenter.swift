@@ -282,7 +282,6 @@ final class AppNotificationCenter: ObservableObject {
                 ]
             )
         ]
-        .sorted { $0.occurredAt > $1.occurredAt }
     }
 
     private static func pushRoute(from userInfo: [AnyHashable: Any]) -> PolSignalRoute? {

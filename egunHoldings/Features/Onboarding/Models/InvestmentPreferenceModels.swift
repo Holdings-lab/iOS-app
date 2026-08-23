@@ -1,5 +1,24 @@
 import Foundation
 
+enum InvestmentProfile: String, CaseIterable, Identifiable, Codable, Sendable {
+    case conservative = "CONSERVATIVE"
+    case balanced = "BALANCED"
+    case aggressive = "AGGRESSIVE"
+
+    nonisolated var id: String { rawValue }
+
+    nonisolated var displayName: String {
+        switch self {
+        case .conservative:
+            return "안정형"
+        case .balanced:
+            return "중립형"
+        case .aggressive:
+            return "공격형"
+        }
+    }
+}
+
 struct InvestmentStyleAllocation: Identifiable, Hashable {
     let id: String
     let label: String

@@ -443,32 +443,3 @@ struct PolSignalButton: View {
         style == .secondary ? PSColor.border : Color.clear
     }
 }
-
-struct PolSignalCompositionBar: View {
-    struct Segment: Identifiable {
-        let id = UUID()
-        let percent: Double
-        let color: Color
-    }
-
-    let segments: [Segment]
-
-    var body: some View {
-        GeometryReader { proxy in
-            HStack(spacing: 0) {
-                ForEach(segments) { segment in
-                    Rectangle()
-                        .fill(segment.color)
-                        .frame(width: max(0, proxy.size.width * segment.percent / total))
-                }
-            }
-            .clipShape(Capsule(style: .continuous))
-        }
-        .frame(height: 10)
-        .background(PSColor.rule, in: Capsule(style: .continuous))
-    }
-
-    private var total: Double {
-        max(segments.reduce(0) { $0 + $1.percent }, 1)
-    }
-}

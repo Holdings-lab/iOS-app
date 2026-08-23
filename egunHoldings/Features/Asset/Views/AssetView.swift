@@ -6,15 +6,12 @@ struct AssetView: View {
     private let brokerBalanceSnapshot: BrokerBalanceSnapshot?
 
     init(
-        userId: Int64? = nil,
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
-        viewModel: AssetViewModel? = nil,
-        onAdjustmentRequested: @escaping () -> Void = {}
+        viewModel: AssetViewModel? = nil
     ) {
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
         _viewModel = StateObject(
             wrappedValue: viewModel ?? AssetViewModel(
-                userId: userId,
                 brokerBalanceSnapshot: brokerBalanceSnapshot
             )
         )
@@ -39,19 +36,6 @@ struct AssetView: View {
             }
         }
         .background(AssetTabPalette.screen.ignoresSafeArea())
-        .navigationDestination(item: $viewModel.navigationDestination) { destination in
-            AssetExposureDestinationView(
-                destination: destination,
-                dashboard: viewModel.dashboard
-            )
-        }
-        .sheet(isPresented: $viewModel.isBrokerConnectionPresented) {
-            BrokerConnectionStubView(onDismiss: viewModel.dismissBrokerConnection)
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(Color.elevated)
-                .presentationCornerRadius(KDXRadius.bottomSheet)
-        }
         .onChange(of: brokerBalanceSnapshot) { _, newSnapshot in
             viewModel.updateBrokerBalance(newSnapshot)
         }
@@ -113,16 +97,18 @@ struct AssetView: View {
     }
 
     private var holdingsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let holdings = viewModel.portfolioDisplay.holdings
+
+        return VStack(alignment: .leading, spacing: 12) {
             Text("보유 종목")
                 .font(.pretendard(17, weight: .bold))
                 .foregroundStyle(AssetTabPalette.textPrimary)
 
             VStack(spacing: 0) {
-                ForEach(Array(viewModel.portfolioDisplay.holdings.enumerated()), id: \.element.id) { index, holding in
+                ForEach(holdings) { holding in
                     AssetHoldingDisplayRow(holding: holding)
 
-                    if index < viewModel.portfolioDisplay.holdings.count - 1 {
+                    if holding.id != holdings.last?.id {
                         Divider()
                             .background(AssetTabPalette.divider)
                     }

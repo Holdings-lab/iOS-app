@@ -251,16 +251,6 @@ nonisolated enum BackendEndpoint {
         Endpoint(baseURL: baseURL, path: "/api/portfolio", authorizationRequirement: .bearerToken)
     }
 
-    /// ⚠️ 서버 API LIST 미등재 (2026-08 재확인). 서버의 인접 API는 `/api/portfolio/allocation`
-    /// (자산 배분 비중 분석)이며 리밸런싱 제안 계약과는 다르다.
-    static func portfolioRebalancing() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/portfolio/rebalancing", authorizationRequirement: .bearerToken)
-    }
-
-    static func portfolioRebalancingPreview(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/portfolio/rebalancing/preview", method: .post, body: body, authorizationRequirement: .bearerToken)
-    }
-
     static func insightSection(_ sectionPath: InsightSectionPath) -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/insights/\(sectionPath.rawValue)", authorizationRequirement: .bearerToken)
     }
