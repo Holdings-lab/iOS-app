@@ -11,7 +11,7 @@ nonisolated struct OnboardingResult: Codable, Sendable {
     var financialGoal: String
     var targetAmount: Int64
     var selectedWatchAssetIDs: [String]
-    var isBrokerageCredentialSubmitted: Bool
+    var isBrokerageConnected: Bool
 
     init(
         connectedInstitutionIDs: [String] = [],
@@ -24,7 +24,7 @@ nonisolated struct OnboardingResult: Codable, Sendable {
         financialGoal: String = FinancialGoal.seedMoney.rawValue,
         targetAmount: Int64 = FinancialGoal.seedMoney.defaultTargetAmount,
         selectedWatchAssetIDs: [String] = [],
-        isBrokerageCredentialSubmitted: Bool = false
+        isBrokerageConnected: Bool = false
     ) {
         self.connectedInstitutionIDs = connectedInstitutionIDs
         self.selectedSectorIDs = selectedSectorIDs
@@ -36,7 +36,7 @@ nonisolated struct OnboardingResult: Codable, Sendable {
         self.financialGoal = financialGoal
         self.targetAmount = targetAmount
         self.selectedWatchAssetIDs = selectedWatchAssetIDs
-        self.isBrokerageCredentialSubmitted = isBrokerageCredentialSubmitted
+        self.isBrokerageConnected = isBrokerageConnected
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -50,7 +50,8 @@ nonisolated struct OnboardingResult: Codable, Sendable {
         case financialGoal
         case targetAmount
         case selectedWatchAssetIDs
-        case isBrokerageCredentialSubmitted
+        // 저장된 온보딩 결과와의 호환을 위해 기존 키를 유지한다.
+        case isBrokerageConnected = "isBrokerageCredentialSubmitted"
     }
 
     init(from decoder: Decoder) throws {
@@ -65,7 +66,7 @@ nonisolated struct OnboardingResult: Codable, Sendable {
         financialGoal = try container.decodeIfPresent(String.self, forKey: .financialGoal) ?? FinancialGoal.seedMoney.rawValue
         targetAmount = try container.decodeIfPresent(Int64.self, forKey: .targetAmount) ?? FinancialGoal.seedMoney.defaultTargetAmount
         selectedWatchAssetIDs = try container.decodeIfPresent([String].self, forKey: .selectedWatchAssetIDs) ?? []
-        isBrokerageCredentialSubmitted = try container.decodeIfPresent(Bool.self, forKey: .isBrokerageCredentialSubmitted) ?? false
+        isBrokerageConnected = try container.decodeIfPresent(Bool.self, forKey: .isBrokerageConnected) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -80,7 +81,7 @@ nonisolated struct OnboardingResult: Codable, Sendable {
         try container.encode(financialGoal, forKey: .financialGoal)
         try container.encode(targetAmount, forKey: .targetAmount)
         try container.encode(selectedWatchAssetIDs, forKey: .selectedWatchAssetIDs)
-        try container.encode(isBrokerageCredentialSubmitted, forKey: .isBrokerageCredentialSubmitted)
+        try container.encode(isBrokerageConnected, forKey: .isBrokerageConnected)
     }
 }
 

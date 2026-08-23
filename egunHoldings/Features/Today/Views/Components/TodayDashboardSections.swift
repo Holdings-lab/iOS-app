@@ -126,29 +126,28 @@ struct TodayUnreadNotificationCard: View {
 struct TodayBriefingCard: View {
     let briefing: TodayBriefing
     let isAccountLinked: Bool
-    let onConnectAccount: () -> Void
 
     var body: some View {
-        Group {
-            if isAccountLinked {
-                linkedContent
-            } else {
-                TodayQuietState(
-                    iconName: "link",
-                    message: Text("계좌를 연결하면\n자산 변화를 보여드려요"),
-                    ctaTitle: "계정 연결하기",
-                    onCTA: onConnectAccount
-                )
-                .padding(.vertical, 20)
-            }
+        if isAccountLinked {
+            linkedContent
+                .background(Color.elevated, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
+                        .stroke(Color.hairline, lineWidth: 1)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
+                .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 1)
+        } else {
+            // 온보딩 7/8 건너뛰기 확인과 같은 문구를 유지한다 — 한쪽만 바꾸면 안내가 어긋난다.
+            Text("계좌 없이 시작할 수 있어요\n일부 기능은 연결 후 사용 가능해요")
+                .font(.pretendard(13, weight: .medium))
+                .foregroundStyle(Color.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(4)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .accessibilityElement(children: .combine)
         }
-        .background(Color.elevated, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
-        .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 1)
     }
 
     private var linkedContent: some View {

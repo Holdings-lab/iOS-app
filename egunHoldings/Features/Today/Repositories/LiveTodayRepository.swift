@@ -52,11 +52,12 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
     ) async -> (isAccountLinked: Bool?, value: TodayBriefing) {
         do {
             let response = try await apiClient.requestResult(
-                BackendEndpoint.dailyBriefing(userId: userId),
+                BackendEndpoint.dailyBriefing(),
                 as: TodayDailyBriefingResponseDTO.self
             )
             return (response.isAccountLinked, response.toDomain(fallback: fallback))
         } catch {
+            APIFallbackLog.log("GET /api/users/\(userId)/daily-briefing", error: error)
             return (nil, fallback)
         }
     }
@@ -67,11 +68,12 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
     ) async -> (isAccountLinked: Bool?, value: [TodayHolding]) {
         do {
             let response = try await apiClient.requestResult(
-                BackendEndpoint.todayHoldings(userId: userId),
+                BackendEndpoint.todayHoldings(),
                 as: TodayHoldingsResponseDTO.self
             )
             return (response.isAccountLinked, response.toDomain(fallback: fallback))
         } catch {
+            APIFallbackLog.log("GET /api/users/\(userId)/holdings", error: error)
             return (nil, fallback)
         }
     }
@@ -82,11 +84,12 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
     ) async -> (isAccountLinked: Bool?, value: TodayGoalProgress?) {
         do {
             let response = try await apiClient.requestResult(
-                BackendEndpoint.goal(userId: userId),
+                BackendEndpoint.goal(),
                 as: TodayGoalResponseDTO.self
             )
             return (response.isAccountLinked, response.toDomain(fallback: fallback))
         } catch {
+            APIFallbackLog.log("GET /api/users/\(userId)/goal", error: error)
             return (nil, fallback)
         }
     }
@@ -94,11 +97,12 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
     private func fetchNews(userId: Int64, fallback: [TodayNewsItem]) async -> [TodayNewsItem] {
         do {
             let response = try await apiClient.requestResult(
-                BackendEndpoint.holdingsNews(userId: userId),
+                BackendEndpoint.holdingsNews(),
                 as: TodayHoldingsNewsResponseDTO.self
             )
             return response.toDomain(fallback: fallback)
         } catch {
+            APIFallbackLog.log("GET /api/users/\(userId)/holdings-news", error: error)
             return fallback
         }
     }

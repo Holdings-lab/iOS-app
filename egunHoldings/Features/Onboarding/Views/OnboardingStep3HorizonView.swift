@@ -5,7 +5,9 @@ struct OnboardingStep3HorizonView: View {
     let onNext: () -> Void
     let onBack: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
+    @State private var isRevealed = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -20,7 +22,7 @@ struct OnboardingStep3HorizonView: View {
                 )
 
                 VStack(spacing: 12) {
-                    ForEach(InvestmentHorizon.allCases) { horizon in
+                    ForEach(Array(InvestmentHorizon.allCases.enumerated()), id: \.element.id) { index, horizon in
                         OnboardingV3OptionCard(
                             symbol: horizon.symbol,
                             title: horizon.title,
@@ -29,6 +31,7 @@ struct OnboardingStep3HorizonView: View {
                         ) {
                             viewModel.investmentHorizon = horizon
                         }
+                        .onboardingReveal(isRevealed: isRevealed, index: index)
                     }
                 }
             }
@@ -50,6 +53,7 @@ struct OnboardingStep3HorizonView: View {
             }
         }
         .onboardingV3Background()
+        .onboardingRevealSequence(isRevealed: $isRevealed, reduceMotion: reduceMotion)
     }
 }
 

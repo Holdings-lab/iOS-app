@@ -7,6 +7,7 @@ struct OnboardingStep6WatchAssetsView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
+    @State private var isRevealed = false
 
     private var selectionAnimation: Animation? {
         reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.7)
@@ -45,8 +46,10 @@ struct OnboardingStep6WatchAssetsView: View {
                         }
                     }
                 }
+                .onboardingReveal(isRevealed: isRevealed)
 
                 WatchAssetsFootnote()
+                    .onboardingReveal(isRevealed: isRevealed, index: 1)
             }
             .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
             .padding(.top, OnboardingV3Layout.progressContentTopPadding)
@@ -66,6 +69,7 @@ struct OnboardingStep6WatchAssetsView: View {
             }
         }
         .onboardingV3Background()
+        .onboardingRevealSequence(isRevealed: $isRevealed, reduceMotion: reduceMotion)
     }
 }
 

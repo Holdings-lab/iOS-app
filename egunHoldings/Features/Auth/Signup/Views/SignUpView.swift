@@ -65,6 +65,13 @@ struct SignUpView: View {
                         onVerifyCode: viewModel.attemptVerification(with:),
                         onNext: viewModel.moveToPasswordSetup
                     )
+                    // 인증 카운트다운 틱은 이 단계에 머무는 동안에만 필요하다. 예전에는 SignUpView
+                    // 전체(NavigationStack 루트)에 걸려 있어서, 약관/비밀번호/완료 단계로 넘어간 뒤에도
+                    // 매초 구독이 살아 있었다. 라우트 콘텐츠에 붙여 이 화면이 스택에서 사라지면
+                    // 함께 취소되도록 한다.
+                    .onReceive(viewModel.verificationTimer) { _ in
+                        viewModel.tickVerificationTimer()
+                    }
                 case .passwordSetup:
                     SignupPasswordView(
                         email: viewModel.emailAddress,
@@ -89,9 +96,6 @@ struct SignUpView: View {
         }
         .background(PFGradientBackground())
         .preferredColorScheme(.light)
-        .onReceive(viewModel.verificationTimer) { _ in
-            viewModel.tickVerificationTimer()
-        }
     }
 
     private func navigateBack() {

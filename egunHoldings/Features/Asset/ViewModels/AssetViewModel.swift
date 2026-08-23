@@ -11,10 +11,10 @@ final class AssetViewModel: ObservableObject {
     @Published private(set) var rebalancingDashboard: RebalancingDashboard
 
     let dashboard: AssetDashboard
-    let portfolioDisplay: AssetPortfolioDisplay
+    @Published private(set) var portfolioDisplay: AssetPortfolioDisplay
 
     private let userId: Int64?
-    private let brokerBalanceSnapshot: BrokerBalanceSnapshot?
+    private var brokerBalanceSnapshot: BrokerBalanceSnapshot?
     private let rebalancingRepository: AssetRebalancingRepositoryProtocol
     private var didLoadRebalancing = false
 
@@ -32,6 +32,15 @@ final class AssetViewModel: ObservableObject {
             snapshot: brokerBalanceSnapshot ?? Self.makeFallbackBalanceSnapshot()
         )
         rebalancingDashboard = MockAssetRebalancingRepository.makeDashboard(userId: userId)
+    }
+
+    /// 로그인/부트스트랩 이후 늦게 도착하는 잔고 조회 응답을 반영한다.
+    /// 예전에는 상위(RootTabView)에서 `.id(brokerBalanceSnapshot?.fetchedAt)`으로 AssetView 자체를
+    /// 재생성해 반영했는데, 그러면 뷰모델과 화면 상태(선택 세그먼트, 진입한 상세 화면 등)가 모두 초기화됐다.
+    func updateBrokerBalance(_ snapshot: BrokerBalanceSnapshot?) {
+        guard snapshot != brokerBalanceSnapshot else { return }
+        brokerBalanceSnapshot = snapshot
+        portfolioDisplay = AssetPortfolioDisplay(snapshot: snapshot ?? Self.makeFallbackBalanceSnapshot())
     }
 
     var filteredRebalancingRecommendations: [RebalancingRecommendation] {

@@ -11,6 +11,10 @@ nonisolated struct LoginResponseDTO: Decodable, Sendable {
     let nickname: String?
     let accessToken: String
     let refreshToken: String?
+    /// 액세스 토큰 만료까지 남은 초 (서버 `AuthDto.LoginResult.accessTokenExpiresIn`).
+    /// 서버 API LIST의 로그인 응답 스펙에는 없는 필드라 옵셔널로 둔다 — 자세한 배경은
+    /// `AuthTokenDefaults.assumedAccessTokenLifetime` 주석 참고.
+    let accessTokenExpiresIn: Int64?
     let onboardingCompleted: Bool
 
     func toDomain(fallbackEmail: String) -> LoginSession {
@@ -20,6 +24,7 @@ nonisolated struct LoginResponseDTO: Decodable, Sendable {
             nickname: nickname ?? Self.defaultNickname(from: email ?? fallbackEmail),
             accessToken: accessToken,
             refreshToken: refreshToken,
+            accessTokenExpiresIn: accessTokenExpiresIn ?? AuthTokenDefaults.assumedAccessTokenLifetime,
             onboardingCompleted: onboardingCompleted
         )
     }
@@ -34,6 +39,10 @@ nonisolated struct LoginOAuthRequestDTO: Encodable, Sendable {
     let provider: String
     let authorizationCode: String
     let redirectUri: String
+}
+
+nonisolated struct LogoutRequestDTO: Encodable, Sendable {
+    let refreshToken: String
 }
 
 nonisolated struct LoginOAuthResponseDTO: Decodable, Sendable {

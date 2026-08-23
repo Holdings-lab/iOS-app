@@ -1,5 +1,87 @@
 import SwiftUI
 
+// MARK: - Large header (설정 루트 전용)
+
+/// 피그마 `설정 / 기본`(7:2012) 헤더. 루트는 fullScreenCover로 뜨므로 뒤로가기가 아니라 닫기(X)를 쓴다.
+/// 하위 상세 화면은 push라서 계속 `SettingsNavHeader`(뒤로가기)를 쓴다.
+struct SettingsLargeHeader: View {
+    let eyebrow: String
+    let title: String
+    let onClose: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(eyebrow)
+                    .font(.pretendard(12, weight: .bold))
+                    .foregroundStyle(Color.textTertiary)
+
+                Text(title)
+                    .font(.pretendard(27, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+                    .tracking(-0.7)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.textSecondary)
+                    .frame(width: 38, height: 38)
+                    .background(Color.elevated, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(Color.hairline, lineWidth: 1)
+                    }
+                    .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("설정 닫기")
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 14)
+    }
+}
+
+// MARK: - Row leading icon
+
+/// 행 앞에 붙는 28pt 아이콘 칩. 피그마 시안은 텍스트 글리프(♢ ☼ ↗ ◎ ◫ ▤ ⌘ ↪)를 임시로 얹어놨는데,
+/// 앱 전반이 SF Symbols로 통일돼 있어(chevron.right·bell·checkmark·sparkles…) 같은 계열로 다시 골랐다.
+/// 칩 자체의 기하(28×28, radius 9, 13pt 글리프)는 시안 그대로 유지한다.
+enum SettingsIconTone {
+    case brand
+    case danger
+
+    var background: Color {
+        switch self {
+        case .brand: return .brandChipBg
+        case .danger: return .downBg
+        }
+    }
+
+    var foreground: Color {
+        switch self {
+        case .brand: return .brand
+        case .danger: return .trendDown
+        }
+    }
+}
+
+struct SettingsRowIcon: View {
+    let systemName: String
+    var tone: SettingsIconTone = .brand
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(tone.foreground)
+            .frame(width: 28, height: 28)
+            .background(tone.background, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+            .accessibilityHidden(true)
+    }
+}
+
 // MARK: - Nav header
 
 struct SettingsNavHeader: View {
@@ -9,16 +91,7 @@ struct SettingsNavHeader: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Button(action: onBack) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(Color.textPrimary)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("뒤로 가기")
-            .padding(.leading, -10)
+            LiquidGlassBackButton(accessibilityLabel: "뒤로 가기", action: onBack)
 
             Spacer()
 
@@ -31,7 +104,7 @@ struct SettingsNavHeader: View {
             if let action {
                 action
             } else {
-                Color.clear.frame(width: 32, height: 32)
+                Color.clear.frame(width: 44, height: 44)
             }
         }
         .padding(.horizontal, 16)
@@ -47,6 +120,8 @@ struct SettingsNavHeader: View {
 
 struct SettingsRow<Right: View>: View {
     let title: String
+    /// 행 앞 아이콘(SF Symbol). 피그마 시안의 28pt 칩 — 생략하면 칩 없이 텍스트만 왼쪽 정렬된다.
+    var icon: String?
     var sub: String?
     var danger = false
     var onTap: (() -> Void)?
@@ -54,10 +129,14 @@ struct SettingsRow<Right: View>: View {
 
     var body: some View {
         Button(action: { onTap?() }) {
-            HStack(spacing: 12) {
+            HStack(spacing: 11) {
+                if let icon {
+                    SettingsRowIcon(systemName: icon, tone: danger ? .danger : .brand)
+                }
+
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.pretendard(14.5, weight: .semibold))
+                        .font(.pretendard(14, weight: .semibold))
                         .foregroundStyle(danger ? Color.trendDown : Color.textPrimary)
 
                     if let sub {
@@ -72,9 +151,9 @@ struct SettingsRow<Right: View>: View {
 
                 right()
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
-            .frame(minHeight: 56)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .frame(minHeight: 52)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -84,15 +163,33 @@ struct SettingsRow<Right: View>: View {
 
 extension SettingsRow where Right == AnyView {
     /// `right`를 생략하면 `onTap`이 있을 때만 자동으로 화살표를 붙인다(스펙의 `StgRow` 기본 동작과 동일).
-    init(title: String, sub: String? = nil, danger: Bool = false, onTap: (() -> Void)? = nil) {
-        self.init(title: title, sub: sub, danger: danger, onTap: onTap) {
+    init(title: String, icon: String? = nil, sub: String? = nil, danger: Bool = false, onTap: (() -> Void)? = nil) {
+        self.init(title: title, icon: icon, sub: sub, danger: danger, onTap: onTap) {
             onTap != nil
                 ? AnyView(
                     Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Color.textTertiary)
+                        .foregroundStyle(Color.textQuaternary)
                 )
                 : AnyView(EmptyView())
+        }
+    }
+}
+
+/// 행 오른쪽에 값 + 화살표를 함께 보여주는 형태(피그마 "내 집 마련 ›", "2개 ›").
+struct SettingsRowValue: View {
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Text(text)
+                .font(.pretendard(13, weight: .medium))
+                .foregroundStyle(Color.textQuaternary)
+                .lineLimit(1)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Color.textQuaternary)
         }
     }
 }
@@ -174,17 +271,21 @@ struct SettingsSection<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.pretendard(13, weight: .bold))
-                .foregroundStyle(Color.textSecondary)
+                .font(.pretendard(12, weight: .bold))
+                .foregroundStyle(Color.textTertiary)
                 .padding(.horizontal, 4)
 
+            // 피그마 카드는 그림자 없이 hairline 테두리로만 떠 있다(7:2041 등).
             VStack(spacing: 0) {
                 content()
             }
             .background(Color.elevated, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 2)
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.hairline, lineWidth: 1)
+            }
         }
-        .padding(.top, 22)
+        .padding(.top, 18)
     }
 }
 

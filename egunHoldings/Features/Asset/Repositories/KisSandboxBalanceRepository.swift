@@ -54,52 +54,41 @@ private struct BrokerHoldingResponseDTO: Decodable {
     }
 }
 
-nonisolated struct BrokerBalanceLookupRequestDTO: Encodable, Sendable {
-    let accountNumber: String?
-    let productCode: String?
-}
-
 enum BrokerBalanceRepositoryError: LocalizedError {
     case unavailable
-    case invalidRequestEncoding
 
     var errorDescription: String? {
         switch self {
         case .unavailable:
             return "잔고조회 서버 주소가 설정되지 않았습니다."
-        case .invalidRequestEncoding:
-            return "잔고조회 요청 데이터를 만들지 못했습니다."
         }
     }
 }
 
+/// 한국투자증권 모의투자 잔고 조회.
+///
+/// 앱키·시크릿과 그 키에 묶인 계좌는 전부 서버에만 존재한다. 클라이언트가 계좌번호를 따로 들고
+/// 있으면 서버의 앱키와 어긋날 수 있어, 어느 계좌를 조회할지는 전적으로 서버가 결정한다.
+/// 계좌번호는 응답으로 받아서 화면에 보여주기만 한다.
 nonisolated struct KisSandboxBalanceRepository: BrokerBalanceRepositoryProtocol {
     private let apiClient: APIClient
     private let baseURL: URL
     private let isAvailable: Bool
-    private let accountNumber: String?
-    private let productCode: String?
 
     init(
         apiClient: APIClient = APIClientFactory.makeDefault(),
-        baseURL: URL? = NetworkConfiguration.tradingServerBaseURL,
-        accountNumber: String? = NetworkConfiguration.tradingKisAccountNumber,
-        productCode: String? = NetworkConfiguration.tradingKisProductCode
+        baseURL: URL? = NetworkConfiguration.tradingServerBaseURL
     ) {
         guard let baseURL else {
             self.apiClient = StubAPIClient()
             self.baseURL = URL(string: "http://localhost")!
             self.isAvailable = false
-            self.accountNumber = accountNumber
-            self.productCode = productCode
             return
         }
 
         self.apiClient = apiClient
         self.baseURL = baseURL
         self.isAvailable = true
-        self.accountNumber = accountNumber
-        self.productCode = productCode
     }
 
     func fetchKisSandboxBalance() async throws -> BrokerBalanceSnapshot {
@@ -107,43 +96,16 @@ nonisolated struct KisSandboxBalanceRepository: BrokerBalanceRepositoryProtocol 
             throw BrokerBalanceRepositoryError.unavailable
         }
 
-        let requestBody = try Self.makeRequestBody(
-            accountNumber: accountNumber,
-            productCode: productCode
-        )
-
         let response = try await apiClient.requestResult(
             Endpoint(
                 baseURL: baseURL,
                 path: "/api/brokers/kis/sandbox/balance",
                 method: .post,
-                body: requestBody
+                body: nil
             ),
             as: BrokerBalanceResponseDTO.self
         )
 
         return response.toDomain()
-    }
-
-    private static func makeRequestBody(accountNumber: String?, productCode: String?) throws -> Data? {
-        let normalizedAccountNumber = accountNumber?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let normalizedProductCode = productCode?.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard
-            normalizedAccountNumber?.isEmpty == false || normalizedProductCode?.isEmpty == false
-        else {
-            return nil
-        }
-
-        let payload = BrokerBalanceLookupRequestDTO(
-            accountNumber: normalizedAccountNumber,
-            productCode: normalizedProductCode
-        )
-
-        do {
-            return try JSONEncoder().encode(payload)
-        } catch {
-            throw BrokerBalanceRepositoryError.invalidRequestEncoding
-        }
     }
 }

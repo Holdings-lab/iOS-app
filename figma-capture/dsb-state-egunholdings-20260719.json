@@ -1,0 +1,32 @@
+{
+  "runId": "dsb-egunholdings-20260719",
+  "fileKey": "jcCNYyKovzigdKAeucQNxw",
+  "fileUrl": "https://www.figma.com/design/jcCNYyKovzigdKAeucQNxw",
+  "phase": "complete",
+  "collections": {
+    "primitives": "VariableCollectionId:3:2",
+    "color": "VariableCollectionId:3:3",
+    "dimensions": "VariableCollectionId:3:4"
+  },
+  "variables": {
+    "primitiveCount": 21,
+    "semanticCount": 16,
+    "dimensionCount": 11
+  },
+  "styles": {
+    "textCount": 8,
+    "effectCount": 2
+  },
+  "components": {
+    "buttonSet": "10:2",
+    "statusBar": "9:32",
+    "tabBarSet": "10:3",
+    "cardBase": "9:78"
+  },
+  "screens": {
+    "page": "7:4",
+    "count": 28,
+    "first": "7:237",
+    "last": "7:2328"
+  }
+}

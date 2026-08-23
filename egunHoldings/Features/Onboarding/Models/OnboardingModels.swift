@@ -105,15 +105,39 @@ enum OnboardingCurrencyFormatter {
     }
 }
 
-struct BrokerageCredentialInput: Equatable {
-    var brokerageID: String = ""
-    var brokeragePassword: String = ""
-    var accountPassword: String = ""
+/// Step 7 계좌 연결 진행 단계.
+/// 앱키·시크릿은 서버가 보유하므로 사용자가 입력할 크리덴셜은 없지만, 연결이 어떤 순서로
+/// 이뤄지는지는 그대로 노출한다. 각 단계는 실제 모의투자 잔고 조회 한 번에 대응한다.
+/// 연결이 끝난 뒤 Step 7·Step 8이 보여주는 계좌 요약.
+/// 잔고 조회가 실패하면 각 필드가 nil이 되고, 화면은 숫자 없이 연결 완료만 노출한다.
+struct LinkedDemoAccount: Equatable, Sendable {
+    let accountNumber: String?
+    let holdingCount: Int?
+    let totalEvaluationAmount: Int?
 
-    var isComplete: Bool {
-        !brokerageID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !brokeragePassword.isEmpty
-            && !accountPassword.isEmpty
+    /// 계좌번호는 앞 4자리만 노출한다.
+    var maskedAccountNumber: String? {
+        guard let accountNumber, accountNumber.count > 4 else { return accountNumber }
+        return accountNumber.prefix(4) + String(repeating: "•", count: accountNumber.count - 4)
+    }
+}
+
+enum BrokerageLinkStage: Int, CaseIterable, Identifiable, Sendable {
+    case authenticating
+    case verifyingAccount
+    case loadingHoldings
+
+    var id: Int { rawValue }
+
+    var title: String {
+        switch self {
+        case .authenticating:
+            return "한국투자증권 모의투자 서버에 연결하는 중"
+        case .verifyingAccount:
+            return "모의투자 계좌를 확인하는 중"
+        case .loadingHoldings:
+            return "보유 종목을 불러오는 중"
+        }
     }
 }
 

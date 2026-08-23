@@ -32,6 +32,7 @@ nonisolated struct LivePolicyNewsRepository: PolicyNewsRepositoryProtocol {
                 throw error
             }
 
+            APIFallbackLog.log("GET /api/feeds/policy", error: error)
             return try await fallbackRepository.fetchNews()
         }
     }

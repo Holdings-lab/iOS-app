@@ -1,11 +1,12 @@
 import Foundation
 
 nonisolated enum NewsroomDigestRepositoryFactory {
-    /// 다이제스트 API 스펙이 확정되기 전까지 Mock을 반환한다.
-    /// UI/UX 확정 후 LiveNewsroomDigestRepository로 교체한다.
+    /// 서버(NewsroomController)가 실제 배포되어 Live로 전환했다 — Mock을 쓰려면 호출부에서
+    /// `NewsroomDigestViewModel(repository: MockNewsroomDigestRepository(scenario: ...))`로 직접 주입한다.
     static func makeDefault(userId: Int64? = nil) -> NewsroomDigestRepositoryProtocol {
-        // UI/UX 검증 중 — 뉴스가 있는 화면(히어로/컴팩트/조용 혼재)을 기본으로 표시.
-        // 검증 후 기본값을 .calmAllQuiet로 되돌릴 것.
-        MockNewsroomDigestRepository(scenario: .calmMixed)
+        guard userId != nil else {
+            return MockNewsroomDigestRepository(scenario: .mixed)
+        }
+        return LiveNewsroomDigestRepository()
     }
 }

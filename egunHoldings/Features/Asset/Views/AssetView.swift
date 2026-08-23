@@ -3,14 +3,15 @@ import SwiftUI
 @MainActor
 struct AssetView: View {
     @StateObject private var viewModel: AssetViewModel
+    private let brokerBalanceSnapshot: BrokerBalanceSnapshot?
 
     init(
         userId: Int64? = nil,
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
         viewModel: AssetViewModel? = nil,
-        exchangeRateViewModel: ExchangeRateViewModel? = nil,
         onAdjustmentRequested: @escaping () -> Void = {}
     ) {
+        self.brokerBalanceSnapshot = brokerBalanceSnapshot
         _viewModel = StateObject(
             wrappedValue: viewModel ?? AssetViewModel(
                 userId: userId,
@@ -50,6 +51,9 @@ struct AssetView: View {
                 .presentationDragIndicator(.visible)
                 .presentationBackground(Color.elevated)
                 .presentationCornerRadius(KDXRadius.bottomSheet)
+        }
+        .onChange(of: brokerBalanceSnapshot) { _, newSnapshot in
+            viewModel.updateBrokerBalance(newSnapshot)
         }
     }
 
@@ -325,19 +329,22 @@ private struct AssetDivider: View {
     }
 }
 
+// Asset 탭 전용 알리아스. 값 대부분은 PSColor와 완전히 동일한 hex를 별도로 재선언하고
+// 있었다 — 여기서는 PSColor를 단일 소스로 참조해 중복 정의를 없애고, PSColor에 없는
+// 값(등락색, 종목/현금 세그먼트색)만 이 탭 고유의 hex로 유지한다.
 enum AssetTabPalette {
-    static let screen = Color(hex: "F0F4FF")
-    static let card = Color.white
-    static let subBackground = Color(hex: "F8FAFF")
-    static let textPrimary = Color(hex: "0F172A")
-    static let textSecondary = Color(hex: "64748B")
-    static let brand = Color(hex: "2563EB")
-    static let brandSoft = Color(hex: "EFF6FF")
-    static let divider = Color(hex: "E2E8F0")
+    static let screen = PSColor.background
+    static let card = PSColor.surface
+    static let subBackground = PSColor.surfaceAlt
+    static let textPrimary = PSColor.textPrimary
+    static let textSecondary = PSColor.textSecondary
+    static let brand = PSColor.primary
+    static let brandSoft = PSColor.primarySoft
+    static let divider = PSColor.border
     static let up = Color(hex: "16A34A")
     static let down = Color(hex: "DC2626")
-    static let neutral = Color(hex: "94A3B8")
-    static let etfSegment = Color(hex: "2563EB")
+    static let neutral = PSColor.textFaint
+    static let etfSegment = PSColor.primary
     static let stockSegment = Color(hex: "8D96A3")
     static let cashSegment = Color(hex: "C5CAD3")
 }

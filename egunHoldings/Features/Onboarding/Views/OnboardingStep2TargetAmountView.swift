@@ -5,8 +5,10 @@ struct OnboardingStep2TargetAmountView: View {
     let onNext: () -> Void
     let onBack: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
     @State private var sliderValue: Double = 0
+    @State private var isRevealed = false
 
     private var goal: FinancialGoal {
         viewModel.financialGoal
@@ -58,6 +60,7 @@ struct OnboardingStep2TargetAmountView: View {
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(OnboardingV3Theme.border, lineWidth: 1)
                 }
+                .onboardingReveal(isRevealed: isRevealed)
             }
             .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
             .padding(.top, OnboardingV3Layout.progressContentTopPadding)
@@ -79,6 +82,7 @@ struct OnboardingStep2TargetAmountView: View {
         .onChange(of: goal) { _, _ in
             sliderValue = Double(viewModel.targetAmount)
         }
+        .onboardingRevealSequence(isRevealed: $isRevealed, reduceMotion: reduceMotion)
     }
 }
 

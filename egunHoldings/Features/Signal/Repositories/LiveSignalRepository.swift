@@ -28,6 +28,7 @@ nonisolated struct LiveSignalRepository: SignalRepositoryProtocol {
                 throw error
             }
 
+            APIFallbackLog.log("GET /api/signals/themes", error: error)
             return try await fallbackRepository.fetchThemeSignals()
         }
     }
@@ -45,6 +46,7 @@ nonisolated struct LiveSignalRepository: SignalRepositoryProtocol {
                 throw error
             }
 
+            APIFallbackLog.log("GET /api/signals/cards?theme=\(theme.tickerId)", error: error)
             return try await fallbackRepository.fetchSignalCards(theme: theme)
         }
     }
@@ -56,7 +58,7 @@ nonisolated struct LiveSignalRepository: SignalRepositoryProtocol {
 
         do {
             let response = try await apiClient.requestResult(
-                BackendEndpoint.events(userId: userId),
+                BackendEndpoint.events(),
                 as: TodayEventsResponseDTO.self
             )
             let fallback = try await fallbackRepository.fetchEvents()
@@ -66,6 +68,7 @@ nonisolated struct LiveSignalRepository: SignalRepositoryProtocol {
                 throw error
             }
 
+            APIFallbackLog.log("GET /api/users/\(userId)/events", error: error)
             return try await fallbackRepository.fetchEvents()
         }
     }

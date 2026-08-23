@@ -8,10 +8,12 @@ struct OnboardingStep8CompletionView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var activeStep: CompletionStep?
     @State private var completedSteps: Set<CompletionStep> = []
+    @State private var progressPercent: Int = 0
     @State private var showsCompletion = false
     @State private var showsCompletionContent = false
     @State private var showsCompletionShimmer = false
     @State private var showsStartButton = false
+    @State private var isStartButtonInteractive = false
     @State private var didStart = false
 
     private var isAccountConnected: Bool {
@@ -32,7 +34,9 @@ struct OnboardingStep8CompletionView: View {
                     showsContent: showsCompletionContent,
                     showsShimmer: showsCompletionShimmer,
                     showsStartButton: showsStartButton,
+                    isStartButtonInteractive: isStartButtonInteractive,
                     reduceMotion: reduceMotion,
+                    userName: viewModel.userName,
                     onStart: onComplete
                 )
                 .transition(.asymmetric(
@@ -44,7 +48,9 @@ struct OnboardingStep8CompletionView: View {
                     steps: steps,
                     activeStep: activeStep,
                     completedSteps: completedSteps,
-                    reduceMotion: reduceMotion
+                    reduceMotion: reduceMotion,
+                    userName: viewModel.userName,
+                    progressPercent: progressPercent
                 )
                 .transition(.opacity)
             }
@@ -60,14 +66,39 @@ struct OnboardingStep8CompletionView: View {
         guard !didStart else { return }
         didStart = true
 
+        async let percentAnimation: Void = driveProgressPercent()
+
         for step in steps {
             await setActive(step)
             await perform(step)
             await markCompleted(step)
         }
 
+        // 실제 네트워크 완료가 아무리 빨라도, 코스를 만드는 듯한 최소한의 체감 시간은 percentAnimation이 보장한다.
+        await percentAnimation
+
         try? await Task.sleep(nanoseconds: 300_000_000)
         await revealCompletion()
+    }
+
+    /// 실제 요청 완료 여부와 무관하게 0→99%까지 감속 곡선으로 채워지는 연출용 카운터.
+    /// 90%대 초반부터 속도를 늦춰, 서버 응답을 기다리는 동안 화면이 "거의 다 됐다"는 인상을 유지하게 한다.
+    @MainActor
+    private func driveProgressPercent() async {
+        guard !reduceMotion else {
+            progressPercent = 99
+            return
+        }
+
+        withAnimation(.easeOut(duration: 2.4)) {
+            progressPercent = 88
+        }
+        try? await Task.sleep(nanoseconds: 2_400_000_000)
+
+        withAnimation(.easeInOut(duration: 1.1)) {
+            progressPercent = 99
+        }
+        try? await Task.sleep(nanoseconds: 1_100_000_000)
     }
 
     /// 서버가 요청을 정상 수신했다는 응답이 오면 그 즉시 체크 표시로 넘어간다. 아직 서버가 응답하지
@@ -81,8 +112,8 @@ struct OnboardingStep8CompletionView: View {
         case .watchAssets:
             succeeded = await viewModel.submitWatchAssets(userId: userId)
         case .goal:
-            if !viewModel.isBrokerageCredentialSubmitted {
-                await viewModel.submitBrokerageConnectionIfNeeded(userId: userId)
+            if !viewModel.isBrokerageConnected {
+                await viewModel.connectBrokerage(userId: userId, reduceMotion: reduceMotion)
             }
             succeeded = await viewModel.submitGoal(userId: userId)
         }
@@ -116,11 +147,24 @@ struct OnboardingStep8CompletionView: View {
     @MainActor
     private func revealCompletion() async {
         if reduceMotion {
+            // 애니메이션 커브는 생략하지만, 100%가 눈에 들어올 시간 없이 완료 화면·버튼까지
+            // 한 프레임에 동시 등장하지 않도록 최소한의 페이싱은 유지한다.
+            progressPercent = 100
+            try? await Task.sleep(nanoseconds: 500_000_000)
             showsCompletion = true
             showsCompletionContent = true
+            try? await Task.sleep(nanoseconds: 300_000_000)
             showsStartButton = true
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            isStartButtonInteractive = true
             return
         }
+
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+            progressPercent = 100
+        }
+        // 스프링이 실제로 안착해 "100%"가 또렷이 보일 시간을 확보한 뒤에 다음 화면으로 넘어간다.
+        try? await Task.sleep(nanoseconds: 550_000_000)
 
         withAnimation(.easeInOut(duration: 0.25)) {
             showsCompletion = true
@@ -144,6 +188,11 @@ struct OnboardingStep8CompletionView: View {
         withAnimation(.easeOut(duration: 0.25)) {
             showsStartButton = true
         }
+
+        // 버튼이 페이드인되는 동안은 탭이 되어도 반응하지 않게 해, 온보딩을 빠르게 넘기던
+        // 습관적인 탭이 실수로 "시작하기"를 눌러버리는 것을 막는다.
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        isStartButtonInteractive = true
     }
 }
 
@@ -176,10 +225,24 @@ private struct ProgressPhase: View {
     let activeStep: CompletionStep?
     let completedSteps: Set<CompletionStep>
     let reduceMotion: Bool
+    let userName: String
+    let progressPercent: Int
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 32) {
             Spacer()
+
+            VStack(spacing: 8) {
+                Text("\(progressPercent)%")
+                    .font(.pretendard(52, weight: .bold))
+                    .foregroundStyle(Color.brand)
+                    .contentTransition(.numericText(value: Double(progressPercent)))
+                    .monospacedDigit()
+
+                Text("\(userName)님의 맞춤 포트폴리오 만드는 중")
+                    .font(.pretendard(15, weight: .semibold))
+                    .foregroundStyle(Color.textSecondary)
+            }
 
             VStack(spacing: 16) {
                 ForEach(steps) { step in
@@ -285,7 +348,9 @@ private struct CompletionPhase: View {
     let showsContent: Bool
     let showsShimmer: Bool
     let showsStartButton: Bool
+    let isStartButtonInteractive: Bool
     let reduceMotion: Bool
+    let userName: String
     let onStart: () -> Void
 
     var body: some View {
@@ -309,7 +374,7 @@ private struct CompletionPhase: View {
                     .font(.pretendard(24, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
 
-                Text("맞춤 설정을 반영했어요")
+                Text("\(userName)님을 위한 맞춤 설정을 반영했어요")
                     .font(.pretendard(15, weight: .regular))
                     .foregroundStyle(Color.textSecondary)
                     .multilineTextAlignment(.center)
@@ -318,6 +383,8 @@ private struct CompletionPhase: View {
 
             if showsStartButton {
                 OnboardingV3PrimaryButton(title: "시작하기", action: onStart)
+                    // 버튼이 막 나타난 직후, 습관적으로 이어지던 탭이 실수로 눌리지 않도록 짧게 막아둔다.
+                    .allowsHitTesting(isStartButtonInteractive)
             }
         }
         .padding(.horizontal, OnboardingV3Layout.horizontalPadding)

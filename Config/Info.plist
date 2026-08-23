@@ -6,10 +6,6 @@
 	<string>$(AUTH_REFRESH_URL)</string>
 	<key>BACKEND_BASE_URL</key>
 	<string>$(BACKEND_BASE_URL)</string>
-	<key>BROKERAGE_SERVER_KEY_ID</key>
-	<string>$(BROKERAGE_SERVER_KEY_ID)</string>
-	<key>BROKERAGE_SERVER_PUBLIC_KEY</key>
-	<string>$(BROKERAGE_SERVER_PUBLIC_KEY)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>

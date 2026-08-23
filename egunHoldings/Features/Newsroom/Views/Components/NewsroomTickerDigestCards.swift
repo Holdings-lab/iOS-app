@@ -1,47 +1,46 @@
 import SwiftUI
 
 enum NewsroomTickerDigestRow: View {
-    case hero(NewsroomTickerDigest, onOpenDetail: () -> Void)
-    case compact(NewsroomTickerDigest, onOpenDetail: () -> Void)
-    case quiet(NewsroomTickerDigest)
+    case hero(NewsroomHoldingBriefing, onOpenDetail: () -> Void)
+    case compact(NewsroomHoldingBriefing, onOpenDetail: () -> Void)
+    case quiet(NewsroomHoldingBriefing)
 
-    static func make(
-        for digest: NewsroomTickerDigest,
-        isHero: Bool,
-        onOpenDetail: @escaping () -> Void
-    ) -> NewsroomTickerDigestRow {
-        guard digest.hasNews else { return .quiet(digest) }
-        return isHero ? .hero(digest, onOpenDetail: onOpenDetail) : .compact(digest, onOpenDetail: onOpenDetail)
+    static func make(for holding: NewsroomHoldingBriefing, onOpenDetail: @escaping () -> Void) -> NewsroomTickerDigestRow {
+        switch holding.briefingType {
+        case .hero: return .hero(holding, onOpenDetail: onOpenDetail)
+        case .compact: return .compact(holding, onOpenDetail: onOpenDetail)
+        case .quiet: return .quiet(holding)
+        }
     }
 
     var body: some View {
         switch self {
-        case .hero(let digest, let onOpenDetail):
-            NewsroomTickerDigestHeroCard(digest: digest, onOpenDetail: onOpenDetail)
-        case .compact(let digest, let onOpenDetail):
-            NewsroomTickerDigestCompactRow(digest: digest, onOpenDetail: onOpenDetail)
-        case .quiet(let digest):
-            NewsroomTickerQuietRow(digest: digest)
+        case .hero(let holding, let onOpenDetail):
+            NewsroomTickerDigestHeroCard(holding: holding, onOpenDetail: onOpenDetail)
+        case .compact(let holding, let onOpenDetail):
+            NewsroomTickerDigestCompactRow(holding: holding, onOpenDetail: onOpenDetail)
+        case .quiet(let holding):
+            NewsroomTickerQuietRow(holding: holding)
         }
     }
 }
 
 struct NewsroomTickerDigestHeroCard: View {
-    let digest: NewsroomTickerDigest
+    let holding: NewsroomHoldingBriefing
     let onOpenDetail: () -> Void
 
     var body: some View {
         Button(action: onOpenDetail) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
-                    NewsroomTickerLogo(digest: digest, size: 34)
+                    NewsroomTickerLogo(ticker: holding.ticker, size: 34)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(digest.ticker)
+                        Text(holding.ticker)
                             .font(.pretendard(13, weight: .bold))
                             .foregroundStyle(Color.textPrimary)
 
-                        Text("내 자산의 \(digest.portfolioWeightPercent)%")
+                        Text("내 자산의 \(NewsroomPercentFormat.weight(holding.weightPercent))%")
                             .font(.pretendard(11.5, weight: .semibold))
                             .foregroundStyle(Color.textTertiary)
                     }
@@ -53,14 +52,14 @@ struct NewsroomTickerDigestHeroCard: View {
                         .foregroundStyle(Color.textQuaternary)
                 }
 
-                Text(digest.headline ?? digest.name)
+                Text(holding.headline ?? holding.name)
                     .font(.pretendard(18, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if let subheadline = digest.subheadline {
-                    Text(subheadline)
+                if let summary = holding.summary {
+                    Text(summary)
                         .font(.pretendard(13.5, weight: .medium))
                         .foregroundStyle(Color.textSecondary)
                         .lineSpacing(3)
@@ -83,13 +82,13 @@ struct NewsroomTickerDigestHeroCard: View {
 
     @ViewBuilder
     private var impactLine: some View {
-        if let priceChange = digest.priceChangePercent {
+        if let dailyChange = holding.dailyChangePercent {
             HStack(spacing: 5) {
-                Text("오늘 \(NewsroomPercentFormat.signed(priceChange))")
+                Text("오늘 \(NewsroomPercentFormat.signed(dailyChange))")
                     .font(.pretendard(12.5, weight: .bold))
-                    .foregroundStyle(NewsroomPercentFormat.color(for: priceChange))
+                    .foregroundStyle(NewsroomPercentFormat.color(for: dailyChange))
 
-                if let impact = digest.portfolioImpactPercent {
+                if let impact = holding.totalAssetImpactPercent {
                     Text("· 총자산 기준 \(NewsroomPercentFormat.signedImpact(impact))")
                         .font(.pretendard(12, weight: .semibold))
                         .foregroundStyle(Color.textTertiary)
@@ -100,20 +99,20 @@ struct NewsroomTickerDigestHeroCard: View {
 }
 
 struct NewsroomTickerDigestCompactRow: View {
-    let digest: NewsroomTickerDigest
+    let holding: NewsroomHoldingBriefing
     let onOpenDetail: () -> Void
 
     var body: some View {
         Button(action: onOpenDetail) {
             HStack(spacing: 11) {
-                NewsroomTickerLogo(digest: digest, size: 32)
+                NewsroomTickerLogo(ticker: holding.ticker, size: 32)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(digest.ticker)
+                    Text(holding.ticker)
                         .font(.pretendard(11.5, weight: .bold))
                         .foregroundStyle(Color.textTertiary)
 
-                    Text(digest.subheadline ?? digest.headline ?? digest.name)
+                    Text(holding.headline ?? holding.name)
                         .font(.pretendard(13.5, weight: .semibold))
                         .foregroundStyle(Color.textPrimary)
                         .multilineTextAlignment(.leading)
@@ -139,18 +138,18 @@ struct NewsroomTickerDigestCompactRow: View {
 }
 
 struct NewsroomTickerQuietRow: View {
-    let digest: NewsroomTickerDigest
+    let holding: NewsroomHoldingBriefing
 
     var body: some View {
         HStack(spacing: 11) {
-            NewsroomTickerLogo(digest: digest, size: 32)
+            NewsroomTickerLogo(ticker: holding.ticker, size: 32)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(digest.ticker) · \(digest.quietStatusText)")
+                Text("\(holding.ticker) · \(holding.headline ?? "특이사항 없음")")
                     .font(.pretendard(13.5, weight: .semibold))
                     .foregroundStyle(Color.textPrimary)
 
-                Text("계속 지켜보고 있어요")
+                Text(holding.summary ?? "계속 지켜보고 있어요")
                     .font(.pretendard(12.5, weight: .medium))
                     .foregroundStyle(Color.textSecondary)
             }
@@ -167,38 +166,22 @@ struct NewsroomTickerQuietRow: View {
                 .stroke(Color.hairline, lineWidth: 1)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(digest.ticker), \(digest.quietStatusText), 계속 지켜보고 있어요")
+        .accessibilityLabel("\(holding.ticker), \(holding.headline ?? "특이사항 없음"), \(holding.summary ?? "계속 지켜보고 있어요")")
     }
 }
 
+/// 티커 이니셜 배지. 서버 응답에 로고 URL이 없어(목록·상세 모두) 항상 이니셜만 그린다.
 struct NewsroomTickerLogo: View {
-    let digest: NewsroomTickerDigest
+    let ticker: String
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if let logoURL = digest.logoURL {
-                AsyncImage(url: logoURL) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFit()
-                    } else {
-                        fallback
-                    }
-                }
-            } else {
-                fallback
-            }
-        }
-        .frame(width: size, height: size)
-        .background(Color.brandTintBg, in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
-        .accessibilityHidden(true)
-    }
-
-    private var fallback: some View {
-        Text(String(digest.ticker.prefix(1)))
+        Text(String(ticker.prefix(1)))
             .font(.pretendard(size * 0.42, weight: .bold))
             .foregroundStyle(Color.brand)
+            .frame(width: size, height: size)
+            .background(Color.brandTintBg, in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
+            .accessibilityHidden(true)
     }
 }
 
@@ -211,6 +194,10 @@ enum NewsroomPercentFormat {
     static func signedImpact(_ value: Double) -> String {
         let sign = value > 0 ? "+" : ""
         return "\(sign)\(String(format: "%.2f", value))%"
+    }
+
+    static func weight(_ value: Double) -> String {
+        String(Int(value.rounded()))
     }
 
     static func color(for value: Double) -> Color {

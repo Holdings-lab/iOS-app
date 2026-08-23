@@ -30,27 +30,11 @@ struct OnboardingV3StepHeader: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack {
-                OnboardingV3BackButton(action: onBack)
+                LiquidGlassBackButton(accessibilityLabel: "뒤로", action: onBack)
 
                 Spacer()
             }
         }
-    }
-}
-
-struct OnboardingV3BackButton: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "chevron.left")
-                .font(.system(size: 19, weight: .semibold))
-                .foregroundStyle(Color.textPrimary)
-                .frame(width: 34, height: 34)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("뒤로")
     }
 }
 
@@ -170,6 +154,48 @@ struct OnboardingV3QuestionHeader: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, 12)
+    }
+}
+
+private struct OnboardingRevealModifier: ViewModifier {
+    let isRevealed: Bool
+    let index: Int
+    let baseDelay: Double
+    let step: Double
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isRevealed ? 1 : 0)
+            .offset(y: isRevealed ? 0 : 8)
+            .animation(
+                .easeOut(duration: 0.28).delay(baseDelay + Double(index) * step),
+                value: isRevealed
+            )
+    }
+}
+
+extension View {
+    /// 콘텐츠가 하나씩(index 순서대로) 순차 등장하도록 만든다. 리스트가 아닌 단일 블록은
+    /// index 기본값 0으로 두면 한 번에 페이드인된다.
+    func onboardingReveal(isRevealed: Bool, index: Int = 0, baseDelay: Double = 0, step: Double = 0.06) -> some View {
+        modifier(OnboardingRevealModifier(isRevealed: isRevealed, index: index, baseDelay: baseDelay, step: step))
+    }
+
+    /// 진입 시 콘텐츠를 살짝 늦춰 등장시켜 onboardingReveal의 순차 등장이 시작될 기준점을 만든다.
+    /// reduceMotion이 켜져 있으면 지연 없이 바로 전체를 보여준다.
+    func onboardingRevealSequence(
+        isRevealed: Binding<Bool>,
+        reduceMotion: Bool
+    ) -> some View {
+        task {
+            guard !reduceMotion else {
+                isRevealed.wrappedValue = true
+                return
+            }
+
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            isRevealed.wrappedValue = true
+        }
     }
 }
 

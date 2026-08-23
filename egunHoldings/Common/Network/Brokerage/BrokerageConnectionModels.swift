@@ -50,4 +50,5 @@ nonisolated struct BrokerageConnection: Equatable, Sendable {
     let brokerage: BrokerageCode?
     let status: BrokerageConnectionStatus
     let connectedAt: Date?
+    let accountNumber: String?
 }

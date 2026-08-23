@@ -15,17 +15,19 @@ struct OnboardingFlowView: View {
     let onLogout: () -> Void
     let onComplete: (OnboardingResult) -> Void
 
-    @StateObject private var onboardingViewModel = OnboardingFlowViewModel()
+    @StateObject private var onboardingViewModel: OnboardingFlowViewModel
     @State private var path: [OnboardingRoute] = []
 
     init(
         userId: Int64? = nil,
+        userName: String = "회원",
         onLogout: @escaping () -> Void,
         onComplete: @escaping (OnboardingResult) -> Void
     ) {
         self.userId = userId
         self.onLogout = onLogout
         self.onComplete = onComplete
+        _onboardingViewModel = StateObject(wrappedValue: OnboardingFlowViewModel(userName: userName))
     }
 
     var body: some View {

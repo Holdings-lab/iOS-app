@@ -31,4 +31,12 @@ nonisolated final class LiveLoginRepository: LoginRepositoryProtocol, @unchecked
         )
         return response.toDomain()
     }
+
+    func logout(refreshToken: String) async throws {
+        let body = try NetworkJSONCoding.encodeJSON(LogoutRequestDTO(refreshToken: refreshToken))
+        _ = try await apiClient.requestResult(
+            BackendEndpoint.logout(body: body),
+            as: EmptyAPIResult.self
+        )
+    }
 }

@@ -10,7 +10,9 @@ struct OnboardingStep7BrokerageView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
     @State private var isSkipConfirmationPresented = false
-    @State private var isSubmitting = false
+    @State private var isLinking = false
+    @State private var isLinkCompleted = false
+    @State private var isRevealed = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -18,7 +20,7 @@ struct OnboardingStep7BrokerageView: View {
     ]
 
     private var canSubmit: Bool {
-        viewModel.connectedInstitutionID != nil && viewModel.brokerageCredential.isComplete
+        viewModel.connectedInstitutionID != nil
     }
 
     private var primaryButtonTitle: String {
@@ -26,11 +28,7 @@ struct OnboardingStep7BrokerageView: View {
             return "증권사를 선택해주세요"
         }
 
-        if !viewModel.brokerageCredential.isComplete {
-            return "계좌 정보를 입력해주세요"
-        }
-
-        return "조회 전용으로 연결하기"
+        return "모의투자 계좌 연결하기"
     }
 
     var body: some View {
@@ -39,17 +37,18 @@ struct OnboardingStep7BrokerageView: View {
 
             VStack(alignment: .leading, spacing: 24) {
                 HStack {
-                    OnboardingV3BackButton(action: onBack)
+                    LiquidGlassBackButton(accessibilityLabel: "뒤로", action: onBack)
 
                     Spacer()
                 }
 
                 OnboardingV3QuestionHeader(
-                    title: "조회 전용 계좌를 연결해주세요",
-                    subtitle: "보유 종목과 잔고만 분석에 사용합니다. 주문 권한은 요청하지 않아요."
+                    title: "모의투자 계좌를 연결해주세요",
+                    subtitle: "한국투자증권 모의투자 계좌로 실제와 동일한 분석을 체험할 수 있어요."
                 )
 
                 BrokerageTrustBlock()
+                    .onboardingReveal(isRevealed: isRevealed)
 
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(viewModel.brokerageInstitutions) { institution in
@@ -65,9 +64,10 @@ struct OnboardingStep7BrokerageView: View {
                         }
                     }
                 }
+                .onboardingReveal(isRevealed: isRevealed, index: 1)
 
                 if viewModel.connectedInstitutionID != nil {
-                    BrokerageCredentialFields(credential: $viewModel.brokerageCredential)
+                    DemoAccountNoticeCard()
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
@@ -83,8 +83,8 @@ struct OnboardingStep7BrokerageView: View {
             OnboardingV3BottomBar {
                 VStack(spacing: 10) {
                     OnboardingV3PrimaryButton(
-                        title: isSubmitting ? "연결하는 중..." : primaryButtonTitle,
-                        isEnabled: canSubmit && !isSubmitting
+                        title: primaryButtonTitle,
+                        isEnabled: canSubmit && !isLinking
                     ) {
                         submit()
                     }
@@ -108,68 +108,185 @@ struct OnboardingStep7BrokerageView: View {
             Button("계좌 연결하기", role: .cancel) {}
         }
         .onboardingV3Background()
+        .onboardingRevealSequence(isRevealed: $isRevealed, reduceMotion: reduceMotion)
+        .overlay {
+            if isLinking {
+                BrokerageLinkProgressOverlay(
+                    activeStage: viewModel.activeLinkStage,
+                    completedStages: viewModel.completedLinkStages,
+                    linkedAccount: isLinkCompleted ? viewModel.linkedAccount : nil,
+                    isCompleted: isLinkCompleted
+                )
+                .transition(.opacity)
+            }
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: isLinking)
     }
 
     private func submit() {
-        isSubmitting = true
+        isLinking = true
         Task {
-            await viewModel.submitBrokerageConnectionIfNeeded(userId: userId)
-            isSubmitting = false
+            await viewModel.connectBrokerage(userId: userId, reduceMotion: reduceMotion)
+
+            withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.75)) {
+                isLinkCompleted = true
+            }
+
+            // 완료 상태를 한 박자 보여준 뒤 다음 스텝으로 넘긴다.
+            try? await Task.sleep(nanoseconds: reduceMotion ? 500_000_000 : 1_200_000_000)
+            isLinking = false
             onNext()
         }
     }
 }
 
-private struct BrokerageCredentialFields: View {
-    @Binding var credential: BrokerageCredentialInput
+/// 연결 진행 오버레이. 단계별 체크는 실제 요청(연동 생성 + 모의투자 잔고 조회) 진행에 맞춰 채워진다.
+private struct BrokerageLinkProgressOverlay: View {
+    let activeStage: BrokerageLinkStage?
+    let completedStages: Set<BrokerageLinkStage>
+    let linkedAccount: LinkedDemoAccount?
+    let isCompleted: Bool
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("계좌 정보 입력")
-                .font(.pretendard(14, weight: .bold))
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                header
+
+                if isCompleted {
+                    completionSummary
+                } else {
+                    VStack(alignment: .leading, spacing: 14) {
+                        ForEach(BrokerageLinkStage.allCases) { stage in
+                            stageRow(stage)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(24)
+            .frame(maxWidth: 320)
+            .background(OnboardingV3Theme.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(OnboardingV3Theme.border, lineWidth: 1)
+            }
+            .shadow(color: .black.opacity(0.12), radius: 24, y: 8)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var header: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(OnboardingV3Theme.selectedBackground)
+                    .frame(width: 56, height: 56)
+
+                Image(systemName: isCompleted ? "checkmark" : "link")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(OnboardingV3Theme.primary)
+            }
+
+            Text(isCompleted ? "연결 완료" : "계좌를 연결하고 있어요")
+                .font(.pretendard(18, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
+        }
+    }
+
+    @ViewBuilder
+    private var completionSummary: some View {
+        VStack(spacing: 6) {
+            Text("한국투자증권 모의투자")
+                .font(.pretendard(14, weight: .semibold))
                 .foregroundStyle(Color.textPrimary)
 
-            CredentialField(title: "증권사 아이디", text: $credential.brokerageID, isSecure: false)
-            CredentialField(title: "비밀번호", text: $credential.brokeragePassword, isSecure: true)
-            CredentialField(title: "계좌 비밀번호", text: $credential.accountPassword, isSecure: true)
+            if let masked = linkedAccount?.maskedAccountNumber {
+                Text(masked)
+                    .font(.pretendard(13, weight: .regular))
+                    .foregroundStyle(OnboardingV3Theme.muted)
+            }
+
+            if let holdingCount = linkedAccount?.holdingCount {
+                Text("보유 종목 \(holdingCount)개를 불러왔어요")
+                    .font(.pretendard(13, weight: .regular))
+                    .foregroundStyle(OnboardingV3Theme.muted)
+                    .multilineTextAlignment(.center)
+            }
         }
-        .padding(16)
-        .background(OnboardingV3Theme.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(OnboardingV3Theme.border, lineWidth: 1)
+    }
+
+    private func stageRow(_ stage: BrokerageLinkStage) -> some View {
+        let isDone = completedStages.contains(stage)
+        let isActive = activeStage == stage
+
+        return HStack(spacing: 10) {
+            ZStack {
+                if isDone {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(OnboardingV3Theme.primary)
+                } else if isActive {
+                    ProgressView()
+                        .controlSize(.small)
+                } else {
+                    Circle()
+                        .stroke(OnboardingV3Theme.border, lineWidth: 1.2)
+                        .frame(width: 18, height: 18)
+                }
+            }
+            .frame(width: 20, height: 20)
+
+            Text(stage.title)
+                .font(.pretendard(13, weight: isActive ? .semibold : .regular))
+                .foregroundStyle(isDone || isActive ? Color.textPrimary : OnboardingV3Theme.muted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: isDone)
+    }
+
+    private var accessibilityText: String {
+        guard !isCompleted else {
+            return "모의투자 계좌 연결이 완료되었습니다"
+        }
+
+        return activeStage?.title ?? "계좌를 연결하고 있어요"
     }
 }
 
-private struct CredentialField: View {
-    let title: String
-    @Binding var text: String
-    let isSecure: Bool
-
+/// 앱키·시크릿은 서버가 보유하므로 사용자가 입력할 정보가 없다는 사실을 명시한다.
+/// 로그인 정보를 요구하지 않는다는 점 자체가 이 화면에서 가장 중요한 신뢰 신호라 카드로 띄운다.
+private struct DemoAccountNoticeCard: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.pretendard(12, weight: .semibold))
-                .foregroundStyle(OnboardingV3Theme.muted)
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(OnboardingV3Theme.primary)
 
-            Group {
-                if isSecure {
-                    SecureField("", text: $text)
-                } else {
-                    TextField("", text: $text)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("입력할 정보가 없어요")
+                    .font(.pretendard(15, weight: .bold))
+                    .foregroundStyle(Color.textPrimary)
+
+                Text("증권사 아이디나 비밀번호를 묻지 않습니다. 연결 버튼만 누르면 모의투자 계좌가 바로 연결돼요.")
+                    .font(.pretendard(13, weight: .regular))
+                    .foregroundStyle(OnboardingV3Theme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .font(.pretendard(15, weight: .regular))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color(hex: "F8FAFF"), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(OnboardingV3Theme.border, lineWidth: 1)
-            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(OnboardingV3Theme.selectedBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(OnboardingV3Theme.primary.opacity(0.35), lineWidth: 1)
         }
     }
 }
@@ -178,15 +295,15 @@ private struct BrokerageTrustBlock: View {
     var body: some View {
         VStack(spacing: 14) {
             BrokerageTrustRow(
-                icon: "eye",
-                title: "조회 전용",
-                description: "잔고와 보유 종목만 분석에 사용합니다"
+                icon: "flask",
+                title: "모의투자 계좌",
+                description: "실제 자산이나 실계좌는 사용되지 않아요"
             )
 
             BrokerageTrustRow(
-                icon: "lock.shield",
-                title: "주문 권한 없음",
-                description: "매수/매도는 실행할 수 없습니다"
+                icon: "eye",
+                title: "잔고 조회만 사용",
+                description: "보유 종목과 평가금액만 분석에 씁니다. 주문 API는 호출하지 않아요"
             )
 
             BrokerageTrustRow(

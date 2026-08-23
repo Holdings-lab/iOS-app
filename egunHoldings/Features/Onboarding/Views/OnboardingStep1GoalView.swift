@@ -5,7 +5,9 @@ struct OnboardingStep1GoalView: View {
     let onNext: () -> Void
     var onBack: () -> Void = {}
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
+    @State private var isRevealed = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -15,12 +17,12 @@ struct OnboardingStep1GoalView: View {
                 OnboardingV3StepHeader(step: 1, onBack: onBack)
 
                 OnboardingV3QuestionHeader(
-                    title: "왜 투자하시나요?",
+                    title: "\(viewModel.userName)님, 왜 투자하시나요?",
                     subtitle: "가장 가까운 목적을 골라주세요"
                 )
 
                 VStack(spacing: 12) {
-                    ForEach(FinancialGoal.allCases) { goal in
+                    ForEach(Array(FinancialGoal.allCases.enumerated()), id: \.element.id) { index, goal in
                         OnboardingV3OptionCard(
                             symbol: goal.symbol,
                             title: goal.title,
@@ -28,6 +30,7 @@ struct OnboardingStep1GoalView: View {
                         ) {
                             viewModel.selectFinancialGoal(goal)
                         }
+                        .onboardingReveal(isRevealed: isRevealed, index: index)
                     }
                 }
             }
@@ -45,6 +48,7 @@ struct OnboardingStep1GoalView: View {
             }
         }
         .onboardingV3Background()
+        .onboardingRevealSequence(isRevealed: $isRevealed, reduceMotion: reduceMotion)
     }
 }
 

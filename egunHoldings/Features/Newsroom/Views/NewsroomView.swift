@@ -1,14 +1,16 @@
 import SwiftUI
 import UIKit
 
-/// 보유 종목 24시간 뉴스를 종목 단위로 종합한 유한한 일일 브리핑.
+/// 보유 종목 뉴스를 종목 단위로 종합한 일일 브리핑.
+/// 빈 자산 여부는 더 이상 클라이언트가 미리 판단하지 않는다 — 서버 응답의 emptyState가 기준이다
+/// (holdings가 비어 있으면 서버가 항상 emptyState를 함께 내려준다, NewsroomService.emptyTabResponse).
 @MainActor
 struct NewsroomView: View {
     let userAssetProfile: UserAssetProfile
     var onAssetTabRequested: () -> Void = {}
 
     @StateObject private var viewModel: NewsroomDigestViewModel
-    @State private var presentedTickerDigest: NewsroomTickerDigest?
+    @State private var presentedHolding: NewsroomHoldingBriefing?
 
     init(
         userId: Int64? = nil,
@@ -30,26 +32,20 @@ struct NewsroomView: View {
             ) {
                 header
 
-                if userAssetProfile.holdings.isEmpty {
+                if let briefing = viewModel.briefing, briefing.holdings.isEmpty {
                     NewsroomNoHoldingsCard(onRegister: onAssetTabRequested)
-                } else if viewModel.isPreparingFirstBriefing {
-                    NewsroomFirstGenerationCard(holdingCount: userAssetProfile.holdings.count)
-                } else if viewModel.isLoading && viewModel.digest == nil {
+                } else if viewModel.isLoading && viewModel.briefing == nil {
                     NewsroomDigestSkeleton()
-                } else if let errorMessage = viewModel.errorMessage, viewModel.digest == nil {
+                } else if let errorMessage = viewModel.errorMessage, viewModel.briefing == nil {
                     NewsroomErrorCard(message: errorMessage) {
-                        viewModel.load(userAssetProfile: userAssetProfile)
+                        viewModel.load()
                     }
-                } else if let digest = viewModel.digest {
-                    digestContent(digest)
+                } else if let briefing = viewModel.briefing {
+                    briefingContent(briefing)
                 }
             }
             .refreshable {
-                guard !userAssetProfile.holdings.isEmpty else { return }
-                let didUpdate = await viewModel.refresh(userAssetProfile: userAssetProfile)
-                if didUpdate {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                }
+                await viewModel.refresh()
             }
 
             if let refreshStatusMessage = viewModel.refreshStatusMessage {
@@ -60,15 +56,11 @@ struct NewsroomView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.refreshStatusMessage)
         .policyFinanceLightTabChrome()
-        .navigationDestination(item: $presentedTickerDigest) { digest in
-            NewsroomDigestDetailView(
-                digest: digest,
-                referenceText: viewModel.digest?.referenceText ?? ""
-            )
+        .navigationDestination(item: $presentedHolding) { holding in
+            NewsroomDigestDetailView(viewModel: viewModel.makeDetailViewModel(for: holding))
         }
         .onAppear {
-            guard !userAssetProfile.holdings.isEmpty else { return }
-            viewModel.loadIfNeeded(userAssetProfile: userAssetProfile)
+            viewModel.loadIfNeeded()
         }
         #if DEBUG
         .toolbar {
@@ -86,13 +78,13 @@ struct NewsroomView: View {
                 .foregroundStyle(Color.textPrimary)
                 .tracking(-0.5)
 
-            if let digest = viewModel.digest {
-                Text("\(digest.referenceText) · \(digest.nextUpdateText)")
+            if let briefing = viewModel.briefing {
+                Text([briefing.asOfAtText, briefing.subtitle].compactMap { $0 }.joined(separator: " · "))
                     .font(.pretendard(12.5, weight: .medium))
-                    .foregroundStyle(digest.isOffline ? Color.warning : Color.textTertiary)
+                    .foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("보유 자산의 지난 24시간을 하나의 브리핑으로 정리해요")
+                Text("보유 자산의 최근 소식을 하나의 브리핑으로 정리해요")
                     .font(.pretendard(12.5, weight: .medium))
                     .foregroundStyle(Color.textTertiary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -102,28 +94,21 @@ struct NewsroomView: View {
     }
 
     @ViewBuilder
-    private func digestContent(_ digest: NewsroomDigest) -> some View {
-        if let macroIssue = digest.macroIssue {
-            NewsroomMacroIssueBanner(issue: macroIssue)
-        }
-
-        tickerSection(digest)
+    private func briefingContent(_ briefing: NewsroomBriefing) -> some View {
+        tickerSection(briefing)
 
         NewsroomEndMarker(heartbeatText: nil)
     }
 
-    private func tickerSection(_ digest: NewsroomDigest) -> some View {
+    private func tickerSection(_ briefing: NewsroomBriefing) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("내 보유 종목")
                 .font(.pretendard(16, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
 
-            ForEach(digest.sortedTickerDigests) { tickerDigest in
-                NewsroomTickerDigestRow.make(
-                    for: tickerDigest,
-                    isHero: digest.heroTickerIDs.contains(tickerDigest.id)
-                ) {
-                    presentedTickerDigest = tickerDigest
+            ForEach(briefing.holdings) { holding in
+                NewsroomTickerDigestRow.make(for: holding) {
+                    presentedHolding = holding
                 }
             }
         }
@@ -144,7 +129,7 @@ struct NewsroomView: View {
         Menu {
             ForEach(NewsroomDigestScenario.allCases) { scenario in
                 Button(scenario.title) {
-                    viewModel.applyScenario(scenario, userAssetProfile: userAssetProfile)
+                    viewModel.applyScenario(scenario)
                 }
             }
         } label: {
@@ -161,18 +146,18 @@ struct NewsroomView: View {
         NewsroomView(
             userAssetProfile: AppMockData.userAssetProfile,
             viewModel: NewsroomDigestViewModel(
-                repository: MockNewsroomDigestRepository(scenario: .calmMixed)
+                repository: MockNewsroomDigestRepository(scenario: .mixed)
             )
         )
     }
 }
 
-#Preview("포트폴리오 공통 이슈") {
+#Preview("전 종목 조용") {
     NavigationStack {
         NewsroomView(
             userAssetProfile: AppMockData.userAssetProfile,
             viewModel: NewsroomDigestViewModel(
-                repository: MockNewsroomDigestRepository(scenario: .alert)
+                repository: MockNewsroomDigestRepository(scenario: .allQuiet)
             )
         )
     }
@@ -183,7 +168,7 @@ struct NewsroomView: View {
         NewsroomView(
             userAssetProfile: UserAssetProfile(holdings: []),
             viewModel: NewsroomDigestViewModel(
-                repository: MockNewsroomDigestRepository(scenario: .calmAllQuiet)
+                repository: MockNewsroomDigestRepository(scenario: .empty)
             )
         )
     }

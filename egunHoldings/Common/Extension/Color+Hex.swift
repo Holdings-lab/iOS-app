@@ -43,7 +43,7 @@ extension Color {
     nonisolated static let brandChipText = Color(hex: "3461FD")
 
     // Stockit Light — Semantic
-    nonisolated static let trendUp       = Color(hex: "1ECB81")
+    nonisolated static let trendUp       = Color(hex: "0A7A47")
     nonisolated static let trendDown     = Color(hex: "F25C5C")
     nonisolated static let up            = Color.trendDown
     nonisolated static let upBg          = Color(hex: "F25C5C", alpha: 0.12)

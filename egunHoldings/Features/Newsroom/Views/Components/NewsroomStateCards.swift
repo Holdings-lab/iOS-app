@@ -15,18 +15,6 @@ struct NewsroomErrorCard: View {
     }
 }
 
-struct NewsroomFirstGenerationCard: View {
-    let holdingCount: Int
-
-    var body: some View {
-        NewsroomStatusCard(
-            iconName: "sparkles",
-            title: "첫 브리핑을 준비하고 있어요",
-            message: "보유 종목 \(holdingCount)개의 최근 소식을 모아 하나씩 정리하고 있어요."
-        )
-    }
-}
-
 struct NewsroomNoHoldingsCard: View {
     let onRegister: () -> Void
 

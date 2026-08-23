@@ -21,7 +21,7 @@ nonisolated struct LiveOnboardingRepository: OnboardingRepositoryProtocol {
             )
         )
         _ = try await apiClient.requestResult(
-            BackendEndpoint.updateMeSettings(userId: userId, body: body),
+            BackendEndpoint.updateInvestmentProfile(body: body),
             as: EmptyAPIResult.self
         )
     }
@@ -31,7 +31,7 @@ nonisolated struct LiveOnboardingRepository: OnboardingRepositoryProtocol {
             WatchAssetsUpdateRequestDTO(sectors: sectors.map(\.rawValue))
         )
         _ = try await apiClient.requestResult(
-            BackendEndpoint.updateWatchAssets(userId: userId, body: body),
+            BackendEndpoint.updateWatchAssets(body: body),
             as: EmptyAPIResult.self
         )
     }
@@ -41,7 +41,7 @@ nonisolated struct LiveOnboardingRepository: OnboardingRepositoryProtocol {
             GoalUpdateRequestDTO(financialGoal: financialGoal.rawValue, targetAmount: targetAmount)
         )
         _ = try await apiClient.requestResult(
-            BackendEndpoint.updateGoal(userId: userId, body: body),
+            BackendEndpoint.updateGoal(body: body),
             as: EmptyAPIResult.self
         )
     }

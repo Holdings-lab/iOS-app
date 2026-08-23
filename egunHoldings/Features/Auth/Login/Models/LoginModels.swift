@@ -42,6 +42,8 @@ nonisolated struct LoginSession: Equatable, Sendable {
     let nickname: String
     let accessToken: String
     let refreshToken: String?
+    /// 액세스 토큰 만료까지 남은 초.
+    let accessTokenExpiresIn: Int64
     let onboardingCompleted: Bool
 }
 

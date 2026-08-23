@@ -5,9 +5,11 @@ struct OnboardingStep5ProfileView: View {
     let onNext: () -> Void
     let onBack: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
     @State private var pendingProfile: InvestmentProfile?
     @State private var confirmPopup: BottomConfirmPopup?
+    @State private var isRevealed = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -22,7 +24,7 @@ struct OnboardingStep5ProfileView: View {
                 )
 
                 VStack(spacing: 12) {
-                    ForEach(InvestmentProfile.allCases) { profile in
+                    ForEach(Array(InvestmentProfile.allCases.enumerated()), id: \.element.id) { index, profile in
                         OnboardingV3OptionCard(
                             symbol: profile.symbol,
                             title: profile.title,
@@ -31,6 +33,7 @@ struct OnboardingStep5ProfileView: View {
                         ) {
                             selectProfile(profile)
                         }
+                        .onboardingReveal(isRevealed: isRevealed, index: index)
                     }
                 }
             }
@@ -61,6 +64,7 @@ struct OnboardingStep5ProfileView: View {
             pendingProfile = nil
         })
         .onAppear(perform: revalidateExistingSelection)
+        .onboardingRevealSequence(isRevealed: $isRevealed, reduceMotion: reduceMotion)
     }
 
     private func selectProfile(_ profile: InvestmentProfile) {

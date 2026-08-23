@@ -20,6 +20,7 @@ struct AppRootView: View {
             case .onboarding:
                 OnboardingFlowView(
                     userId: router.session?.userId,
+                    userName: router.userName,
                     onLogout: router.logout,
                     onComplete: router.completeOnboarding
                 )

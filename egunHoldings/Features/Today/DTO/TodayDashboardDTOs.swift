@@ -6,7 +6,10 @@ import Foundation
 // MARK: - GET /api/users/{id}/daily-briefing (Section 1)
 
 nonisolated struct TodayDailyBriefingResponseDTO: Decodable {
-    let isAccountLinked: Bool
+    // 실서버(2026-07 확인) 응답에는 이 필드가 아예 오지 않는다(대신 assetTotal/ratio/
+    // maxDrawdownTolerance 등 문서에 없는 필드가 옴). 필수로 두면 다른 필드가 멀쩡히 와도
+    // 디코딩 전체가 실패해 Mock 폴백으로 넘어가 버리므로 옵셔널로 둔다.
+    let isAccountLinked: Bool?
     let dailyChangePct: Double?
     let drawdownPct: Double?
     let status: String?
@@ -25,7 +28,9 @@ nonisolated struct TodayDailyBriefingResponseDTO: Decodable {
 // MARK: - GET /api/users/{id}/holdings (Section 2)
 
 nonisolated struct TodayHoldingsResponseDTO: Decodable {
-    let isAccountLinked: Bool
+    // 실서버(2026-07 확인) 응답은 `{ "holdings": [] }`뿐이라 이 필드가 없다. daily-briefing과
+    // 동일한 이유로 옵셔널 처리 — 없으면 holdings 유무로 연동 여부를 판단한다.
+    let isAccountLinked: Bool?
     let holdings: [TodayHoldingDTO]?
 
     func toDomain(fallback: [TodayHolding]) -> [TodayHolding] {
@@ -48,14 +53,16 @@ nonisolated struct TodayHoldingDTO: Decodable {
 // MARK: - GET /api/users/{id}/goal (Section 3)
 
 nonisolated struct TodayGoalResponseDTO: Decodable {
-    let isAccountLinked: Bool
+    // 실서버(UserAssetDto.GoalProgressResponse) 응답엔 isAccountLinked가 없다 — daily-briefing/
+    // holdings와 동일한 이유로, 목표가 실제로 설정돼 있는지(goalLabel 등 필드 존재)로만 판단한다.
+    let isAccountLinked: Bool?
     let goalLabel: String?
     let progressPct: Double?
     let scheduleStatus: String?
     let scheduleNote: String?
 
     func toDomain(fallback: TodayGoalProgress?) -> TodayGoalProgress? {
-        guard isAccountLinked, let goalLabel, let progressPct, let scheduleStatus else {
+        guard let goalLabel, let progressPct, let scheduleStatus else {
             return nil
         }
 

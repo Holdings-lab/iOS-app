@@ -35,7 +35,7 @@ nonisolated struct LiveAssetRebalancingRepository: AssetRebalancingRepositoryPro
             }
 
             let response = try await apiClient.requestResult(
-                BackendEndpoint.portfolioRebalancing(userId: userId),
+                BackendEndpoint.portfolioRebalancing(),
                 as: RebalancingResponseDTO.self
             )
 
@@ -45,6 +45,7 @@ nonisolated struct LiveAssetRebalancingRepository: AssetRebalancingRepositoryPro
                 throw error
             }
 
+            APIFallbackLog.log("GET/POST /api/users/\(userId)/portfolio/rebalancing", error: error)
             return fallback
         }
     }
@@ -59,7 +60,7 @@ nonisolated struct LiveAssetRebalancingRepository: AssetRebalancingRepositoryPro
         )
 
         let response = try await apiClient.requestResult(
-            BackendEndpoint.portfolioRebalancingPreview(userId: userId, body: requestBody),
+            BackendEndpoint.portfolioRebalancingPreview(body: requestBody),
             as: RebalancingResponseDTO.self
         )
 

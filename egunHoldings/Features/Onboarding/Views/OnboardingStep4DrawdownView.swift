@@ -5,7 +5,9 @@ struct OnboardingStep4DrawdownView: View {
     let onNext: () -> Void
     let onBack: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
+    @State private var isRevealed = false
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -20,7 +22,7 @@ struct OnboardingStep4DrawdownView: View {
                 )
 
                 VStack(spacing: 12) {
-                    ForEach(MaxDrawdownTolerance.onboardingOptions) { tolerance in
+                    ForEach(Array(MaxDrawdownTolerance.onboardingOptions.enumerated()), id: \.element.id) { index, tolerance in
                         OnboardingV3OptionCard(
                             symbol: tolerance.symbol,
                             title: tolerance.title,
@@ -29,6 +31,7 @@ struct OnboardingStep4DrawdownView: View {
                         ) {
                             viewModel.maxDrawdownTolerance = tolerance
                         }
+                        .onboardingReveal(isRevealed: isRevealed, index: index)
                     }
                 }
             }
@@ -50,6 +53,7 @@ struct OnboardingStep4DrawdownView: View {
             }
         }
         .onboardingV3Background()
+        .onboardingRevealSequence(isRevealed: $isRevealed, reduceMotion: reduceMotion)
     }
 }
 

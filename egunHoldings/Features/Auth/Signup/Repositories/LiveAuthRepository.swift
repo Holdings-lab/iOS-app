@@ -89,7 +89,7 @@ nonisolated struct LiveAuthRepository: RegistrationRepositoryProtocol, AccountMa
 
     func deleteAccount(userId: Int64) async throws -> AuthAccountProfile {
         let response = try await apiClient.requestResult(
-            BackendEndpoint.deleteAccount(userId: userId),
+            BackendEndpoint.deleteAccount(),
             as: AuthAccountResponseDTO.self
         )
         return response.toDomain()
@@ -109,7 +109,7 @@ nonisolated struct LiveAuthRepository: RegistrationRepositoryProtocol, AccountMa
     func updateNickname(userId: Int64, nickname: String) async throws -> AuthAccountProfile {
         let body = try NetworkJSONCoding.encodeJSON(NicknameRequestDTO(nickname: nickname))
         let response = try await apiClient.requestResult(
-            BackendEndpoint.updateNickname(userId: userId, body: body),
+            BackendEndpoint.updateNickname(body: body),
             as: AuthAccountResponseDTO.self
         )
         return response.toDomain()
@@ -123,7 +123,7 @@ nonisolated struct LiveAuthRepository: RegistrationRepositoryProtocol, AccountMa
             )
         )
         let response = try await apiClient.requestResult(
-            BackendEndpoint.changePassword(userId: userId, body: body),
+            BackendEndpoint.changePassword(body: body),
             as: AuthAccountResponseDTO.self
         )
         return response.toDomain()

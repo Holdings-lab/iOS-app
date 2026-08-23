@@ -4,6 +4,8 @@ import SwiftUI
 
 // NavigationPath에 서로 다른 타입을 섞으면 SwiftUI 내부 경로 비교에서
 // AnyNavigationPath.Error.comparisonTypeMismatch 크래시가 나므로 단일 타입으로 통합한다.
+// 같은 이유로, 자체 NavigationStack을 가진 화면(SettingsRootView 등)은 이 경로에 push하지 않고
+// fullScreenCover로 띄운다 — NavigationStack 중첩도 동일한 크래시를 유발한다.
 enum TodayNavDestination: Hashable {
     case today(TodayRoute)
     case signal(PolSignalRoute)
@@ -16,12 +18,14 @@ struct TodayView: View {
     @StateObject private var viewModel: TodayViewModel
     @StateObject private var policyNewsViewModel: PolicyNewsViewModel
     @StateObject private var notificationCenter = AppNotificationCenter.shared
-    @ObservedObject private var exchangeRateViewModel: ExchangeRateViewModel
     @State private var navigationPath: [TodayNavDestination] = []
     @State private var isPushSlotDismissed = false
+    @State private var isSettingsPresented = false
     @State private var presentedNotificationDetail: AppNotificationItem?
     @Binding private var externalSignalRoute: PolSignalRoute?
     private let userId: Int64?
+    private let userAssetProfile: UserAssetProfile
+    private let portfolioSnapshot: PortfolioSnapshot
     private let onAssetTabRequested: () -> Void
     private let onNewsroomTabRequested: () -> Void
     private let onSignalRouteRequested: (PolSignalRoute) -> Void
@@ -32,7 +36,6 @@ struct TodayView: View {
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         viewModel: TodayViewModel? = nil,
-        exchangeRateViewModel: ExchangeRateViewModel? = nil,
         externalSignalRoute: Binding<PolSignalRoute?> = .constant(nil),
         onAssetTabRequested: @escaping () -> Void = {},
         onNewsroomTabRequested: @escaping () -> Void = {},
@@ -40,6 +43,8 @@ struct TodayView: View {
         onAnalysisNotificationRequested: @escaping (PolSignalAnalysisPayload) -> Void = { _ in }
     ) {
         self.userId = userId
+        self.userAssetProfile = userAssetProfile
+        self.portfolioSnapshot = portfolioSnapshot
         self.onAssetTabRequested = onAssetTabRequested
         self.onNewsroomTabRequested = onNewsroomTabRequested
         self.onSignalRouteRequested = onSignalRouteRequested
@@ -53,7 +58,6 @@ struct TodayView: View {
         )
         _policyNewsViewModel = StateObject(wrappedValue: PolicyNewsViewModel(userId: userId))
         _externalSignalRoute = externalSignalRoute
-        self.exchangeRateViewModel = exchangeRateViewModel ?? ExchangeRateViewModel()
     }
 
     var body: some View {
@@ -68,7 +72,7 @@ struct TodayView: View {
                             onNotifications: {
                                 openNotifications()
                             },
-                            onSettings: { navigationPath.append(.today(.settings)) }
+                            onSettings: { isSettingsPresented = true }
                         )
 
                         if let item = notificationCenter.todayPreviewNotification, !isPushSlotDismissed {
@@ -91,8 +95,7 @@ struct TodayView: View {
                         } else {
                             TodayBriefingCard(
                                 briefing: viewModel.briefing,
-                                isAccountLinked: viewModel.isAccountLinked,
-                                onConnectAccount: onAssetTabRequested
+                                isAccountLinked: viewModel.isAccountLinked
                             )
 
                             TodayHoldingsTop3Card(
@@ -132,7 +135,11 @@ struct TodayView: View {
                         }
                     )
                 case .today(.settings):
-                    SettingsRootView(notificationCenter: notificationCenter)
+                    // 설정 화면은 자체 NavigationStack을 가진 화면이라 여기서 push하지 않는다 —
+                    // NavigationStack 안에 NavigationStack을 push로 중첩하면 SwiftUI가
+                    // AnyNavigationPath.Error.comparisonTypeMismatch로 크래시한다.
+                    // 실제로는 isSettingsPresented(fullScreenCover)로만 열리므로 이 분기는 도달하지 않는다.
+                    EmptyView()
                 case .signal(.list):
                     EmptyView()
                 case .signal(.detail(let id)):
@@ -166,6 +173,13 @@ struct TodayView: View {
             .onChange(of: externalSignalRoute) { _, _ in
                 consumeExternalSignalRoute()
             }
+            // 잔고 조회가 늦게 도착해도 화면을 재생성하지 않고 데이터만 갈아끼운다.
+            .onChange(of: portfolioSnapshot) { _, _ in
+                syncSessionData()
+            }
+            .onChange(of: userAssetProfile) { _, _ in
+                syncSessionData()
+            }
             .onChange(of: policyNewsViewModel.presentedItem) { _, item in
                 syncPolicyNewsDestination(with: item)
             }
@@ -188,7 +202,14 @@ struct TodayView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
+            .fullScreenCover(isPresented: $isSettingsPresented) {
+                SettingsRootView(notificationCenter: notificationCenter)
+            }
         }
+    }
+
+    private func syncSessionData() {
+        viewModel.updateSessionData(userAssetProfile: userAssetProfile, portfolioSnapshot: portfolioSnapshot)
     }
 
     private func openNewsItem(_ item: TodayNewsItem) {

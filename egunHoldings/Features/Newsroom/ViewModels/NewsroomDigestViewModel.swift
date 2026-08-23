@@ -3,15 +3,11 @@ import Combine
 
 @MainActor
 final class NewsroomDigestViewModel: ObservableObject {
-    @Published private(set) var digest: NewsroomDigest?
+    @Published private(set) var briefing: NewsroomBriefing?
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
     /// pull-to-refresh 결과 토스트. "이미 최신이에요" 등, 1.5초 뒤 자동으로 사라진다.
     @Published private(set) var refreshStatusMessage: String?
-
-    var isPreparingFirstBriefing: Bool {
-        isLoading && digest == nil && repository.showsFirstGenerationState
-    }
 
     private var repository: NewsroomDigestRepositoryProtocol
 
@@ -19,7 +15,7 @@ final class NewsroomDigestViewModel: ObservableObject {
         self.repository = repository ?? NewsroomDigestRepositoryFactory.makeDefault(userId: userId)
     }
 
-    func load(userAssetProfile: UserAssetProfile) {
+    func load() {
         guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
@@ -28,31 +24,30 @@ final class NewsroomDigestViewModel: ObservableObject {
             guard let self else { return }
 
             do {
-                digest = try await repository.fetchDigest(userAssetProfile: userAssetProfile)
+                briefing = try await repository.fetchBriefing(briefingDate: nil)
             } catch {
-                if digest == nil {
-                    errorMessage = "다이제스트를 불러오지 못했어요. 잠시 후 다시 시도해주세요."
+                if briefing == nil {
+                    errorMessage = "뉴스룸을 불러오지 못했어요. 잠시 후 다시 시도해주세요."
                 }
             }
             isLoading = false
         }
     }
 
-    func loadIfNeeded(userAssetProfile: UserAssetProfile) {
-        guard digest == nil, !isLoading else { return }
-        load(userAssetProfile: userAssetProfile)
+    func loadIfNeeded() {
+        guard briefing == nil, !isLoading else { return }
+        load()
     }
 
-    /// Pull-to-refresh. LLM 생성을 트리거하지 않는다 — 같은 다이제스트면 "이미 최신이에요" 토스트만 보여준다.
     @discardableResult
-    func refresh(userAssetProfile: UserAssetProfile) async -> Bool {
+    func refresh() async -> Bool {
         do {
-            let fetched = try await repository.fetchDigest(userAssetProfile: userAssetProfile)
-            if fetched == digest {
+            let fetched = try await repository.fetchBriefing(briefingDate: nil)
+            if fetched == briefing {
                 await showRefreshStatus("이미 최신이에요")
                 return false
             } else {
-                digest = fetched
+                briefing = fetched
                 errorMessage = nil
                 return true
             }
@@ -60,6 +55,11 @@ final class NewsroomDigestViewModel: ObservableObject {
             await showRefreshStatus("새로고침에 실패했어요")
             return false
         }
+    }
+
+    /// 상세 화면은 이제 별도 네트워크 요청이라 자체 뷰모델을 새로 만들어 넘긴다.
+    func makeDetailViewModel(for holding: NewsroomHoldingBriefing) -> NewsroomTickerDetailViewModel {
+        NewsroomTickerDetailViewModel(holding: holding, repository: repository)
     }
 
     private func showRefreshStatus(_ message: String) async {
@@ -72,10 +72,10 @@ final class NewsroomDigestViewModel: ObservableObject {
 
     #if DEBUG
     /// UI/UX 검증용 — Mock 시나리오를 바꿔가며 화면 상태를 확인한다.
-    func applyScenario(_ scenario: NewsroomDigestScenario, userAssetProfile: UserAssetProfile) {
+    func applyScenario(_ scenario: NewsroomDigestScenario) {
         repository = MockNewsroomDigestRepository(scenario: scenario)
-        digest = nil
-        load(userAssetProfile: userAssetProfile)
+        briefing = nil
+        load()
     }
     #endif
 }

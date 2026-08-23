@@ -14,7 +14,6 @@ struct RootTabView: View {
     @State private var selectedTab: RootTab = .today
     @State private var todaySignalRoute: PolSignalRoute?
     @State private var presentedSignalRoute: PolSignalRoute?
-    @StateObject private var exchangeRateViewModel = ExchangeRateViewModel()
     @ObservedObject private var notificationCenter = AppNotificationCenter.shared
 
     init(
@@ -36,7 +35,6 @@ struct RootTabView: View {
                 userId: userId,
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
-                exchangeRateViewModel: exchangeRateViewModel,
                 externalSignalRoute: $todaySignalRoute,
                 onAssetTabRequested: {
                     selectedTab = .asset
@@ -51,7 +49,6 @@ struct RootTabView: View {
                     openTodaySignal(notificationCenter.signalRoute(for: payload))
                 }
             )
-            .id(portfolioSnapshot)
             .tag(RootTab.today)
             .tabItem {
                 Label("오늘", systemImage: "sun.max.fill")
@@ -75,13 +72,11 @@ struct RootTabView: View {
                 AssetView(
                     userId: userId,
                     brokerBalanceSnapshot: brokerBalanceSnapshot,
-                    exchangeRateViewModel: exchangeRateViewModel,
                     onAdjustmentRequested: {
                         openSignal(.adjustment)
                     }
                 )
             }
-            .id(brokerBalanceSnapshot?.fetchedAt)
             .tag(RootTab.asset)
             .tabItem {
                 Label("내 자산", systemImage: "chart.pie.fill")
@@ -121,7 +116,19 @@ struct RootTabView: View {
         openTodaySignal(route)
     }
 
+    /// `RootTabView`는 `AppRouter`가 발행하는 `userAssetProfile`/`portfolioSnapshot`이 바뀔 때마다
+    /// (예: 잔고 조회 응답 도착) 구조체 자체가 다시 생성된다. UITabBar의 외형은 전역 상태라 매번
+    /// 다시 써도 화면에는 차이가 없으므로, 프로세스당 한 번만 적용해 불필요한 UIColor 변환/전역 쓰기를 막는다.
+    private static let didSetupTabBarAppearance: Bool = {
+        RootTabView.applyTabBarAppearance()
+        return true
+    }()
+
     private func setupTabBarAppearance() {
+        _ = Self.didSetupTabBarAppearance
+    }
+
+    private static func applyTabBarAppearance() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor(AssetTabPalette.card)

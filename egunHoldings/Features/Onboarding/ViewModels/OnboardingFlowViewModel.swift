@@ -3,6 +3,8 @@ import Foundation
 
 @MainActor
 final class OnboardingFlowViewModel: ObservableObject {
+    let userName: String
+
     @Published var financialGoal: FinancialGoal = .seedMoney
     @Published var targetAmount: Int64 = FinancialGoal.seedMoney.defaultTargetAmount
     @Published var investmentHorizon: InvestmentHorizon?
@@ -10,20 +12,31 @@ final class OnboardingFlowViewModel: ObservableObject {
     @Published var investmentProfile: InvestmentProfile?
     @Published private(set) var selectedWatchAssets: Set<WatchAssetSector> = []
     @Published private(set) var connectedInstitutionID: String?
-    @Published var brokerageCredential = BrokerageCredentialInput()
-    @Published private(set) var isBrokerageCredentialSubmitted = false
+    @Published private(set) var isBrokerageConnected = false
     @Published private(set) var brokerageConnectionId: String?
+
+    // MARK: - Step 7 연결 연출 상태
+
+    @Published private(set) var activeLinkStage: BrokerageLinkStage?
+    @Published private(set) var completedLinkStages: Set<BrokerageLinkStage> = []
+    /// 연결이 끝난 뒤 요약 카드에 노출할 계좌 정보. 잔고 조회가 실패하면 nil로 남는다.
+    @Published private(set) var linkedAccount: LinkedDemoAccount?
 
     private let onboardingRepository: OnboardingRepositoryProtocol
     private let brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol
+    private let brokerBalanceRepository: BrokerBalanceRepositoryProtocol
     private var hasCustomTargetAmount = false
 
     init(
+        userName: String = "회원",
         onboardingRepository: OnboardingRepositoryProtocol = LiveOnboardingRepository(),
-        brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol = LiveBrokerageConnectionRepository()
+        brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol = LiveBrokerageConnectionRepository(),
+        brokerBalanceRepository: BrokerBalanceRepositoryProtocol = KisSandboxBalanceRepository()
     ) {
+        self.userName = userName
         self.onboardingRepository = onboardingRepository
         self.brokerageConnectionRepository = brokerageConnectionRepository
+        self.brokerBalanceRepository = brokerBalanceRepository
     }
 
     var recommendedInstitution: AccountInstitution {
@@ -105,8 +118,10 @@ final class OnboardingFlowViewModel: ObservableObject {
 
     func skipBrokerageConnection() {
         connectedInstitutionID = nil
-        brokerageCredential = BrokerageCredentialInput()
-        isBrokerageCredentialSubmitted = false
+        isBrokerageConnected = false
+        activeLinkStage = nil
+        completedLinkStages = []
+        linkedAccount = nil
     }
 
     // MARK: - Step 8: 완료 처리
@@ -143,32 +158,50 @@ final class OnboardingFlowViewModel: ObservableObject {
         }
     }
 
-    /// Step 7 "연결하기" 시점에 즉시 호출된다. 서버 공개키가 아직 배포되지 않았거나(BrokerageConnectionError.serverKeyUnavailable)
-    /// 요청이 실패하면 기존과 동일하게 짧은 대기 후 제출된 것으로 처리해 온보딩 진행은 막지 않는다.
-    func submitBrokerageConnectionIfNeeded(userId: Int64?) async {
-        guard let institutionID = connectedInstitutionID, brokerageCredential.isComplete else { return }
+    /// Step 7 "연결하기" 시점에 호출된다.
+    ///
+    /// 크리덴셜 입력이 없는 대신 실제로 두 가지 일을 한다 — 서버에 연동 레코드를 만들고,
+    /// 모의투자 잔고를 한 번 조회해 계좌가 실제로 응답하는지 확인한다. 단계 표시는 이 두
+    /// 요청이 끝날 때까지 순차로 진행되며, 최소 노출 시간을 두어 한 프레임에 스쳐 지나가지 않게 한다.
+    /// 백엔드가 아직 준비되지 않아 둘 다 실패하더라도 온보딩 진행 자체는 막지 않는다.
+    func connectBrokerage(userId: Int64?, reduceMotion: Bool) async {
+        guard let institutionID = connectedInstitutionID, !isBrokerageConnected else { return }
 
-        if let userId {
-            do {
-                let connection = try await brokerageConnectionRepository.connect(
-                    userId: userId,
-                    institutionID: institutionID,
-                    credential: BrokerageCredentialPayloadDTO(
-                        loginId: brokerageCredential.brokerageID,
-                        loginPassword: brokerageCredential.brokeragePassword,
-                        accountPassword: brokerageCredential.accountPassword
-                    )
-                )
-                brokerageConnectionId = connection.connectionId
-                isBrokerageCredentialSubmitted = true
-                return
-            } catch {
-                // 백엔드/공개키 미준비 — 아래 목업 경로로 폴백
-            }
+        completedLinkStages = []
+        linkedAccount = nil
+
+        let connectionTask: Task<BrokerageConnection?, Never> = Task { [brokerageConnectionRepository] in
+            guard let userId else { return nil }
+            return try? await brokerageConnectionRepository.connect(userId: userId, institutionID: institutionID)
         }
 
-        try? await Task.sleep(nanoseconds: 400_000_000)
-        isBrokerageCredentialSubmitted = true
+        let stageDuration: UInt64 = reduceMotion ? 120_000_000 : 620_000_000
+
+        activeLinkStage = .authenticating
+        try? await Task.sleep(nanoseconds: stageDuration)
+        let connection = await connectionTask.value
+        brokerageConnectionId = connection?.connectionId
+        completedLinkStages.insert(.authenticating)
+
+        activeLinkStage = .verifyingAccount
+        let balanceTask: Task<BrokerBalanceSnapshot?, Never> = Task { [brokerBalanceRepository] in
+            try? await brokerBalanceRepository.fetchKisSandboxBalance()
+        }
+        try? await Task.sleep(nanoseconds: stageDuration)
+        let balance = await balanceTask.value
+        completedLinkStages.insert(.verifyingAccount)
+
+        activeLinkStage = .loadingHoldings
+        try? await Task.sleep(nanoseconds: stageDuration)
+        completedLinkStages.insert(.loadingHoldings)
+
+        linkedAccount = LinkedDemoAccount(
+            accountNumber: balance?.accountNumber ?? connection?.accountNumber,
+            holdingCount: balance?.holdings.count,
+            totalEvaluationAmount: balance?.totalEvaluationAmount
+        )
+        activeLinkStage = nil
+        isBrokerageConnected = true
     }
 
     func submitGoal(userId: Int64?) async -> Bool {
@@ -182,6 +215,7 @@ final class OnboardingFlowViewModel: ObservableObject {
             )
             return true
         } catch {
+            APIFallbackLog.log("PATCH /api/users/\(userId)/goal", error: error)
             return false
         }
     }
@@ -204,7 +238,7 @@ final class OnboardingFlowViewModel: ObservableObject {
             financialGoal: financialGoal.rawValue,
             targetAmount: targetAmount,
             selectedWatchAssetIDs: selectedWatchAssets.map(\.rawValue),
-            isBrokerageCredentialSubmitted: isBrokerageCredentialSubmitted
+            isBrokerageConnected: isBrokerageConnected
         )
     }
 }

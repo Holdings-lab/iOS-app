@@ -51,16 +51,7 @@ struct SignalThemeDetailView: View {
 
     private var navigationHeader: some View {
         HStack(alignment: .center) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(PSColor.textPrimary)
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            LiquidGlassBackButton(action: { dismiss() })
 
             Text(detail.theme.displayName)
                 .font(.pretendard(20, weight: .bold))
