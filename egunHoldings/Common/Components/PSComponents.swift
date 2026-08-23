@@ -102,65 +102,6 @@ enum JudgmentType: String {
     }
 }
 
-struct JudgmentTypeBadge: View {
-    let type: JudgmentType
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: type.symbol)
-                .font(.system(size: 10, weight: .semibold))
-            Text(type.rawValue)
-                .font(PSFont.semibold(11))
-        }
-        .foregroundStyle(type.color)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(type.color.opacity(0.12), in: RoundedRectangle(cornerRadius: KDXRadius.chip, style: .continuous))
-    }
-}
-
-// MARK: - ExposureBar
-
-struct PSExposureBar: View {
-    let theme: String
-    let pct: Int
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Text(theme)
-                .font(PSFont.caption())
-                .foregroundStyle(PSColor.textMuted)
-                .frame(width: 64, alignment: .leading)
-                .lineLimit(1)
-
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.divider)
-                        .frame(height: 6)
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [color, Color.brandLight],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: max(8, geo.size.width * CGFloat(pct) / 100), height: 6)
-                }
-            }
-            .frame(height: 6)
-
-            Text("\(pct)%")
-                .font(PSFont.semibold(12))
-                .foregroundStyle(color)
-                .frame(width: 36, alignment: .trailing)
-                .monospacedDigit()
-        }
-    }
-}
-
 // MARK: - PolicyColorDot
 
 struct PolicyColorDot: View {

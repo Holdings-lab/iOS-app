@@ -47,39 +47,6 @@ enum PolicyImpactDelay: String {
     case threeMonths = "3개월"
 }
 
-enum PolicyJudgmentAction: String {
-    case increase = "비중 확대 검토"
-    case reduce = "줄이기"
-    case hedge = "방어 비중 점검"
-    case wait = "기다리기"
-
-    var color: Color {
-        switch self {
-        case .increase:
-            return .success
-        case .reduce:
-            return .brand
-        case .hedge:
-            return .up
-        case .wait:
-            return .warning
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .increase:
-            return "arrow.up.forward"
-        case .reduce:
-            return "arrow.down.forward"
-        case .hedge:
-            return "shield.lefthalf.filled"
-        case .wait:
-            return "pause.circle.fill"
-        }
-    }
-}
-
 struct PolicyUpdateSummary {
     let updatedAtText: String
     let sourceText: String

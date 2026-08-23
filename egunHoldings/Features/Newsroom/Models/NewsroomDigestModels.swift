@@ -166,15 +166,10 @@ nonisolated enum NewsroomDigestDateFormat {
         return formatter
     }()
 
-    private static let iso8601Formatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        return formatter
-    }()
-
-    private static let fractionalISO8601Formatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.unitsStyle = .short
         return formatter
     }()
 
@@ -183,13 +178,10 @@ nonisolated enum NewsroomDigestDateFormat {
     }
 
     static func relativeText(for date: Date) -> String {
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.unitsStyle = .short
-        return formatter.localizedString(for: date, relativeTo: Date())
+        relativeFormatter.localizedString(for: date, relativeTo: Date())
     }
 
     static func parseISO8601(_ value: String) -> Date? {
-        fractionalISO8601Formatter.date(from: value) ?? iso8601Formatter.date(from: value)
+        NetworkJSONCoding.parseISO8601(value)
     }
 }

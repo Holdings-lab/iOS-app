@@ -153,47 +153,6 @@ struct SignalDemoCard: View {
     }
 }
 
-struct SparkleAnimationView: View {
-    @State private var scale: CGFloat = 0.8
-    @State private var opacity = 0.0
-    @State private var hasAnimated = false
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(FlowTheme.sparkleBackground)
-                .overlay {
-                    Circle()
-                        .stroke(FlowTheme.sparkleBorder, lineWidth: 1)
-                }
-
-            Text("✦")
-                .font(.pretendard(24, weight: .bold))
-                .foregroundStyle(FlowTheme.accentStart)
-        }
-        .frame(width: 56, height: 56)
-        .scaleEffect(scale)
-        .opacity(opacity)
-        .onAppear {
-            guard !hasAnimated else { return }
-            hasAnimated = true
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                withAnimation(.easeOut(duration: 0.34)) {
-                    scale = 1.2
-                    opacity = 1
-                }
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.34) {
-                    withAnimation(.easeInOut(duration: 0.26)) {
-                        scale = 1
-                    }
-                }
-            }
-        }
-    }
-}
-
 struct CompletionCheckAnimationView: View {
     @State private var circleScale: CGFloat = 0.88
     @State private var circleOpacity = 0.0
@@ -264,34 +223,5 @@ private struct CheckmarkShape: Shape {
         path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.88, y: rect.minY + rect.height * 0.18))
 
         return path
-    }
-}
-
-struct FlowInfoHint: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(.pretendard(12, weight: .medium))
-            .foregroundStyle(Color.textTertiary)
-    }
-}
-
-struct FlowSummaryRow: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Text(title)
-                .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.textTertiary)
-                .frame(width: 74, alignment: .leading)
-
-            Text(value)
-                .font(.pretendard(14, weight: .semibold))
-                .foregroundStyle(Color.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
     }
 }

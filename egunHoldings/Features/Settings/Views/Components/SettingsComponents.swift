@@ -176,24 +176,6 @@ extension SettingsRow where Right == AnyView {
     }
 }
 
-/// 행 오른쪽에 값 + 화살표를 함께 보여주는 형태(피그마 "내 집 마련 ›", "2개 ›").
-struct SettingsRowValue: View {
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Text(text)
-                .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.textQuaternary)
-                .lineLimit(1)
-
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.textQuaternary)
-        }
-    }
-}
-
 struct SettingsDivider: View {
     var body: some View {
         Rectangle().fill(Color.hairline).frame(height: 1)

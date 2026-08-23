@@ -281,28 +281,6 @@ struct PolSignalSectionHeader: View {
     }
 }
 
-struct PolSignalSectionTitle: View {
-    let title: String
-    let caption: String?
-
-    init(_ title: String, caption: String? = nil) {
-        self.title = title
-        self.caption = caption
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            PolSignalSectionHeader(title: title)
-            if let caption {
-                Text(caption)
-                    .font(.pretendard(12, weight: .medium))
-                    .foregroundStyle(PSColor.textFaint)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-}
-
 struct PolSignalAIBlock: View {
     let text: String
     var isExpanded = true

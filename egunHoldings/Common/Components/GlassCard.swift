@@ -64,36 +64,6 @@ struct KDXCard<Content: View>: View {
     }
 }
 
-// Subtle inner box — used inside KDXCard for secondary info.
-struct KDXInnerBox<Content: View>: View {
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color.subtle, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.hairline, lineWidth: 1)
-            }
-    }
-}
-
-struct KDXEyebrow: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(.pretendard(11, weight: .semibold))
-            .foregroundStyle(Color.brand)
-    }
-}
-
 struct PressScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

@@ -100,10 +100,14 @@ struct PolicyNewsInsight: Equatable, Sendable {
 
 extension PolicyNewsItem {
     var relativePublishedText: String {
+        Self.relativePublishedFormatter.localizedString(for: publishedAt, relativeTo: Date())
+    }
+
+    private static let relativePublishedFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
-        return formatter.localizedString(for: publishedAt, relativeTo: Date())
-    }
+        return formatter
+    }()
 }
 
 extension PolicyNewsInsight {

@@ -24,15 +24,15 @@ final class AppNotificationCenter: ObservableObject {
     }
 
     var latestUnreadAnalysisPayload: PolSignalAnalysisPayload? {
-        sortedNotifications
+        notifications
             .first { !$0.isRead && $0.analysisPayload != nil }?
             .analysisPayload
     }
 
     var todayPreviewNotification: AppNotificationItem? {
-        sortedNotifications.first { !$0.isRead && $0.kind == .news && $0.hasDetailContent }
-            ?? sortedNotifications.first { !$0.isRead && $0.hasDetailContent }
-            ?? sortedNotifications.first { !$0.isRead }
+        notifications.first { !$0.isRead && $0.kind == .news && $0.hasDetailContent }
+            ?? notifications.first { !$0.isRead && $0.hasDetailContent }
+            ?? notifications.first { !$0.isRead }
     }
 
     var authorizationStatusText: String {
@@ -71,7 +71,7 @@ final class AppNotificationCenter: ObservableObject {
 
     var groupedNotifications: [AppNotificationDayGroup] {
         let calendar = Calendar(identifier: .gregorian)
-        let grouped = Dictionary(grouping: sortedNotifications) { item in
+        let grouped = Dictionary(grouping: notifications) { item in
             calendar.startOfDay(for: item.occurredAt)
         }
 
@@ -80,10 +80,6 @@ final class AppNotificationCenter: ObservableObject {
             .map { date in
                 AppNotificationDayGroup(date: date, items: grouped[date] ?? [])
             }
-    }
-
-    private var sortedNotifications: [AppNotificationItem] {
-        notifications.sorted { $0.occurredAt > $1.occurredAt }
     }
 
     /// 시연 기준 시각 — 2026-05-28 09:15 KST 고정.
@@ -96,6 +92,7 @@ final class AppNotificationCenter: ObservableObject {
     private init(center: UNUserNotificationCenter = .current()) {
         self.center = center
         notifications = Self.makeSeedNotifications(now: Self.demoNow)
+            .sorted { $0.occurredAt > $1.occurredAt }
 
         Task {
             await refreshAuthorizationStatus()
@@ -155,8 +152,9 @@ final class AppNotificationCenter: ObservableObject {
     }
 
     func addInAppNotification(_ item: AppNotificationItem) {
-        notifications.append(item)
-        notifications.sort { $0.occurredAt > $1.occurredAt }
+        let insertionIndex = notifications.firstIndex { $0.occurredAt < item.occurredAt }
+            ?? notifications.endIndex
+        notifications.insert(item, at: insertionIndex)
     }
 
     func handlePushNotificationOpen(userInfo: [AnyHashable: Any]) {
