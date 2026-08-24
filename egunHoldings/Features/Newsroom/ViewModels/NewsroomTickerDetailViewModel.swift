@@ -17,7 +17,7 @@ final class NewsroomTickerDetailViewModel: ObservableObject {
     init(
         holding: NewsroomHoldingBriefing,
         repository: NewsroomDigestRepositoryProtocol,
-        judgementStore: NewsroomAIJudgementStoring = NewsroomAIJudgementStore()
+        judgementStore: NewsroomAIJudgementStoring = NewsroomAIJudgementStore.shared
     ) {
         self.holding = holding
         self.repository = repository
@@ -39,7 +39,10 @@ final class NewsroomTickerDetailViewModel: ObservableObject {
             do {
                 let fetched = try await repository.fetchDetail(ticker: holding.ticker, briefingDate: nil)
                 // 브리핑만 캐시와 대조해 갈아끼운다 — 뉴스 요약/출처는 매일 새로 오는 값이라 그대로 쓴다.
-                let judgement = judgementStore.resolve(incoming: fetched.aiJudgement, for: holding.ticker)
+                let judgement = await judgementStore.resolve(
+                    incoming: fetched.aiJudgement,
+                    for: holding.ticker
+                )
                 detail = fetched.replacingAIJudgement(judgement)
             } catch {
                 errorMessage = "상세 정보를 불러오지 못했어요. 잠시 후 다시 시도해주세요."
