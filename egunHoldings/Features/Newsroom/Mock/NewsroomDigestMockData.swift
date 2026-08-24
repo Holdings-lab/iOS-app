@@ -14,6 +14,12 @@ nonisolated enum NewsroomDigestMockData {
         asOfAt.addingTimeInterval(-hours * 3600)
     }
 
+    /// 예측 배치는 매일 돌지만, 크롤링이 비거나 배치가 실패한 날은 어제 값이 그대로 캐시에
+    /// 남아있을 수 있다 — 뉴스 기준시각과 하루 어긋난 상태를 Mock 기본값으로 둔다.
+    private static var briefingGeneratedAt: Date {
+        asOfAt.addingTimeInterval(-1 * 24 * 3600)
+    }
+
     // MARK: - 목록
 
     static var calmMixed: NewsroomBriefing {
@@ -86,7 +92,8 @@ nonisolated enum NewsroomDigestMockData {
                 reason: "머신러닝은 상승 확률 58% 수준의 완만한 신호를 포착하고 있습니다. 데이터센터 매출이 컨센서스를 웃돈 점은 긍정적이지만, 다음 분기 가이던스가 예상 범위 안에 머물러 추가 상향 여지가 제한적입니다. 실적 발표 직후 구간은 차익 실현 물량이 나오기 쉬워 방향성보다 변동성 확대에 무게를 둡니다.",
                 alignment: .positive,
                 usedNewsURLs: [],
-                disclaimer: "본 내용은 투자 판단의 근거가 아닙니다."
+                disclaimer: "본 내용은 투자 판단의 근거가 아닙니다.",
+                generatedAt: briefingGeneratedAt
             ),
             summaryBody: "엔비디아가 2분기 실적을 발표했어요. 데이터센터 부문 매출이 시장 예상을 웃돌았다는 보도가 이어졌고, 다음 분기 가이던스는 예상 범위 안이었어요.",
             findings: [
@@ -113,7 +120,8 @@ nonisolated enum NewsroomDigestMockData {
                 reason: "머신러닝은 상승 확률 49% 수준으로 방향성을 잡지 못하고 있습니다. 인도 생산 비중 확대는 수년 단위로 진행되는 구조적 변화라 단기 주가에 반영되는 폭이 크지 않고, 회사의 공식 발표가 아직 없어 보도 자체의 확실성도 낮은 편입니다.",
                 alignment: .mixed,
                 usedNewsURLs: [],
-                disclaimer: "본 내용은 투자 판단의 근거가 아닙니다."
+                disclaimer: "본 내용은 투자 판단의 근거가 아닙니다.",
+                generatedAt: briefingGeneratedAt
             ),
             summaryBody: "애플이 인도 내 생산 비중을 늘리는 방안을 검토 중이라는 보도가 있었어요. 회사의 공식 발표는 아직 없어요.",
             findings: ["인도 생산 비중 확대를 검토 중이라는 보도가 나왔어요"],
@@ -136,7 +144,8 @@ nonisolated enum NewsroomDigestMockData {
                 reason: "인프라 투자 재확인은 클라우드·AI 수요가 견조하다는 신호로 읽히지만, 동시에 감가상각비 증가로 이어져 단기 영업이익률에는 부담으로 작용합니다. 두 요인이 상쇄되는 구간이라 뚜렷한 방향을 제시하기 어렵습니다.",
                 alignment: .neutral,
                 usedNewsURLs: [],
-                disclaimer: "본 내용은 투자 판단의 근거가 아닙니다."
+                disclaimer: "본 내용은 투자 판단의 근거가 아닙니다.",
+                generatedAt: briefingGeneratedAt
             ),
             summaryBody: "마이크로소프트가 클라우드와 AI 수요 대응을 위한 인프라 투자 계획을 재확인했어요.",
             findings: [],

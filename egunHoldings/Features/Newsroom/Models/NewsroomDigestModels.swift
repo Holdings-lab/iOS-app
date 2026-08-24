@@ -70,17 +70,41 @@ nonisolated struct NewsroomTickerDetail: Equatable, Sendable {
     var asOfAtText: String? {
         asOfAt.map { NewsroomDigestDateFormat.asOfAtText(for: $0) }
     }
+
+    /// 브리핑만 교체한 사본. 배치가 비는 날 대비용 캐시 병합 결과로 바꿔 끼우는 용도라
+    /// 응답에 실려 온 값을 그대로 쓰지 않는다. 자세한 규칙은
+    /// `NewsroomAIJudgementStore.resolve(incoming:for:)`에 있다.
+    func replacingAIJudgement(_ judgement: NewsroomAIJudgement?) -> NewsroomTickerDetail {
+        NewsroomTickerDetail(
+            stock: stock,
+            headline: headline,
+            imageURL: imageURL,
+            aiJudgement: judgement,
+            summaryBody: summaryBody,
+            findings: findings,
+            sources: sources,
+            asOfAt: asOfAt,
+            aiNotice: aiNotice
+        )
+    }
 }
 
 /// AI 판단 블록. 서버가 headline(결론 한 줄)과 reason(근거 문단)을 분리해서 주므로
 /// 화면도 둘을 다르게 다룬다 — headline은 항상 노출하고, 분량이 큰 reason은 접어 둔다.
-nonisolated struct NewsroomAIJudgement: Equatable, Sendable {
+///
+/// 예측 모델은 매일 새로 도는데(뉴스 요약과 같은 주기), 그중 하루라도 배치가 비어서
+/// 이번 응답에 값이 안 실려 올 수 있다. 그런 날엔 화면이 통째로 비지 않도록
+/// 로컬에 캐시해 두고(그래서 Codable) `generatedAt`으로 신선도를 판단한다.
+/// "다음 브리핑 예정일" 같은 필드는 없다 — 정해진 주기로 예약 발행되는 게 아니라서다.
+nonisolated struct NewsroomAIJudgement: Equatable, Sendable, Codable {
     let title: String?
     let headline: String
     let reason: String?
     let alignment: NewsroomAIAlignment?
     let usedNewsURLs: [URL]
     let disclaimer: String?
+    /// 이 브리핑이 생성된 시각. 캐시와 응답 중 무엇이 최신인지 가르는 기준이다.
+    let generatedAt: Date?
 
     var titleText: String { title ?? "AI는 이렇게 판단했어요" }
     var disclaimerText: String { disclaimer ?? "본 내용은 투자 판단의 근거가 아닙니다." }
@@ -89,11 +113,15 @@ nonisolated struct NewsroomAIJudgement: Equatable, Sendable {
         guard let reason else { return false }
         return !reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
+
+    var generatedAtText: String? {
+        generatedAt.map { NewsroomDigestDateFormat.briefingDateText(for: $0) }
+    }
 }
 
 /// 뉴스 논조와 모델 신호의 방향성. 서버가 새 값을 추가해도 디코딩이 깨지지 않도록
 /// 매핑되지 않는 값은 nil로 두고, 그 경우 화면에서 칩을 아예 그리지 않는다.
-nonisolated enum NewsroomAIAlignment: Equatable, Sendable {
+nonisolated enum NewsroomAIAlignment: Equatable, Sendable, Codable {
     case positive
     case negative
     case mixed
@@ -125,6 +153,38 @@ nonisolated enum NewsroomAIAlignment: Equatable, Sendable {
         case .neutral:
             return "중립"
         }
+    }
+
+    /// 캐시 표현. 서버 어휘를 그대로 쓰므로 저장본을 눈으로 확인하기 쉽고,
+    /// 매핑 규칙이 바뀌어도 `init?(rawValue:)` 한 곳만 고치면 된다.
+    private var storageValue: String {
+        switch self {
+        case .positive:
+            return "POSITIVE"
+        case .negative:
+            return "NEGATIVE"
+        case .mixed:
+            return "MIXED"
+        case .neutral:
+            return "NEUTRAL"
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let rawValue = try container.decode(String.self)
+        guard let alignment = NewsroomAIAlignment(rawValue: rawValue) else {
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Unknown alignment: \(rawValue)"
+            )
+        }
+        self = alignment
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(storageValue)
     }
 }
 
@@ -173,8 +233,21 @@ nonisolated enum NewsroomDigestDateFormat {
         return formatter
     }()
 
+    /// 브리핑 날짜는 뉴스 기준시각과 달리 "며칠에 나왔나"만 의미가 있어(시각은 배치 시간일 뿐이다)
+    /// 시:분을 떼고 날짜만 보여준다.
+    private static let briefingDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "M월 d일"
+        return formatter
+    }()
+
     static func asOfAtText(for date: Date) -> String {
         "\(asOfAtFormatter.string(from: date)) 기준"
+    }
+
+    static func briefingDateText(for date: Date) -> String {
+        briefingDateFormatter.string(from: date)
     }
 
     static func relativeText(for date: Date) -> String {

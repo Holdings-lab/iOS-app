@@ -319,6 +319,12 @@ private struct NewsroomAIJudgmentSection: View {
         VStack(alignment: .leading, spacing: 10) {
             header
 
+            if let generatedAtText = judgement.generatedAtText {
+                Text("\(generatedAtText) 브리핑")
+                    .font(.pretendard(11.5, weight: .semibold))
+                    .foregroundStyle(Color.brand.opacity(0.75))
+            }
+
             Text(judgement.headline)
                 .font(.pretendard(14.5, weight: .medium))
                 .foregroundStyle(Color.textPrimary)

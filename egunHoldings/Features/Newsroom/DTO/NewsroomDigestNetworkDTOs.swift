@@ -153,6 +153,7 @@ nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
     let alignment: String?
     let usedNewsURLs: [String]?
     let disclaimer: String?
+    let generatedAt: Date?
 
     private enum CodingKeys: String, CodingKey {
         case title
@@ -161,6 +162,7 @@ nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
         case alignment
         case usedNewsURLs = "used_news_url"
         case disclaimer
+        case generatedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -171,6 +173,7 @@ nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
             alignment = nil
             usedNewsURLs = nil
             disclaimer = nil
+            generatedAt = nil
             return
         }
 
@@ -181,6 +184,10 @@ nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
         alignment = try container.decodeIfPresent(String.self, forKey: .alignment)
         usedNewsURLs = try container.decodeIfPresent([String].self, forKey: .usedNewsURLs)
         disclaimer = try container.decodeIfPresent(String.self, forKey: .disclaimer)
+        // generatedAt은 없어도 되고(구 스키마) 형식이 틀려도 브리핑 본문까지 날리면 안 되므로
+        // Date로 강제 디코딩하지 않고 문자열로 받아 최선 노력으로 파싱한다.
+        generatedAt = try container.decodeIfPresent(String.self, forKey: .generatedAt)
+            .flatMap(NewsroomDigestDateFormat.parseISO8601)
     }
 
     func toDomain() -> NewsroomAIJudgement {
@@ -190,7 +197,8 @@ nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
             reason: reason,
             alignment: alignment.flatMap(NewsroomAIAlignment.init(rawValue:)),
             usedNewsURLs: (usedNewsURLs ?? []).compactMap(URL.init(string:)),
-            disclaimer: disclaimer
+            disclaimer: disclaimer,
+            generatedAt: generatedAt
         )
     }
 }
