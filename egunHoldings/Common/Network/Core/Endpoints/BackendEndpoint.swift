@@ -13,9 +13,6 @@ import Foundation
 /// 반면 `/api/feeds/policy*`는 이번 리팩터에 포함되지 않았다 — JWT 보호 대상도 아니고(PROTECTED_PREFIXES에
 /// `/api/feeds` 없음), 여전히 `userId`를 쿼리 파라미터로 명시적으로 받는다(ContentFeedController 변경 없음).
 ///
-/// `/admin/...`은 관리자가 *다른* 사용자를 대상으로 조작하는 API라 대상 userId를 계속 명시적으로 받되,
-/// 이제 `Authorization` 대신(또는 그와 별개로) `X-Admin-Key` 헤더가 필수다(AdminAuthenticationFilter 신설,
-/// 2026-08). 이 앱에는 admin 화면이 없어 호출부가 없으므로 헤더는 아직 배선하지 않았다.
 nonisolated enum BackendEndpoint {
     static func emailSendCode(body: Data) -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/auth/email/send-code", method: .post, body: body)
@@ -258,49 +255,6 @@ nonisolated enum BackendEndpoint {
         }
 
         return Endpoint(baseURL: baseURL, path: "/api/internal/webhooks/events", method: .post, headers: headers, body: body)
-    }
-
-    // MARK: - Admin (관리자가 대상 사용자를 명시적으로 지정하는 API — userId 유지)
-    //
-    // 2026-08부터 `/admin/*`는 AdminAuthenticationFilter가 `X-Admin-Key` 헤더를 강제한다.
-    // 이 앱에는 admin 화면/호출부가 없어 헤더는 아직 배선하지 않았다 — 실제로 쓰려면 추가 필요.
-
-    static func adminAccounts(page: Int = 0, size: Int = 100) -> Endpoint {
-        Endpoint(
-            baseURL: baseURL,
-            path: "/admin/accounts",
-            queryItems: [
-                URLQueryItem(name: "page", value: String(page)),
-                URLQueryItem(name: "size", value: String(size)),
-            ],
-            authorizationRequirement: .bearerToken
-        )
-    }
-
-    static func adminAddAccount(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/admin/accounts/add", method: .post, body: body, authorizationRequirement: .bearerToken)
-    }
-
-    static func adminChangePassword(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/admin/accounts/change-password", method: .post, body: body, authorizationRequirement: .bearerToken)
-    }
-
-    static func adminDeleteAccount(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/admin/accounts/\(userId)", method: .delete, authorizationRequirement: .bearerToken)
-    }
-
-    static func adminUpdateFCMToken(userId: Int64, fcmToken: String) -> Endpoint {
-        Endpoint(
-            baseURL: baseURL,
-            path: "/admin/accounts/\(userId)/fcm-token",
-            queryItems: [URLQueryItem(name: "fcmToken", value: fcmToken)],
-            method: .patch,
-            authorizationRequirement: .bearerToken
-        )
-    }
-
-    static func adminSendNotification(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/admin/notifications/send", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
     private static let baseURL = NetworkConfiguration.backendBaseURL
