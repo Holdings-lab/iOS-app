@@ -75,30 +75,6 @@ nonisolated struct TodayGoalResponseDTO: Decodable {
     }
 }
 
-// MARK: - GET /api/users/{id}/holdings-news (Section 4)
-
-nonisolated struct TodayHoldingsNewsResponseDTO: Decodable {
-    // `basis`는 isAccountLinked로 100% 결정되는 파생값이라(연동 시 holdings+interests, 미연동 시
-    // interests) 별도로 저장하지 않고 디코딩만 허용한다. 헤더 문구는 isAccountLinked를 그대로 재사용한다.
-    let items: [TodayNewsItemDTO]?
-
-    func toDomain(fallback: [TodayNewsItem]) -> [TodayNewsItem] {
-        guard let items else { return fallback }
-        return items.map { $0.toDomain() }
-    }
-}
-
-nonisolated struct TodayNewsItemDTO: Decodable {
-    let id: String
-    let ticker: String?
-    let headline: String
-    let aiSummary: String
-
-    func toDomain() -> TodayNewsItem {
-        TodayNewsItem(id: id, title: headline, summary: aiSummary, ticker: ticker)
-    }
-}
-
 nonisolated private enum TodayDTOMapper {
     static func severity(from value: String?, fallback: TodayBriefingSeverity) -> TodayBriefingSeverity {
         switch value {

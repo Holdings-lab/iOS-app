@@ -18,17 +18,16 @@ nonisolated struct LiveSignalRepository: SignalRepositoryProtocol {
     func fetchThemeSignals() async throws -> [PortfolioThemeSignal] {
         do {
             let dtos = try await apiClient.requestResult(
-                BackendEndpoint.signalThemes(),
-                as: [SignalThemeResponseDTO].self
+                BackendEndpoint.homeSecondarySignals(),
+                as: [HomeSecondarySignalDTO].self
             )
-            let signals = dtos.compactMap { $0.toDomain(relatedEventId: $0.relatedEventId) }
-            return signals.isEmpty ? try await fallbackRepository.fetchThemeSignals() : signals
+            return dtos.compactMap { $0.toDomain() }
         } catch {
             guard Self.shouldUseFallback(for: error) else {
                 throw error
             }
 
-            APIFallbackLog.log("GET /api/signals/themes", error: error)
+            APIFallbackLog.log("GET /api/home/signals/secondary", error: error)
             return try await fallbackRepository.fetchThemeSignals()
         }
     }
@@ -36,17 +35,16 @@ nonisolated struct LiveSignalRepository: SignalRepositoryProtocol {
     func fetchSignalCards(theme: PortfolioThemeSignal.Theme) async throws -> [SignalCard] {
         do {
             let dtos = try await apiClient.requestResult(
-                BackendEndpoint.signalCards(theme: theme.tickerId),
-                as: [SignalCardResponseDTO].self
+                BackendEndpoint.homeSecondarySignals(),
+                as: [HomeSecondarySignalDTO].self
             )
-            let cards = dtos.compactMap { $0.toDomain() }
-            return cards.isEmpty ? try await fallbackRepository.fetchSignalCards(theme: theme) : cards
+            return dtos.compactMap { $0.toSignalCard(for: theme) }
         } catch {
             guard Self.shouldUseFallback(for: error) else {
                 throw error
             }
 
-            APIFallbackLog.log("GET /api/signals/cards?theme=\(theme.tickerId)", error: error)
+            APIFallbackLog.log("GET /api/home/signals/secondary", error: error)
             return try await fallbackRepository.fetchSignalCards(theme: theme)
         }
     }

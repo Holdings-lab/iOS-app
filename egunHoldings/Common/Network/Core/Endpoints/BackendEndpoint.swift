@@ -112,11 +112,6 @@ nonisolated enum BackendEndpoint {
         Endpoint(baseURL: baseURL, path: "/api/holdings", authorizationRequirement: .bearerToken)
     }
 
-    /// ⚠️ 서버 API LIST 미등재 (2026-08 재확인). 대응 엔드포인트가 없어 Mock 폴백으로 동작 중.
-    static func holdingsNews() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/holdings-news", authorizationRequirement: .bearerToken)
-    }
-
     /// body 없이 호출하면 서버의 `KIS_MOCK_*` 설정으로 모의투자 계좌를 연결한다.
     static func linkBrokerAccount() -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/accounts", method: .post, authorizationRequirement: .bearerToken)
@@ -206,22 +201,9 @@ nonisolated enum BackendEndpoint {
         return Endpoint(baseURL: baseURL, path: "/api/events/\(sectionPath.rawValue)", queryItems: queryItems, authorizationRequirement: .bearerToken)
     }
 
-    /// ⚠️ 서버 API LIST 미등재. `/api/signals/*` 네임스페이스 자체가 서버에 없다.
-    static func signalDetail(id: String) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/signals/\(escapedPathComponent(id))", authorizationRequirement: .bearerToken)
-    }
-
-    static func signalThemes() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/signals/themes", authorizationRequirement: .bearerToken)
-    }
-
-    static func signalCards(theme: String) -> Endpoint {
-        Endpoint(
-            baseURL: baseURL,
-            path: "/api/signals/cards",
-            queryItems: [URLQueryItem(name: "theme", value: theme)],
-            authorizationRequirement: .bearerToken
-        )
+    /// 홈 브리핑의 보조 정책 신호. 기존 `/api/signals/**`는 서버에 없다.
+    static func homeSecondarySignals() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/home/signals/secondary", authorizationRequirement: .bearerToken)
     }
 
     static func heatmap(marketScope: String = "all", country: String = "all") -> Endpoint {

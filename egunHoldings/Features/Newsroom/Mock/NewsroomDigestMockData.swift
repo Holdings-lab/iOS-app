@@ -83,7 +83,7 @@ nonisolated enum NewsroomDigestMockData {
 
     static var nvidiaDetail: NewsroomTickerDetail {
         NewsroomTickerDetail(
-            stock: NewsroomStockMeta(ticker: "NVDA", name: "NVIDIA", dailyChangePercent: 1.8, weightPercent: 12, totalAssetImpactPercent: 0.22),
+            stock: NewsroomStockMeta(ticker: "NVDA", name: "NVIDIA", logoURL: nil, dailyChangePercent: 1.8, weightPercent: 12, totalAssetImpactPercent: 0.22),
             headline: nvidiaHeadline,
             imageURL: nil,
             aiJudgement: NewsroomAIJudgement(
@@ -111,7 +111,7 @@ nonisolated enum NewsroomDigestMockData {
 
     static var appleDetail: NewsroomTickerDetail {
         NewsroomTickerDetail(
-            stock: NewsroomStockMeta(ticker: "AAPL", name: "Apple", dailyChangePercent: -0.6, weightPercent: 18, totalAssetImpactPercent: -0.11),
+            stock: NewsroomStockMeta(ticker: "AAPL", name: "Apple", logoURL: nil, dailyChangePercent: -0.6, weightPercent: 18, totalAssetImpactPercent: -0.11),
             headline: appleHeadline,
             imageURL: nil,
             aiJudgement: NewsroomAIJudgement(
@@ -135,7 +135,7 @@ nonisolated enum NewsroomDigestMockData {
 
     static var msftDetail: NewsroomTickerDetail {
         NewsroomTickerDetail(
-            stock: NewsroomStockMeta(ticker: "MSFT", name: "Microsoft", dailyChangePercent: 0.2, weightPercent: 9, totalAssetImpactPercent: 0.02),
+            stock: NewsroomStockMeta(ticker: "MSFT", name: "Microsoft", logoURL: nil, dailyChangePercent: 0.2, weightPercent: 9, totalAssetImpactPercent: 0.02),
             headline: "마이크로소프트, 클라우드 인프라 투자 계획 재확인",
             imageURL: nil,
             aiJudgement: NewsroomAIJudgement(
@@ -196,6 +196,7 @@ nonisolated enum NewsroomDigestMockData {
         NewsroomHoldingBriefing(
             ticker: ticker,
             name: name,
+            logoURL: nil,
             weightPercent: Double(weight),
             briefingType: type,
             dailyChangePercent: dailyChangePct,
@@ -214,6 +215,7 @@ nonisolated enum NewsroomDigestMockData {
             title: title,
             publisher: publisher,
             publishedAtRaw: formatter.string(from: hoursBeforeGeneration(hoursAgo)),
+            thumbnailURL: nil,
             url: URL(string: "https://example.com/\(id)")
         )
     }

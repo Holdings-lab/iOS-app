@@ -31,7 +31,7 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
         async let briefingResult = fetchBriefing(userId: userId, fallback: fallback.briefing)
         async let holdingsResult = fetchHoldings(userId: userId, fallback: fallback.holdings)
         async let goalResult = fetchGoal(userId: userId, fallback: fallback.goalProgress)
-        async let newsResult = fetchNews(userId: userId, fallback: fallback.newsItems)
+        async let newsResult = fetchNews(fallback: fallback.newsItems)
 
         let (briefing, holdings, goal, news) = await (briefingResult, holdingsResult, goalResult, newsResult)
 
@@ -94,15 +94,23 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
         }
     }
 
-    private func fetchNews(userId: Int64, fallback: [TodayNewsItem]) async -> [TodayNewsItem] {
+    private func fetchNews(fallback: [TodayNewsItem]) async -> [TodayNewsItem] {
         do {
             let response = try await apiClient.requestResult(
-                BackendEndpoint.holdingsNews(),
-                as: TodayHoldingsNewsResponseDTO.self
+                BackendEndpoint.newsroom(),
+                as: NewsroomBriefingResponseDTO.self
             )
-            return response.toDomain(fallback: fallback)
+            let items = response.toDomain().holdings.prefix(3).map { holding in
+                TodayNewsItem(
+                    id: holding.ticker,
+                    title: holding.headline ?? holding.name,
+                    summary: holding.summary ?? "새로운 뉴스를 확인해 보세요.",
+                    ticker: holding.ticker
+                )
+            }
+            return items.isEmpty ? fallback : items
         } catch {
-            APIFallbackLog.log("GET /api/users/\(userId)/holdings-news", error: error)
+            APIFallbackLog.log("GET /api/newsroom", error: error)
             return fallback
         }
     }

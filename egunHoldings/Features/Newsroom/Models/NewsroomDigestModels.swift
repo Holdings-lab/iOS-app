@@ -28,6 +28,7 @@ nonisolated enum NewsroomBriefingType: Equatable, Sendable {
 nonisolated struct NewsroomHoldingBriefing: Identifiable, Equatable, Hashable, Sendable {
     let ticker: String
     let name: String
+    let logoURL: URL?
     let weightPercent: Double
     let briefingType: NewsroomBriefingType
     let dailyChangePercent: Double?
@@ -191,6 +192,7 @@ nonisolated enum NewsroomAIAlignment: Equatable, Sendable, Codable {
 nonisolated struct NewsroomStockMeta: Equatable, Sendable {
     let ticker: String
     let name: String
+    let logoURL: URL?
     let dailyChangePercent: Double?
     let weightPercent: Double?
     let totalAssetImpactPercent: Double?
@@ -202,6 +204,7 @@ nonisolated struct NewsroomSourceItem: Identifiable, Equatable, Sendable {
     let publisher: String
     /// 서버가 ISO8601 파싱에 실패하면 원본 문자열을 그대로 내려주므로 Date로 강제하지 않는다.
     let publishedAtRaw: String?
+    let thumbnailURL: URL?
     let url: URL?
 
     var id: String { newsId ?? url?.absoluteString ?? title }

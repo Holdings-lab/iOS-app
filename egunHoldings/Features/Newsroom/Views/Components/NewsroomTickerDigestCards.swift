@@ -33,7 +33,7 @@ struct NewsroomTickerDigestHeroCard: View {
         Button(action: onOpenDetail) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 10) {
-                    NewsroomTickerLogo(ticker: holding.ticker, size: 34)
+                    NewsroomTickerLogo(ticker: holding.ticker, logoURL: holding.logoURL, size: 34)
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(holding.ticker)
@@ -105,7 +105,7 @@ struct NewsroomTickerDigestCompactRow: View {
     var body: some View {
         Button(action: onOpenDetail) {
             HStack(spacing: 11) {
-                NewsroomTickerLogo(ticker: holding.ticker, size: 32)
+                NewsroomTickerLogo(ticker: holding.ticker, logoURL: holding.logoURL, size: 32)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(holding.ticker)
@@ -142,7 +142,7 @@ struct NewsroomTickerQuietRow: View {
 
     var body: some View {
         HStack(spacing: 11) {
-            NewsroomTickerLogo(ticker: holding.ticker, size: 32)
+            NewsroomTickerLogo(ticker: holding.ticker, logoURL: holding.logoURL, size: 32)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(holding.ticker) · \(holding.headline ?? "특이사항 없음")")
@@ -170,18 +170,40 @@ struct NewsroomTickerQuietRow: View {
     }
 }
 
-/// 티커 이니셜 배지. 서버 응답에 로고 URL이 없어(목록·상세 모두) 항상 이니셜만 그린다.
+/// 서버 로고를 우선 표시하고, 네트워크 실패나 URL 부재 시 티커 이니셜로 폴백한다.
 struct NewsroomTickerLogo: View {
     let ticker: String
+    let logoURL: URL?
     let size: CGFloat
 
     var body: some View {
+        Group {
+            if let logoURL {
+                AsyncImage(url: logoURL) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .padding(size * 0.14)
+                    } else {
+                        fallback
+                    }
+                }
+            } else {
+                fallback
+            }
+        }
+        .frame(width: size, height: size)
+        .background(Color.brandTintBg, in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
+        .accessibilityHidden(true)
+    }
+
+    private var fallback: some View {
         Text(String(ticker.prefix(1)))
             .font(.pretendard(size * 0.42, weight: .bold))
             .foregroundStyle(Color.brand)
             .frame(width: size, height: size)
-            .background(Color.brandTintBg, in: RoundedRectangle(cornerRadius: size * 0.3, style: .continuous))
-            .accessibilityHidden(true)
     }
 }
 

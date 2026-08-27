@@ -49,6 +49,7 @@ nonisolated struct NewsroomSectionDTO: Decodable, Sendable {
 nonisolated struct NewsroomHoldingBriefingDTO: Decodable, Sendable {
     let ticker: String
     let name: String
+    let logoUrl: String?
     let weightPct: Double
     let briefingType: NewsroomBriefingTypeDTO
     let dailyChangePct: Double?
@@ -61,6 +62,7 @@ nonisolated struct NewsroomHoldingBriefingDTO: Decodable, Sendable {
         NewsroomHoldingBriefing(
             ticker: ticker,
             name: name,
+            logoURL: logoUrl.flatMap(URL.init(string:)),
             weightPercent: weightPct,
             briefingType: NewsroomBriefingType(dto: briefingType),
             dailyChangePercent: dailyChangePct,
@@ -126,6 +128,7 @@ nonisolated struct NewsroomTickerDetailResponseDTO: Decodable, Sendable {
 nonisolated struct NewsroomStockMetaDTO: Decodable, Sendable {
     let ticker: String
     let name: String
+    let logoUrl: String?
     let dailyChangePct: Double?
     let weightPct: Double?
     let totalAssetImpactPct: Double?
@@ -134,6 +137,7 @@ nonisolated struct NewsroomStockMetaDTO: Decodable, Sendable {
         NewsroomStockMeta(
             ticker: ticker,
             name: name,
+            logoURL: logoUrl.flatMap(URL.init(string:)),
             dailyChangePercent: dailyChangePct,
             weightPercent: weightPct,
             totalAssetImpactPercent: totalAssetImpactPct
@@ -215,6 +219,7 @@ nonisolated struct NewsroomSourceItemDTO: Decodable, Sendable {
     /// 서버가 항상 ISO8601로 못 줄 수 있어(원문 파싱 실패 시 원본 문자열 그대로 폴백) 문자열로 받고
     /// 화면에서 최선 노력으로 파싱한다 — 여기서 Date로 강제하면 그 경우 전체 디코딩이 깨진다.
     let publishedAt: String?
+    let thumbnailUrl: String?
     let url: String?
 
     func toDomain() -> NewsroomSourceItem {
@@ -223,6 +228,7 @@ nonisolated struct NewsroomSourceItemDTO: Decodable, Sendable {
             title: title,
             publisher: publisher,
             publishedAtRaw: publishedAt,
+            thumbnailURL: thumbnailUrl.flatMap(URL.init(string:)),
             url: url.flatMap(URL.init(string:))
         )
     }

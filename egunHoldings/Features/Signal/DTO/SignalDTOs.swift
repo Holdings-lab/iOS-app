@@ -1,31 +1,13 @@
 import Foundation
 import SwiftUI
 
-// MARK: - Theme Signals (Today Top 3)
+// MARK: - GET /api/home/signals/secondary
 
-nonisolated struct SignalThemeResponseDTO: Decodable {
-    let theme: String
-    let myExposurePercent: Int
-    let verdictKind: String?
-    let prescription: SignalPrescriptionDTO?
-    let nextEventLabel: String?
-    let relatedEventId: Int?
-}
-
-nonisolated struct SignalPrescriptionDTO: Decodable {
-    let summary: String
-    let action: String
-    let nowPercent: String?
-    let goalLabel: String?
-}
-
-// MARK: - Signal Cards
-
-nonisolated struct SignalCardResponseDTO: Decodable {
-    let intensity: String
+nonisolated struct HomeSecondarySignalDTO: Decodable {
     let title: String
-    let description: String
-    let newsTitle: String?
+    let shortJudgement: String
+    let exposurePercent: Int
+    let oneLineReason: String
 }
 
 // MARK: - Event Detail
@@ -49,76 +31,85 @@ nonisolated struct SignalEventResponseDTO: Decodable {
 
 // MARK: - Domain Mapping
 
-extension SignalThemeResponseDTO {
-    func toDomain(relatedEventId: Int? = nil) -> PortfolioThemeSignal? {
-        let theme: PortfolioThemeSignal.Theme
-        switch self.theme {
-        case "big_tech":
-            theme = .bigTech
-        case "semiconductor":
-            theme = .semiconductor
-        case "financials":
-            theme = .financials
-        case "green_energy":
-            theme = .greenEnergy
-        default:
-            return nil
-        }
+extension HomeSecondarySignalDTO {
+    func toDomain() -> PortfolioThemeSignal? {
+        guard let theme = PortfolioThemeSignal.Theme(serverTitle: title) else { return nil }
 
-        let verdict: PolSignalVerdictKind? = verdictKind.flatMap {
-            switch $0 {
-            case "review":
-                return .review
-            case "watch":
-                return .watch
-            case "adjust":
-                return .adjust
-            default:
-                return nil
-            }
-        }
-
+        let verdict = PolSignalVerdictKind(serverJudgement: shortJudgement)
         return PortfolioThemeSignal(
             id: UUID(),
             theme: theme,
-            myExposurePercent: myExposurePercent,
+            myExposurePercent: exposurePercent,
             verdictKind: verdict,
-            prescription: prescription.map {
+            prescription: verdict.map { _ in
                 TodayDecisionPrescription(
-                    summary: $0.summary,
-                    action: $0.action,
-                    nowPercent: $0.nowPercent,
-                    goalLabel: $0.goalLabel,
-                    narrative: nil
+                    summary: oneLineReason,
+                    action: shortJudgement,
+                    nowPercent: "\(exposurePercent)%",
+                    goalLabel: nil,
+                    narrative: oneLineReason
                 )
             },
-            nextEventLabel: nextEventLabel,
-            relatedEventId: relatedEventId ?? self.relatedEventId
+            nextEventLabel: nil,
+            relatedEventId: nil
+        )
+    }
+
+    func toSignalCard(for theme: PortfolioThemeSignal.Theme) -> SignalCard? {
+        guard PortfolioThemeSignal.Theme(serverTitle: title) == theme else { return nil }
+
+        return SignalCard(
+            id: UUID(),
+            intensity: SignalCard.Intensity(serverJudgement: shortJudgement),
+            title: title,
+            description: oneLineReason,
+            newsTitle: shortJudgement
         )
     }
 }
 
-extension SignalCardResponseDTO {
-    func toDomain() -> SignalCard? {
-        let intensity: SignalCard.Intensity
-        switch self.intensity {
-        case "veryHigh":
-            intensity = .veryHigh
-        case "high":
-            intensity = .high
-        case "medium":
-            intensity = .medium
-        default:
+private extension PortfolioThemeSignal.Theme {
+    init?(serverTitle: String) {
+        let value = serverTitle.lowercased()
+        if value.contains("반도체") || value.contains("semi") || value.contains("chip") {
+            self = .semiconductor
+        } else if value.contains("금융") || value.contains("financial") || value.contains("bank") {
+            self = .financials
+        } else if value.contains("친환경") || value.contains("green") || value.contains("energy") {
+            self = .greenEnergy
+        } else if value.contains("빅테크") || value.contains("tech") || value.contains("기술") {
+            self = .bigTech
+        } else {
             return nil
         }
+    }
+}
 
-        return SignalCard(
-            id: UUID(),
-            intensity: intensity,
-            title: title,
-            description: description,
-            newsTitle: newsTitle
-        )
+private extension PolSignalVerdictKind {
+    init?(serverJudgement: String) {
+        let value = serverJudgement.lowercased()
+        if value.contains("조정") || value.contains("대응") || value.contains("adjust") {
+            self = .adjust
+        } else if value.contains("관망") || value.contains("지켜") || value.contains("대기") || value.contains("watch") {
+            self = .watch
+        } else if value.contains("점검") || value.contains("주의") || value.contains("review") {
+            self = .review
+        } else {
+            return nil
+        }
+    }
+}
+
+private extension SignalCard.Intensity {
+    init(serverJudgement: String) {
+        switch PolSignalVerdictKind(serverJudgement: serverJudgement) {
+        case .adjust:
+            self = .veryHigh
+        case .review:
+            self = .high
+        case .watch, nil:
+            self = .medium
+        }
     }
 }
 

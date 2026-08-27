@@ -18,6 +18,7 @@ struct NewsroomDigestDetailView: View {
         viewModel.detail?.stock ?? NewsroomStockMeta(
             ticker: viewModel.holding.ticker,
             name: viewModel.holding.name,
+            logoURL: viewModel.holding.logoURL,
             dailyChangePercent: viewModel.holding.dailyChangePercent,
             weightPercent: viewModel.holding.weightPercent,
             totalAssetImpactPercent: viewModel.holding.totalAssetImpactPercent
@@ -131,7 +132,7 @@ struct NewsroomDigestDetailView: View {
 
     private var assetHeader: some View {
         HStack(alignment: .top, spacing: 12) {
-            NewsroomTickerLogo(ticker: stock.ticker, size: 44)
+            NewsroomTickerLogo(ticker: stock.ticker, logoURL: stock.logoURL, size: 44)
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 7) {
@@ -187,7 +188,7 @@ struct NewsroomDigestDetailView: View {
 
     private var imageFallback: some View {
         VStack(spacing: 10) {
-            NewsroomTickerLogo(ticker: stock.ticker, size: 72)
+            NewsroomTickerLogo(ticker: stock.ticker, logoURL: stock.logoURL, size: 72)
             Text(stock.name)
                 .font(.pretendard(14, weight: .bold))
                 .foregroundStyle(Color.textSecondary)
@@ -258,6 +259,8 @@ struct NewsroomDigestDetailView: View {
                         }
                     } label: {
                         HStack(spacing: 10) {
+                            NewsroomSourceThumbnail(url: source.thumbnailURL)
+
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(source.title)
                                     .font(.pretendard(14, weight: .semibold))
@@ -301,6 +304,40 @@ struct NewsroomDigestDetailView: View {
             .lineSpacing(3)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct NewsroomSourceThumbnail: View {
+    let url: URL?
+
+    var body: some View {
+        Group {
+            if let url {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        fallback
+                    }
+                }
+            } else {
+                fallback
+            }
+        }
+        .frame(width: 52, height: 52)
+        .background(Color.muted)
+        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .clipped()
+        .accessibilityHidden(true)
+    }
+
+    private var fallback: some View {
+        Image(systemName: "newspaper")
+            .font(.system(size: 17, weight: .medium))
+            .foregroundStyle(Color.textQuaternary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
