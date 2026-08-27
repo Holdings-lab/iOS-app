@@ -12,6 +12,7 @@ struct OnboardingStep7BrokerageView: View {
     @State private var isSkipConfirmationPresented = false
     @State private var isLinking = false
     @State private var isLinkCompleted = false
+    @State private var isLinkErrorPresented = false
     @State private var isRevealed = false
 
     private let columns = [
@@ -107,6 +108,11 @@ struct OnboardingStep7BrokerageView: View {
 
             Button("계좌 연결하기", role: .cancel) {}
         }
+        .alert("계좌를 연결하지 못했어요", isPresented: $isLinkErrorPresented) {
+            Button("확인", role: .cancel) {}
+        } message: {
+            Text(viewModel.brokerageLinkErrorMessage ?? "잠시 후 다시 시도해 주세요.")
+        }
         .onboardingV3Background()
         .onboardingRevealSequence(isRevealed: $isRevealed, reduceMotion: reduceMotion)
         .overlay {
@@ -126,7 +132,12 @@ struct OnboardingStep7BrokerageView: View {
     private func submit() {
         isLinking = true
         Task {
-            await viewModel.connectBrokerage(userId: userId, reduceMotion: reduceMotion)
+            let didConnect = await viewModel.connectBrokerage(userId: userId, reduceMotion: reduceMotion)
+            guard didConnect else {
+                isLinking = false
+                isLinkErrorPresented = true
+                return
+            }
 
             withAnimation(reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.75)) {
                 isLinkCompleted = true

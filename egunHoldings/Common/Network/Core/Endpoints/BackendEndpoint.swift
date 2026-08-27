@@ -120,25 +120,17 @@ nonisolated enum BackendEndpoint {
         Endpoint(baseURL: baseURL, path: "/api/holdings-news", authorizationRequirement: .bearerToken)
     }
 
-    /// ⚠️ 서버 API LIST 미등재 (2026-08 재확인). 실제 증권사 연동 라우트는 `/api/accounts`
-    /// (`BrokerAccountController` — `LinkRequest{hyphenUserId, hyphenUserPw, hyphenAccountPassword, ...}`,
-    /// 평문 자격증명)이며, 여기서 쓰는 AES-GCM 암호화 봉투 계약과는 전혀 다르다. 경로만 새 규칙에
-    /// 맞춰뒀을 뿐 여전히 서버에 없는 경로 — 별도로 계약을 정리해야 한다.
-    static func brokerageConnections() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/brokerage-connections", authorizationRequirement: .bearerToken)
+    /// body 없이 호출하면 서버의 `KIS_MOCK_*` 설정으로 모의투자 계좌를 연결한다.
+    static func linkBrokerAccount() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/accounts", method: .post, authorizationRequirement: .bearerToken)
     }
 
-    static func createBrokerageConnection(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/brokerage-connections", method: .post, body: body, authorizationRequirement: .bearerToken)
+    static func brokerAccounts() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/accounts", authorizationRequirement: .bearerToken)
     }
 
-    static func deleteBrokerageConnection(connectionId: String) -> Endpoint {
-        Endpoint(
-            baseURL: baseURL,
-            path: "/api/brokerage-connections/\(escapedPathComponent(connectionId))",
-            method: .delete,
-            authorizationRequirement: .bearerToken
-        )
+    static func syncBrokerAccount(accountId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/accounts/\(accountId)/sync", method: .post, authorizationRequirement: .bearerToken)
     }
 
     static func newsroom(briefingDate: String? = nil) -> Endpoint {

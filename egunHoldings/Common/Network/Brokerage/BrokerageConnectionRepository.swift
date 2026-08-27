@@ -1,21 +1,30 @@
 import Foundation
 
-nonisolated enum BrokerageConnectionError: Error {
-    /// 서버 brokerage enum에 매핑되지 않는 기관
+nonisolated enum BrokerageConnectionError: LocalizedError {
     case unsupportedInstitution
+    case missingAccount
+    case connectionRejected
+    case syncFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .unsupportedInstitution:
+            return "현재는 한국투자증권 모의투자만 연결할 수 있어요."
+        case .missingAccount:
+            return "서버에서 연결된 계좌 정보를 받지 못했어요."
+        case .connectionRejected:
+            return "모의투자 계좌가 연결 상태가 아니에요."
+        case .syncFailed:
+            return "모의투자 계좌 동기화에 실패했어요."
+        }
+    }
 }
 
-/// 온보딩 Step 7·설정 탭 "연결된 계좌"·오늘 탭 빈 상태 CTA가 공유하는 증권사 연동 리포지토리.
-/// 연동 추가/해제 성공 시 ①②③ 응답의 `isAccountLinked`가 서버에서 전환된다.
-///
-/// 한국투자증권 모의투자 구조에서는 앱키·시크릿이 서버에만 존재하므로 클라이언트가 보낼
-/// 크리덴셜이 없다. `connect`는 "이 사용자를 모의투자 계좌에 붙여달라"는 요청에 가깝다.
+/// 서버 환경에 있는 KIS 모의투자 계좌를 현재 JWT 사용자에게 연결한다.
+/// 앱은 증권사 자격증명을 수집하거나 전송하지 않는다.
 nonisolated protocol BrokerageConnectionRepositoryProtocol: Sendable {
-    func connect(userId: Int64, institutionID: String) async throws -> BrokerageConnection
-
-    func fetchConnections(userId: Int64) async throws -> [BrokerageConnection]
-
-    func disconnect(userId: Int64, connectionId: String) async throws -> BrokerageConnection
+    func connectKISDemoAccount(institutionID: String) async throws -> BrokerageConnection
+    func sync(accountId: Int64) async throws
 }
 
 nonisolated struct LiveBrokerageConnectionRepository: BrokerageConnectionRepositoryProtocol {
@@ -25,35 +34,45 @@ nonisolated struct LiveBrokerageConnectionRepository: BrokerageConnectionReposit
         self.apiClient = apiClient
     }
 
-    func connect(userId: Int64, institutionID: String) async throws -> BrokerageConnection {
-        guard let brokerage = BrokerageCode(institutionID: institutionID) else {
+    func connectKISDemoAccount(institutionID: String) async throws -> BrokerageConnection {
+        guard BrokerageCode(institutionID: institutionID) == .kis else {
             throw BrokerageConnectionError.unsupportedInstitution
         }
 
-        let body = try NetworkJSONCoding.encodeJSON(
-            BrokerageConnectionCreateRequestDTO(brokerage: brokerage.rawValue)
-        )
+        if let existing = try await connectedKISAccount() {
+            return existing
+        }
 
-        let response = try await apiClient.requestResult(
-            BackendEndpoint.createBrokerageConnection(body: body),
-            as: BrokerageConnectionResponseDTO.self
-        )
-        return response.toDomain()
-    }
-
-    func fetchConnections(userId: Int64) async throws -> [BrokerageConnection] {
-        let response = try await apiClient.requestResult(
-            BackendEndpoint.brokerageConnections(),
+        let accounts = try await apiClient.requestResult(
+            BackendEndpoint.linkBrokerAccount(),
             as: [BrokerageConnectionResponseDTO].self
         )
-        return response.map { $0.toDomain() }
+        guard let account = accounts.first?.toDomain() else {
+            throw BrokerageConnectionError.missingAccount
+        }
+        guard account.status == .connected else {
+            throw BrokerageConnectionError.connectionRejected
+        }
+        return account
     }
 
-    func disconnect(userId: Int64, connectionId: String) async throws -> BrokerageConnection {
+    func sync(accountId: Int64) async throws {
         let response = try await apiClient.requestResult(
-            BackendEndpoint.deleteBrokerageConnection(connectionId: connectionId),
-            as: BrokerageConnectionResponseDTO.self
+            BackendEndpoint.syncBrokerAccount(accountId: accountId),
+            as: BrokerageSyncResponseDTO.self
         )
-        return response.toDomain()
+        guard response.status == "SUCCESS" else {
+            throw BrokerageConnectionError.syncFailed
+        }
+    }
+
+    private func connectedKISAccount() async throws -> BrokerageConnection? {
+        let accounts = try await apiClient.requestResult(
+            BackendEndpoint.brokerAccounts(),
+            as: [BrokerageConnectionResponseDTO].self
+        )
+        return accounts.map { $0.toDomain() }.first { account in
+            account.brokerage == .kis && account.status == .connected
+        }
     }
 }

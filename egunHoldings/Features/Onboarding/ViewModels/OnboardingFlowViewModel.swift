@@ -13,14 +13,15 @@ final class OnboardingFlowViewModel: ObservableObject {
     @Published private(set) var selectedWatchAssets: Set<WatchAssetSector> = []
     @Published private(set) var connectedInstitutionID: String?
     @Published private(set) var isBrokerageConnected = false
-    @Published private(set) var brokerageConnectionId: String?
+    @Published private(set) var brokerageAccountId: Int64?
 
     // MARK: - Step 7 연결 연출 상태
 
     @Published private(set) var activeLinkStage: BrokerageLinkStage?
     @Published private(set) var completedLinkStages: Set<BrokerageLinkStage> = []
-    /// 연결이 끝난 뒤 요약 카드에 노출할 계좌 정보. 잔고 조회가 실패하면 nil로 남는다.
+    /// 연결이 끝난 뒤 요약 카드에 노출할 계좌 정보.
     @Published private(set) var linkedAccount: LinkedDemoAccount?
+    @Published private(set) var brokerageLinkErrorMessage: String?
 
     private let onboardingRepository: OnboardingRepositoryProtocol
     private let brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol
@@ -31,7 +32,7 @@ final class OnboardingFlowViewModel: ObservableObject {
         userName: String = "회원",
         onboardingRepository: OnboardingRepositoryProtocol = LiveOnboardingRepository(),
         brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol = LiveBrokerageConnectionRepository(),
-        brokerBalanceRepository: BrokerBalanceRepositoryProtocol = KisSandboxBalanceRepository()
+        brokerBalanceRepository: BrokerBalanceRepositoryProtocol = BackendPortfolioBalanceRepository()
     ) {
         self.userName = userName
         self.onboardingRepository = onboardingRepository
@@ -122,6 +123,8 @@ final class OnboardingFlowViewModel: ObservableObject {
         activeLinkStage = nil
         completedLinkStages = []
         linkedAccount = nil
+        brokerageAccountId = nil
+        brokerageLinkErrorMessage = nil
     }
 
     // MARK: - Step 8: 완료 처리
@@ -160,48 +163,62 @@ final class OnboardingFlowViewModel: ObservableObject {
 
     /// Step 7 "연결하기" 시점에 호출된다.
     ///
-    /// 크리덴셜 입력이 없는 대신 실제로 두 가지 일을 한다 — 서버에 연동 레코드를 만들고,
-    /// 모의투자 잔고를 한 번 조회해 계좌가 실제로 응답하는지 확인한다. 단계 표시는 이 두
-    /// 요청이 끝날 때까지 순차로 진행되며, 최소 노출 시간을 두어 한 프레임에 스쳐 지나가지 않게 한다.
-    /// 백엔드가 아직 준비되지 않아 둘 다 실패하더라도 온보딩 진행 자체는 막지 않는다.
-    func connectBrokerage(userId: Int64?, reduceMotion: Bool) async {
-        guard let institutionID = connectedInstitutionID, !isBrokerageConnected else { return }
+    /// 서버의 KIS 모의투자 계좌를 연결하고, 동기화 후 포트폴리오를 조회한다.
+    /// 세 단계가 모두 성공한 경우에만 연결 완료로 처리한다.
+    func connectBrokerage(userId: Int64?, reduceMotion: Bool) async -> Bool {
+        guard let institutionID = connectedInstitutionID else { return false }
+        guard !isBrokerageConnected else { return true }
 
         completedLinkStages = []
         linkedAccount = nil
+        brokerageAccountId = nil
+        brokerageLinkErrorMessage = nil
 
-        let connectionTask: Task<BrokerageConnection?, Never> = Task { [brokerageConnectionRepository] in
-            guard let userId else { return nil }
-            return try? await brokerageConnectionRepository.connect(userId: userId, institutionID: institutionID)
+        guard userId != nil else {
+            brokerageLinkErrorMessage = "로그인 정보를 확인할 수 없어요. 다시 로그인해 주세요."
+            return false
         }
 
         let stageDuration: UInt64 = reduceMotion ? 120_000_000 : 620_000_000
 
-        activeLinkStage = .authenticating
-        try? await Task.sleep(nanoseconds: stageDuration)
-        let connection = await connectionTask.value
-        brokerageConnectionId = connection?.connectionId
-        completedLinkStages.insert(.authenticating)
+        do {
+            activeLinkStage = .authenticating
+            async let minimumConnectionDelay: Void = Task.sleep(nanoseconds: stageDuration)
+            let connection = try await brokerageConnectionRepository.connectKISDemoAccount(
+                institutionID: institutionID
+            )
+            try? await minimumConnectionDelay
+            brokerageAccountId = connection.accountId
+            completedLinkStages.insert(.authenticating)
 
-        activeLinkStage = .verifyingAccount
-        let balanceTask: Task<BrokerBalanceSnapshot?, Never> = Task { [brokerBalanceRepository] in
-            try? await brokerBalanceRepository.fetchKisSandboxBalance()
+            activeLinkStage = .verifyingAccount
+            try await Task.sleep(nanoseconds: stageDuration)
+            guard connection.status == .connected else {
+                throw BrokerageConnectionError.connectionRejected
+            }
+            completedLinkStages.insert(.verifyingAccount)
+
+            activeLinkStage = .loadingHoldings
+            async let minimumPortfolioDelay: Void = Task.sleep(nanoseconds: stageDuration)
+            try await brokerageConnectionRepository.sync(accountId: connection.accountId)
+            let balance = try await brokerBalanceRepository.fetchPortfolioBalance()
+            try? await minimumPortfolioDelay
+            completedLinkStages.insert(.loadingHoldings)
+
+            linkedAccount = LinkedDemoAccount(
+                accountNumber: balance.accountNumber.isEmpty ? connection.accountNumber : balance.accountNumber,
+                holdingCount: balance.holdings.count,
+                totalEvaluationAmount: balance.totalEvaluationAmount
+            )
+            activeLinkStage = nil
+            isBrokerageConnected = true
+            return true
+        } catch {
+            activeLinkStage = nil
+            isBrokerageConnected = false
+            brokerageLinkErrorMessage = error.localizedDescription
+            return false
         }
-        try? await Task.sleep(nanoseconds: stageDuration)
-        let balance = await balanceTask.value
-        completedLinkStages.insert(.verifyingAccount)
-
-        activeLinkStage = .loadingHoldings
-        try? await Task.sleep(nanoseconds: stageDuration)
-        completedLinkStages.insert(.loadingHoldings)
-
-        linkedAccount = LinkedDemoAccount(
-            accountNumber: balance?.accountNumber ?? connection?.accountNumber,
-            holdingCount: balance?.holdings.count,
-            totalEvaluationAmount: balance?.totalEvaluationAmount
-        )
-        activeLinkStage = nil
-        isBrokerageConnected = true
     }
 
     func submitGoal(userId: Int64?) async -> Bool {

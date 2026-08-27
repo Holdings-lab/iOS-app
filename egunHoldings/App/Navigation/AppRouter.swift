@@ -27,7 +27,7 @@ final class AppRouter: ObservableObject {
         let resolvedStore = store ?? KeychainAuthSessionStore()
         self.store = resolvedStore
         self.accountStore = accountStore ?? AuthAccountStore()
-        self.brokerBalanceRepository = brokerBalanceRepository ?? KisSandboxBalanceRepository()
+        self.brokerBalanceRepository = brokerBalanceRepository ?? BackendPortfolioBalanceRepository()
         self.loginRepository = loginRepository ?? LiveLoginRepository()
         self.tokenRefresher = tokenRefresher ?? AlamofireAccessTokenRefresher(
             tokenStore: SessionAuthTokenStore(sessionStore: resolvedStore),
@@ -309,7 +309,7 @@ final class AppRouter: ObservableObject {
     private func refreshBrokerBalance(forSessionToken sessionToken: String) async {
         do {
             Self.debugLog("로그인/부트스트랩 잔고조회 시작: token=\(Self.redactedToken(sessionToken))")
-            let snapshot = try await brokerBalanceRepository.fetchKisSandboxBalance()
+            let snapshot = try await brokerBalanceRepository.fetchPortfolioBalance()
 
             guard var currentSession = session, currentSession.token == sessionToken else {
                 Self.debugLog("잔고조회 응답 무시: 세션 토큰이 이미 변경되었습니다.")

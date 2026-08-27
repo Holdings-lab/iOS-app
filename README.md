@@ -70,9 +70,6 @@ egunHoldings는 정책 이벤트와 보유 자산의 연결을 보여주는 Swif
 | `POLICY_BACKEND_BASE_URL` | 이전 설정명입니다. `BACKEND_BASE_URL`이 없을 때 호환용으로 읽습니다. |
 | `ML_SERVICE_BASE_URL` | `/ml/**` ML 서비스 베이스 URL입니다. 없으면 백엔드 베이스 URL을 함께 사용합니다. |
 | `AUTH_REFRESH_URL` | 자동 토큰 리프레시 API가 준비되면 사용할 전체 URL입니다. 없으면 리프레시 인터셉터를 붙이지 않습니다. |
-| `TRADING_SERVER_BASE_URL` | KIS 샌드박스 잔고조회 중계 서버 URL입니다. 없으면 백엔드 베이스 URL을 사용합니다. |
-| `TRADING_KIS_ACCOUNT_NUMBER` | KIS 샌드박스 계좌번호입니다. Debug에서는 기본 테스트 값이 있습니다. |
-| `TRADING_KIS_PRODUCT_CODE` | KIS 상품 코드입니다. Debug에서는 `01`을 기본값으로 사용합니다. |
 
 실서비스 키, 계좌 식별자, 토큰 등 민감한 값은 저장소에 커밋하지 말고 로컬 `.xcconfig`나 CI/CD 시크릿으로 주입하는 방식을 권장합니다.
 
