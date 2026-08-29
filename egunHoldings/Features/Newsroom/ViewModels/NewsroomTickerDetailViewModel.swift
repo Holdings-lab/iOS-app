@@ -17,11 +17,11 @@ final class NewsroomTickerDetailViewModel: ObservableObject {
     init(
         holding: NewsroomHoldingBriefing,
         repository: NewsroomDigestRepositoryProtocol,
-        judgementStore: NewsroomAIJudgementStoring = NewsroomAIJudgementStore.shared
+        judgementStore: NewsroomAIJudgementStoring? = nil
     ) {
         self.holding = holding
         self.repository = repository
-        self.judgementStore = judgementStore
+        self.judgementStore = judgementStore ?? NewsroomAIJudgementStore.shared
     }
 
     func loadIfNeeded() {

@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import egunHoldings
 
+@MainActor
 struct NewsroomAndSignalAPIContractTests {
     @Test("뉴스룸 로고와 기사 썸네일 URL을 도메인 모델에 보존한다")
     func mapsNewsroomImageURLs() throws {

@@ -15,10 +15,16 @@ protocol NewsroomAIJudgementStoring: Sendable {
     func resolve(incoming: NewsroomAIJudgement?, for ticker: String) async -> NewsroomAIJudgement?
 }
 
+/// Foundation의 `UserDefaults`는 스레드 안전하지만 Swift 동시성 표기는 Sendable이 아니다.
+/// 이 actor만 보관·접근하므로 경계를 한 번만 명시한다.
+private nonisolated struct NewsroomUserDefaultsStorage: @unchecked Sendable {
+    let value: UserDefaults
+}
+
 actor NewsroomAIJudgementStore: NewsroomAIJudgementStoring {
     static let shared = NewsroomAIJudgementStore()
 
-    private let defaults: UserDefaults
+    private let defaultsStorage: NewsroomUserDefaultsStorage
     private let keyPrefix = "policy_finance.newsroom.aiJudgement.v1."
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
@@ -26,7 +32,7 @@ actor NewsroomAIJudgementStore: NewsroomAIJudgementStoring {
     private var loadedKeys: Set<String> = []
 
     init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+        defaultsStorage = NewsroomUserDefaultsStorage(value: defaults)
         encoder.dateEncodingStrategy = .iso8601
         decoder.dateDecodingStrategy = .iso8601
     }
@@ -75,7 +81,7 @@ actor NewsroomAIJudgementStore: NewsroomAIJudgementStoring {
         guard !loadedKeys.contains(storageKey) else { return memoryCache[storageKey] }
 
         loadedKeys.insert(storageKey)
-        guard let data = defaults.data(forKey: storageKey) else { return nil }
+        guard let data = defaultsStorage.value.data(forKey: storageKey) else { return nil }
 
         do {
             let judgement = try decoder.decode(NewsroomAIJudgement.self, from: data)
@@ -83,7 +89,7 @@ actor NewsroomAIJudgementStore: NewsroomAIJudgementStoring {
             return judgement
         } catch {
             // 손상된 데이터를 매번 다시 디코딩하지 않도록 즉시 제거한다.
-            defaults.removeObject(forKey: storageKey)
+            defaultsStorage.value.removeObject(forKey: storageKey)
             return nil
         }
     }
@@ -94,7 +100,7 @@ actor NewsroomAIJudgementStore: NewsroomAIJudgementStoring {
         memoryCache[storageKey] = judgement
 
         guard let data = try? encoder.encode(judgement) else { return }
-        defaults.set(data, forKey: storageKey)
+        defaultsStorage.value.set(data, forKey: storageKey)
     }
 
     private func key(for ticker: String) -> String {

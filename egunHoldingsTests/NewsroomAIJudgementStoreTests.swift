@@ -4,6 +4,7 @@ import Testing
 
 /// `resolve(incoming:for:)`의 핵심 규칙 검증:
 /// 서버가 매일 같은 값을 다시 보내든(daily-resend), 갱신일에만 보내든(sparse) 결과가 같아야 한다.
+@MainActor
 struct NewsroomAIJudgementStoreTests {
     private func judgement(headline: String, generatedAt: Date?) -> NewsroomAIJudgement {
         NewsroomAIJudgement(
