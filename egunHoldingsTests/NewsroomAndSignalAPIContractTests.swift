@@ -22,6 +22,13 @@ struct NewsroomAndSignalAPIContractTests {
         #expect(detail?.toDomain().sources.first?.thumbnailURL?.absoluteString == "https://cdn.example.com/news/1.jpg")
     }
 
+    @Test("뉴스가 없는 보유 종목과 보유 자산 없음을 구분한다")
+    func distinguishesNoRelatedNewsFromNoHoldings() {
+        #expect(NewsroomDigestMockData.allQuiet.hasNoRelevantNews)
+        #expect(!NewsroomDigestMockData.calmMixed.hasNoRelevantNews)
+        #expect(!NewsroomDigestMockData.empty.hasNoRelevantNews)
+    }
+
     @Test("시그널 요약과 카드가 현재 홈 시그널 경로를 사용한다")
     func fetchesSignalsFromHomeSecondaryEndpoint() async throws {
         let queue = SignalContractRequestQueue(responses: [

@@ -29,6 +29,16 @@ struct NewsroomNoHoldingsCard: View {
     }
 }
 
+struct NewsroomNoRelatedNewsCard: View {
+    var body: some View {
+        NewsroomStatusCard(
+            iconName: "newspaper",
+            title: "관련 뉴스가 아직 없어요",
+            message: "관련 소식을 찾는 대로 알려드릴게요."
+        )
+    }
+}
+
 private struct NewsroomStatusCard: View {
     let iconName: String
     let title: String

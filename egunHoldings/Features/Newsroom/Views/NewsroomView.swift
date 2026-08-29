@@ -34,6 +34,8 @@ struct NewsroomView: View {
 
                 if let briefing = viewModel.briefing, briefing.holdings.isEmpty {
                     NewsroomNoHoldingsCard(onRegister: onAssetTabRequested)
+                } else if let briefing = viewModel.briefing, briefing.hasNoRelevantNews {
+                    NewsroomNoRelatedNewsCard()
                 } else if viewModel.isLoading && viewModel.briefing == nil {
                     NewsroomDigestSkeleton()
                 } else if let errorMessage = viewModel.errorMessage, viewModel.briefing == nil {

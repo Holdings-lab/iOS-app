@@ -17,6 +17,12 @@ nonisolated struct NewsroomBriefing: Equatable, Sendable {
     var asOfAtText: String? {
         asOfAt.map { NewsroomDigestDateFormat.asOfAtText(for: $0) }
     }
+
+    /// 보유 종목은 있지만 매칭된 뉴스가 하나도 없는 상태.
+    /// 자산이 없는 emptyState와 구분해, 뉴스 탐색 중이라는 안내를 보여준다.
+    var hasNoRelevantNews: Bool {
+        !holdings.isEmpty && holdings.allSatisfy { $0.briefingType == .quiet }
+    }
 }
 
 nonisolated enum NewsroomBriefingType: Equatable, Sendable {
