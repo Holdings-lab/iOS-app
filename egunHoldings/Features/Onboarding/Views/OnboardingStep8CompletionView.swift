@@ -113,7 +113,7 @@ struct OnboardingStep8CompletionView: View {
             succeeded = await viewModel.submitWatchAssets(userId: userId)
         case .goal:
             if !viewModel.isBrokerageConnected {
-                await viewModel.connectBrokerage(userId: userId, reduceMotion: reduceMotion)
+                _ = await viewModel.connectBrokerage(userId: userId, reduceMotion: reduceMotion)
             }
             succeeded = await viewModel.submitGoal(userId: userId)
         }

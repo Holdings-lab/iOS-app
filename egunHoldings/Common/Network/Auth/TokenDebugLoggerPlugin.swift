@@ -2,8 +2,7 @@ import Foundation
 @preconcurrency import Moya
 
 /// 모든 네트워크 응답을 받은 직후, 현재 액세스 토큰의 만료 상태를 Xcode 콘솔에 출력한다.
-/// 요청/응답 바디 자체는 NetworkLoggerPlugin이 이미 verbose로 찍고 있으므로,
-/// 여기서는 토큰 수명 추적에만 집중한다.
+/// 요청/응답 바디와 토큰 값은 기록하지 않고, 토큰 수명 추적에만 집중한다.
 nonisolated struct TokenDebugLoggerPlugin: PluginType {
     private let tokenStore: AuthTokenStore
 

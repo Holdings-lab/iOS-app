@@ -33,6 +33,17 @@ nonisolated enum NetworkConfiguration {
         return backendBaseURL.appendingPathComponent("api/auth/refresh")
     }
 
+    /// 사용자 화면을 떠난 뒤에도 기본 60초 타임아웃까지 요청이 남아 있지 않도록
+    /// 일반 API와 토큰 갱신에 공통으로 적용한다. 연결 복구 대기는 화면 요청에는
+    /// 적합하지 않아, 호출자가 명시적으로 재시도하게 한다.
+    static func makeSessionConfiguration() -> URLSessionConfiguration {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 15
+        configuration.timeoutIntervalForResource = 30
+        configuration.waitsForConnectivity = false
+        return configuration
+    }
+
     private static func configuredURL(forInfoKey key: String) -> URL? {
         guard let rawValue = configuredString(forInfoKey: key) else {
             return nil

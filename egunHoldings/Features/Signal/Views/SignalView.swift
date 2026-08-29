@@ -89,7 +89,7 @@ struct SignalView: View {
             consumeExternalRoute()
         }
         .task {
-            await viewModel.load()
+            await viewModel.loadIfNeeded()
         }
     }
 

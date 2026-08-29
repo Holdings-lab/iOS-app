@@ -35,11 +35,13 @@ nonisolated final class AlamofireAccessTokenRefresher: AccessTokenRefreshing, @u
     private let refreshURL: URL
 
     init(
-        session: Alamofire.Session = Alamofire.Session(),
+        session: Alamofire.Session? = nil,
         tokenStore: AuthTokenStore,
         refreshURL: URL
     ) {
-        self.session = session
+        self.session = session ?? Alamofire.Session(
+            configuration: NetworkConfiguration.makeSessionConfiguration()
+        )
         self.tokenStore = tokenStore
         self.refreshURL = refreshURL
     }

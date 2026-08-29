@@ -29,24 +29,23 @@ struct NewsroomAndSignalAPIContractTests {
         #expect(!NewsroomDigestMockData.empty.hasNoRelevantNews)
     }
 
-    @Test("시그널 요약과 카드가 현재 홈 시그널 경로를 사용한다")
-    func fetchesSignalsFromHomeSecondaryEndpoint() async throws {
+    @Test("시그널 이벤트가 인증된 현재 경로를 사용한다")
+    func fetchesEventsFromCurrentEndpoint() async throws {
         let queue = SignalContractRequestQueue(responses: [
-            envelope(resultJSON: secondarySignalsJSON),
-            envelope(resultJSON: secondarySignalsJSON),
+            envelope(resultJSON: eventsJSON),
         ])
-        let repository = LiveSignalRepository(apiClient: SignalContractAPIClient(queue: queue))
+        let repository = LiveSignalRepository(
+            userId: 1,
+            apiClient: SignalContractAPIClient(queue: queue)
+        )
 
-        let signals = try await repository.fetchThemeSignals()
-        let cards = try await repository.fetchSignalCards(theme: .semiconductor)
+        let events = try await repository.fetchEvents()
         let requests = await queue.recordedRequests()
 
-        #expect(requests.map(\.path) == ["/api/home/signals/secondary", "/api/home/signals/secondary"])
-        #expect(signals.count == 1)
-        #expect(signals.first?.theme == .semiconductor)
-        #expect(signals.first?.myExposurePercent == 32)
-        #expect(cards.count == 1)
-        #expect(cards.first?.description == "AI 반도체 수요 변화에 대비해 비중을 점검하세요.")
+        #expect(requests.map(\.path) == ["/api/events"])
+        #expect(requests.first?.queryItems.map(\.name) == ["dateSegment", "category"])
+        #expect(events.first?.id == 91)
+        #expect(events.first?.title == "반도체 지원금 발표")
     }
 
     private var briefingJSON: String {
@@ -57,8 +56,8 @@ struct NewsroomAndSignalAPIContractTests {
         #"{"stock":{"ticker":"005930","name":"삼성전자","logoUrl":"https://cdn.example.com/logos/005930.png"},"headline":"반도체 뉴스","imageUrl":"https://cdn.example.com/news/hero.jpg","sources":[{"title":"기사 제목","publisher":"뉴스","thumbnailUrl":"https://cdn.example.com/news/1.jpg"}]}"#
     }
 
-    private var secondarySignalsJSON: String {
-        #"[{"title":"반도체","shortJudgement":"점검","exposurePercent":32,"oneLineReason":"AI 반도체 수요 변화에 대비해 비중을 점검하세요."}]"#
+    private var eventsJSON: String {
+        #"{"items":[{"eventId":91,"title":"반도체 지원금 발표","tags":["반도체"],"relatedAssets":["SOXX"],"importanceStars":4}]}"#
     }
 
     private func envelope(resultJSON: String) -> Data {

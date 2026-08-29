@@ -15,40 +15,6 @@ nonisolated struct LiveSignalRepository: SignalRepositoryProtocol {
         self.fallbackRepository = fallbackRepository
     }
 
-    func fetchThemeSignals() async throws -> [PortfolioThemeSignal] {
-        do {
-            let dtos = try await apiClient.requestResult(
-                BackendEndpoint.homeSecondarySignals(),
-                as: [HomeSecondarySignalDTO].self
-            )
-            return dtos.compactMap { $0.toDomain() }
-        } catch {
-            guard Self.shouldUseFallback(for: error) else {
-                throw error
-            }
-
-            APIFallbackLog.log("GET /api/home/signals/secondary", error: error)
-            return try await fallbackRepository.fetchThemeSignals()
-        }
-    }
-
-    func fetchSignalCards(theme: PortfolioThemeSignal.Theme) async throws -> [SignalCard] {
-        do {
-            let dtos = try await apiClient.requestResult(
-                BackendEndpoint.homeSecondarySignals(),
-                as: [HomeSecondarySignalDTO].self
-            )
-            return dtos.compactMap { $0.toSignalCard(for: theme) }
-        } catch {
-            guard Self.shouldUseFallback(for: error) else {
-                throw error
-            }
-
-            APIFallbackLog.log("GET /api/home/signals/secondary", error: error)
-            return try await fallbackRepository.fetchSignalCards(theme: theme)
-        }
-    }
-
     func fetchEvents() async throws -> [PolSignalEvent] {
         guard let userId else {
             return try await fallbackRepository.fetchEvents()
