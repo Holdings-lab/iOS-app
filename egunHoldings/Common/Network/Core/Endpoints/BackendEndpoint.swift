@@ -81,6 +81,25 @@ nonisolated enum BackendEndpoint {
         Endpoint(baseURL: baseURL, path: "/api/me/settings", authorizationRequirement: .bearerToken)
     }
 
+    static func updateNotificationSettings(body: Data) -> Endpoint {
+        Endpoint(
+            baseURL: baseURL,
+            path: "/api/me/settings/notifications",
+            method: .patch,
+            body: body,
+            authorizationRequirement: .bearerToken
+        )
+    }
+
+    static func sendTestNotification() -> Endpoint {
+        Endpoint(
+            baseURL: baseURL,
+            path: "/api/me/notifications/test",
+            method: .post,
+            authorizationRequirement: .bearerToken
+        )
+    }
+
     /// ⚠️ 예전 타깃(`PATCH /api/me/settings`)이 이번 리팩터로 사라졌다. 서버에 남은 동급 라우트는
     /// `PATCH /api/investment-profile`뿐인데 필드가 `investmentHorizon`·`maxDrawdownTolerance` 2개뿐이라
     /// `investmentProfile`(투자 성향)을 보낼 곳이 없다 — 온보딩 5/8 값이 저장 안 될 수 있음. 확인 필요.

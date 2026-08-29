@@ -39,9 +39,8 @@ struct SettingsRootView: View {
 
                         profileCard
 
-                        investSection
-                        accountsSection
                         notificationSection
+                        investSection
                         accountManagementSection
 
                         Text("v3.1.0")
@@ -117,6 +116,7 @@ struct SettingsRootView: View {
             )
         }
         .preferredColorScheme(.light)
+        .task { await viewModel.loadSettings() }
     }
 
     /// 피그마 `설정 / 오류`(7:2220) 상단 배너. 계좌 인증 만료 건이 있을 때만 뜬다.
@@ -202,88 +202,46 @@ struct SettingsRootView: View {
 
     private var investSection: some View {
         SettingsSection(title: "투자 설정") {
-            SettingsRow(title: "투자 프로필", icon: "slider.horizontal.3", sub: viewModel.investProfileSummary, onTap: { path.append(.investProfile) })
+            SettingsRow(title: "투자 목표", icon: "target", sub: viewModel.goalSummary, onTap: { path.append(.goal) })
             SettingsDivider()
-            SettingsRow(title: "목표 설정", icon: "target", sub: viewModel.goalSummary, onTap: { path.append(.goal) })
-            SettingsDivider()
-            SettingsRow(title: "관심 분야", icon: "square.grid.2x2", sub: viewModel.watchSectorSummary, onTap: { path.append(.watchlist) })
-            SettingsDivider()
-            SettingsRow(title: "관심 정책 카테고리", icon: "doc.text", sub: viewModel.policyCategorySummary, onTap: { path.append(.policyCategories) })
-        }
-    }
-
-    private var accountsSection: some View {
-        SettingsSection(title: "연결된 계좌") {
-            SettingsRow(title: "증권사 계좌 관리", icon: "building.columns", sub: viewModel.connectedBrokerNames, onTap: { path.append(.accounts) }) {
-                if viewModel.issueCount > 0 {
-                    StatusBadge(tone: .warn, text: "확인 필요")
-                } else {
-                    chevron
-                }
+            SettingsRow(title: "연결 계좌", icon: "building.columns", sub: "\(viewModel.connectedCount)개", onTap: { path.append(.accounts) }) {
+                viewModel.issueCount > 0 ? AnyView(StatusBadge(tone: .warn, text: "주의 필요")) : AnyView(chevron)
             }
+            SettingsDivider()
+            SettingsRow(title: "관심 정책", icon: "doc.text", sub: viewModel.policyCategorySummary, onTap: { path.append(.policyCategories) })
         }
     }
 
     private var notificationSection: some View {
         SettingsSection(title: "알림") {
-            SettingsRow(title: "푸시 알림", icon: "bell.badge", sub: viewModel.pushPermissionText) {
-                Button(action: viewModel.sendTestNotification) {
-                    Text(viewModel.isSendingTestNotification ? "전송 중" : "테스트")
-                        .font(.pretendard(12.5, weight: .bold))
-                        .foregroundStyle(Color.textPrimary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.subtle, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .stroke(Color.hairline, lineWidth: 1)
-                        }
+            SettingsRow(title: "정책 변화 알림", icon: "bell.badge", sub: "중요 정책 변화를 알려드려요") {
+                SettingsToggle(isOn: Binding(
+                    get: { viewModel.policyChangeAlert },
+                    set: viewModel.setPolicyChangeAlert
+                ))
+            }
+            SettingsDivider()
+            SettingsRow(title: "오늘 브리핑 시간", icon: "sun.max", sub: "선택한 시간에 오늘의 브리핑을 보내드려요") {
+                Picker("오늘 브리핑 시간", selection: Binding(
+                    get: { viewModel.briefingTime },
+                    set: viewModel.setBriefingTime
+                )) {
+                    ForEach(viewModel.briefingTimeOptions, id: \.self) { time in
+                        Text(time).tag(time)
+                    }
                 }
-                .buttonStyle(.plain)
-                .disabled(viewModel.isSendingTestNotification)
+                .pickerStyle(.segmented)
+                .frame(width: 150)
             }
-
             SettingsDivider()
-
-            SettingsRow(title: "하락 알림", icon: "chart.line.downtrend.xyaxis", sub: "포트폴리오가 고점 대비 크게 하락하면 알려드려요") {
-                SettingsToggle(isOn: $viewModel.notificationPreferences.dropAlertOn)
-            }
-
-            if viewModel.notificationPreferences.dropAlertOn {
-                SettingsDivider()
-                sensitivityRow(label: "WATCH 민감도", selection: $viewModel.notificationPreferences.watchSensitivity)
-                SettingsDivider()
-                sensitivityRow(label: "ALERT 민감도", selection: $viewModel.notificationPreferences.alertSensitivity)
-            }
-
-            SettingsDivider()
-
-            SettingsRow(title: "방해 금지 시간대", icon: "moon", sub: "22:00 – 07:00 · 다음 업데이트에 추가돼요", onTap: viewModel.notifyComingSoon) {
-                StatusBadge(tone: .soon, text: "준비 중")
-            }
-
-            SettingsDivider()
-
-            SettingsRow(title: "시장 신호 알림", icon: "antenna.radiowaves.left.and.right", sub: "발동 기준은 아직 준비 중이에요") {
-                SettingsToggle(isOn: $viewModel.notificationPreferences.marketSignalOn)
+            SettingsRow(title: "테스트 알림 보내기", icon: "arrow.up.right", sub: "기기에 알림이 도착하는지 확인해요", onTap: viewModel.sendTestNotification) {
+                if viewModel.isSendingTestNotification {
+                    ProgressView().controlSize(.small)
+                } else {
+                    chevron
+                }
             }
         }
-    }
-
-    private func sensitivityRow(label: String, selection: Binding<Sensitivity>) -> some View {
-        VStack(alignment: .leading, spacing: 9) {
-            Text(label)
-                .font(.pretendard(12.5, weight: .semibold))
-                .foregroundStyle(Color.textSecondary)
-
-            SettingsSegmentedControl(
-                selection: selection,
-                options: Sensitivity.allCases.map { ($0, $0.title) }
-            )
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 14)
     }
 
     private var accountManagementSection: some View {

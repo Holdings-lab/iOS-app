@@ -30,46 +30,6 @@ struct ConnectedAccount: Identifiable {
     var id: String { brokerId }
 }
 
-// MARK: - Notifications (신규 — 설정 탭 전용)
-
-enum Sensitivity: String, CaseIterable {
-    case low, normal, high
-
-    var title: String {
-        switch self {
-        case .low: return "둔감"
-        case .normal: return "기본"
-        case .high: return "민감"
-        }
-    }
-}
-
-struct NotificationPreferences {
-    var dropAlertOn = true
-    var watchSensitivity: Sensitivity = .normal
-    var alertSensitivity: Sensitivity = .normal
-    var marketSignalOn = true
-}
-
-// MARK: - App preferences (신규 — 설정 탭 전용)
-
-enum AppTheme: String, CaseIterable {
-    case system, light, dark
-
-    var title: String {
-        switch self {
-        case .system: return "시스템"
-        case .light: return "라이트"
-        case .dark: return "다크"
-        }
-    }
-}
-
-struct AppPreferences {
-    var theme: AppTheme = .system
-    var dataSaverOn = true
-}
-
 // MARK: - MaxDrawdownTolerance 설정 탭 전용 힌트 문구
 
 extension MaxDrawdownTolerance {
