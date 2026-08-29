@@ -29,7 +29,8 @@ struct AppRootView: View {
                     userId: router.session?.userId,
                     userAssetProfile: router.userAssetProfile,
                     portfolioSnapshot: router.portfolioSnapshot,
-                    brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot
+                    brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot,
+                    onBrokerBalanceUpdated: router.updateBrokerBalance
                 )
             }
         }

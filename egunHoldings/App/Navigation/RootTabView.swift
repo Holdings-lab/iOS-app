@@ -11,6 +11,7 @@ struct RootTabView: View {
     let userAssetProfile: UserAssetProfile
     let portfolioSnapshot: PortfolioSnapshot
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
+    let onBrokerBalanceUpdated: (BrokerBalanceSnapshot) -> Void
     @State private var selectedTab: RootTab = .today
     @State private var todaySignalRoute: PolSignalRoute?
     @State private var presentedSignalRoute: PolSignalRoute?
@@ -20,12 +21,14 @@ struct RootTabView: View {
         userId: Int64? = nil,
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
-        brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil
+        brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
+        onBrokerBalanceUpdated: @escaping (BrokerBalanceSnapshot) -> Void = { _ in }
     ) {
         self.userId = userId
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
+        self.onBrokerBalanceUpdated = onBrokerBalanceUpdated
         setupTabBarAppearance()
     }
 
@@ -70,7 +73,8 @@ struct RootTabView: View {
 
             NavigationStack {
                 AssetView(
-                    brokerBalanceSnapshot: brokerBalanceSnapshot
+                    brokerBalanceSnapshot: brokerBalanceSnapshot,
+                    onBrokerBalanceUpdated: onBrokerBalanceUpdated
                 )
             }
             .tag(RootTab.asset)

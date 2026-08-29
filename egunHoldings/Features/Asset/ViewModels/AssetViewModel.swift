@@ -3,17 +3,79 @@ import SwiftUI
 
 @MainActor
 final class AssetViewModel: ObservableObject {
-    @Published private(set) var portfolioDisplay: AssetPortfolioDisplay
+    enum LoadState: Equatable {
+        case idle
+        case loading
+        case loaded
+        case empty
+        case failed(String)
+    }
+
+    @Published private(set) var portfolioDisplay: AssetPortfolioDisplay?
+    @Published private(set) var loadState: LoadState
+    @Published private(set) var isConnecting = false
 
     private var brokerBalanceSnapshot: BrokerBalanceSnapshot?
+    private let brokerBalanceRepository: BrokerBalanceRepositoryProtocol
+    private let brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol
 
     init(
-        brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil
+        brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
+        brokerBalanceRepository: BrokerBalanceRepositoryProtocol = BackendPortfolioBalanceRepository(),
+        brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol = LiveBrokerageConnectionRepository()
     ) {
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
-        portfolioDisplay = AssetPortfolioDisplay(
-            snapshot: brokerBalanceSnapshot ?? Self.makeFallbackBalanceSnapshot()
-        )
+        self.brokerBalanceRepository = brokerBalanceRepository
+        self.brokerageConnectionRepository = brokerageConnectionRepository
+
+        if let brokerBalanceSnapshot {
+            portfolioDisplay = AssetPortfolioDisplay(snapshot: brokerBalanceSnapshot)
+            loadState = Self.isEmptyPortfolio(brokerBalanceSnapshot) ? .empty : .loaded
+        } else {
+            portfolioDisplay = nil
+            loadState = .idle
+        }
+    }
+
+    func loadIfNeeded() async -> BrokerBalanceSnapshot? {
+        guard loadState == .idle else { return nil }
+        return await reload()
+    }
+
+    @discardableResult
+    func reload() async -> BrokerBalanceSnapshot? {
+        guard !isConnecting else { return nil }
+        loadState = .loading
+
+        do {
+            let snapshot = try await brokerBalanceRepository.fetchPortfolioBalance()
+            apply(snapshot)
+            return snapshot
+        } catch {
+            portfolioDisplay = nil
+            loadState = .failed(AppVocabulary.ErrorMessage.userFacing(for: error, fallback: "자산을 불러오지 못했어요."))
+            return nil
+        }
+    }
+
+    @discardableResult
+    func connectKISDemoAccount() async -> BrokerBalanceSnapshot? {
+        guard !isConnecting else { return nil }
+        isConnecting = true
+        defer { isConnecting = false }
+
+        do {
+            let connection = try await brokerageConnectionRepository.connectKISDemoAccount(
+                institutionID: AccountInstitution.koreaInvestmentID
+            )
+            try await brokerageConnectionRepository.sync(accountId: connection.accountId)
+            let snapshot = try await brokerBalanceRepository.fetchPortfolioBalance()
+            apply(snapshot)
+            return snapshot
+        } catch {
+            loadState = .failed(AppVocabulary.ErrorMessage.userFacing(for: error, fallback: "한국투자증권 모의투자 계좌를 연결하지 못했어요."))
+            return nil
+        }
     }
 
     /// 로그인/부트스트랩 이후 늦게 도착하는 잔고 조회 응답을 반영한다.
@@ -21,34 +83,21 @@ final class AssetViewModel: ObservableObject {
     func updateBrokerBalance(_ snapshot: BrokerBalanceSnapshot?) {
         guard snapshot != brokerBalanceSnapshot else { return }
         brokerBalanceSnapshot = snapshot
-        portfolioDisplay = AssetPortfolioDisplay(snapshot: snapshot ?? Self.makeFallbackBalanceSnapshot())
+        guard let snapshot else { return }
+        apply(snapshot)
     }
 
-    private static func makeFallbackBalanceSnapshot() -> BrokerBalanceSnapshot {
-        BrokerBalanceSnapshot(
-            broker: "KIS",
-            environment: "MOCK",
-            accountNumber: "sandbox",
-            productCode: "01",
-            totalEvaluationAmount: 10_950_000,
-            stockEvaluationAmount: 10_444_326,
-            cashAmount: 505_674,
-            totalPurchaseAmount: 6_600_000,
-            totalProfitLossAmount: 4_350_000,
-            holdings: [
-                BrokerHoldingSnapshot(
-                    symbol: "QQQ",
-                    name: "인베스코 QQQ ETF",
-                    quantity: 10,
-                    averagePurchasePrice: 660_000,
-                    purchaseAmount: 6_600_000,
-                    evaluationAmount: 10_444_326,
-                    profitLossAmount: 3_844_326,
-                    profitLossRate: 58.2
-                )
-            ],
-            fetchedAt: Date()
-        )
+    private func apply(_ snapshot: BrokerBalanceSnapshot) {
+        brokerBalanceSnapshot = snapshot
+        portfolioDisplay = AssetPortfolioDisplay(snapshot: snapshot)
+        loadState = Self.isEmptyPortfolio(snapshot) ? .empty : .loaded
+    }
+
+    private static func isEmptyPortfolio(_ snapshot: BrokerBalanceSnapshot) -> Bool {
+        snapshot.accountNumber.isEmpty
+            && snapshot.holdings.isEmpty
+            && snapshot.totalEvaluationAmount == 0
+            && snapshot.cashAmount == 0
     }
 }
 

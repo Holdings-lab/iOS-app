@@ -154,6 +154,13 @@ final class AppRouter: ObservableObject {
         revokeRefreshTokenOnServer(refreshToken)
     }
 
+    /// 자산 탭이 직접 조회하거나 새로 연결한 서버 포트폴리오를 앱 전역 세션에도 반영한다.
+    func updateBrokerBalance(_ snapshot: BrokerBalanceSnapshot) {
+        guard var currentSession = session else { return }
+        currentSession.brokerBalanceSnapshot = snapshot
+        saveSession(currentSession)
+    }
+
     func registeredAccount(for email: String) -> RegisteredAuthAccount? {
         accountStore.loadAll().first { $0.normalizedEmail == normalizedEmail(from: email) }
     }
