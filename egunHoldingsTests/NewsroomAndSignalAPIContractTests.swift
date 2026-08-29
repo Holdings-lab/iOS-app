@@ -16,6 +16,7 @@ struct NewsroomAndSignalAPIContractTests {
         ).result
 
         #expect(briefing?.toDomain().holdings.first?.logoURL?.absoluteString == "https://cdn.example.com/logos/005930.png")
+        #expect(briefing?.toDomain().holdings.map(\.briefingType) == [.hero, .compact, .quiet])
         #expect(detail?.toDomain().stock.logoURL?.absoluteString == "https://cdn.example.com/logos/005930.png")
         #expect(detail?.toDomain().imageURL?.absoluteString == "https://cdn.example.com/news/hero.jpg")
         #expect(detail?.toDomain().sources.first?.thumbnailURL?.absoluteString == "https://cdn.example.com/news/1.jpg")
@@ -42,7 +43,7 @@ struct NewsroomAndSignalAPIContractTests {
     }
 
     private var briefingJSON: String {
-        #"{"header":{"title":"뉴스룸","subtitle":"보유 종목 브리핑"},"holdings":[{"ticker":"005930","name":"삼성전자","logoUrl":"https://cdn.example.com/logos/005930.png","weightPct":32.0,"briefingType":"Hero"}]}"#
+        #"{"header":{"title":"뉴스룸","subtitle":"보유 종목 브리핑"},"holdings":[{"ticker":"005930","name":"삼성전자","logoUrl":"https://cdn.example.com/logos/005930.png","weightPct":32.0,"briefingType":"Hero"},{"ticker":"NVDA","name":"NVIDIA","weightPct":12.0,"briefingType":"Compact"},{"ticker":"QQQ","name":"Invesco QQQ Trust","weightPct":35.0,"briefingType":"Quiet"}]}"#
     }
 
     private var detailJSON: String {

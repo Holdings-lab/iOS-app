@@ -76,7 +76,7 @@ struct NewsroomTickerDigestHeroCard: View {
         .background(Color.elevated, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
-                .stroke(Color.hairline, lineWidth: 1)
+                .stroke(Color.brand, lineWidth: 2)
         }
     }
 
