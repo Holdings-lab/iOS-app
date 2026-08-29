@@ -162,7 +162,7 @@ struct AssetPortfolioDisplay {
                 symbol: holding.symbol,
                 title: displayName(for: holding),
                 subtitle: "\(holding.quantity)주 보유",
-                amountText: krw(holding.evaluationAmount),
+                amountText: currency(holding.marketValue, code: holding.currencyCode),
                 profitText: "\(signedKRW(holding.profitLossAmount)) (\(percent(holding.profitLossRate)))",
                 profitTone: AssetProfitTone(value: holding.profitLossAmount),
                 isCash: false
@@ -176,7 +176,7 @@ struct AssetPortfolioDisplay {
                     symbol: nil,
                     title: "현금·예수금",
                     subtitle: "예수금 포함",
-                    amountText: krw(snapshot.cashAmount),
+                    amountText: currency(snapshot.cashAmount, code: "KRW"),
                     profitText: "—",
                     profitTone: .flat,
                     isCash: true
@@ -216,7 +216,17 @@ struct AssetPortfolioDisplay {
     }
 
     private static func krw(_ value: Int) -> String {
-        currencyFormatter.string(from: NSNumber(value: value)) ?? "₩0"
+        currency(value, code: "KRW")
+    }
+
+    private static func currency(_ value: Int, code: String) -> String {
+        let normalizedCode = code.uppercased()
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.currencyCode = normalizedCode
+        formatter.locale = Locale(identifier: normalizedCode == "KRW" ? "ko_KR" : "en_US")
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? "\(normalizedCode) 0"
     }
 
     private static func signedKRW(_ value: Int) -> String {
@@ -229,14 +239,6 @@ struct AssetPortfolioDisplay {
         return String(format: "%@%.1f%%", sign, value)
     }
 
-    private static let currencyFormatter: NumberFormatter = {
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "KRW"
-        formatter.locale = Locale(identifier: "ko_KR")
-        formatter.maximumFractionDigits = 0
-        return formatter
-    }()
 }
 
 struct AssetCompositionSegment: Identifiable {

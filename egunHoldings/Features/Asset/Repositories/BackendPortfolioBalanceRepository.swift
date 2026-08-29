@@ -60,16 +60,20 @@ private nonisolated struct BackendAssetPositionDTO: Decodable {
     let itemName: String
     let quantity: Decimal
     let purchaseUnitPrice: Decimal
+    let presentPrice: Decimal?
     let purchaseAmount: Decimal
     let valuationAmount: Decimal
     let valuationGainLoss: Decimal
     let profitRate: Decimal
+    let currencyCode: String?
 
     func toDomain() -> BrokerHoldingSnapshot {
         BrokerHoldingSnapshot(
             symbol: itemCode,
             name: itemName,
             quantity: quantity.intValue,
+            currentPrice: presentPrice,
+            currencyCode: currencyCode ?? "KRW",
             averagePurchasePrice: purchaseUnitPrice.intValue,
             purchaseAmount: purchaseAmount.intValue,
             evaluationAmount: valuationAmount.intValue,

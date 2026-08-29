@@ -27,6 +27,7 @@ struct BrokerageAPIContractTests {
     }
 
     @Test("서버 포트폴리오 응답을 앱 잔고 모델로 변환한다")
+    @MainActor
     func mapsBackendPortfolio() async throws {
         let queue = APIRequestQueue(responses: [envelope(resultJSON: portfolioJSON)])
         let repository = BackendPortfolioBalanceRepository(apiClient: QueueAPIClient(queue: queue))
@@ -41,6 +42,10 @@ struct BrokerageAPIContractTests {
         #expect(balance.cashAmount == 250_000)
         #expect(balance.holdings.first?.symbol == "005930")
         #expect(balance.holdings.first?.evaluationAmount == 1_000_000)
+        #expect(balance.holdings.first?.currentPrice == 100_000)
+        #expect(balance.holdings.first?.marketValue == 1_000_000)
+        #expect(balance.holdings.first?.currencyCode == "USD")
+        #expect(AssetPortfolioDisplay(snapshot: balance).holdings.first?.amountText == "$1,000,000")
     }
 
     @Test("계좌 연결 요청이 실패하면 온보딩을 연결 완료로 표시하지 않는다")
@@ -66,7 +71,7 @@ struct BrokerageAPIContractTests {
     }
 
     private var portfolioJSON: String {
-        #"{"estimatedDepositAsset":1250000,"cashBalance":250000,"totalPurchaseAmount":800000,"totalValuationAmount":1000000,"totalValuationGainLoss":200000,"totalProfitRate":25,"positions":[{"itemCode":"005930","itemName":"삼성전자","quantity":10,"purchaseUnitPrice":80000,"purchaseAmount":800000,"valuationAmount":1000000,"valuationGainLoss":200000,"profitRate":25}],"byBroker":{"KIS_1234567801":{"accountId":17,"accountNumber":"1234567801","brokerName":"KIS","estimatedDepositAsset":1250000,"cashBalance":250000,"positions":[],"lastSyncedAt":"2026-08-27T10:00:00"}},"lastSyncedAt":"2026-08-27T10:00:00"}"#
+        #"{"estimatedDepositAsset":1250000,"cashBalance":250000,"totalPurchaseAmount":800000,"totalValuationAmount":1000000,"totalValuationGainLoss":200000,"totalProfitRate":25,"positions":[{"itemCode":"005930","itemName":"삼성전자","quantity":10,"purchaseUnitPrice":80000,"presentPrice":100000,"purchaseAmount":800000,"valuationAmount":1000000,"valuationGainLoss":200000,"profitRate":25,"currencyCode":"USD"}],"byBroker":{"KIS_1234567801":{"accountId":17,"accountNumber":"1234567801","brokerName":"KIS","estimatedDepositAsset":1250000,"cashBalance":250000,"positions":[],"lastSyncedAt":"2026-08-27T10:00:00"}},"lastSyncedAt":"2026-08-27T10:00:00"}"#
     }
 
     private func envelope(resultJSON: String) -> Data {
