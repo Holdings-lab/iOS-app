@@ -45,7 +45,11 @@ struct BrokerageAPIContractTests {
         #expect(balance.holdings.first?.currentPrice == 100_000)
         #expect(balance.holdings.first?.marketValue == 1_000_000)
         #expect(balance.holdings.first?.currencyCode == "USD")
-        #expect(AssetPortfolioDisplay(snapshot: balance).holdings.first?.amountText == "$1,000,000")
+        let display = AssetPortfolioDisplay(snapshot: balance)
+        #expect(display.holdings.first?.amountText == "$1,000,000")
+        #expect(display.holdings.first?.profitText == "+$200,000 (+25.0%)")
+        #expect(display.compositionSegments.map(\.title) == ["주식", "현금"])
+        #expect(display.compositionSegments.map(\.percent) == [80, 20])
     }
 
     @Test("계좌 연결 요청이 실패하면 온보딩을 연결 완료로 표시하지 않는다")

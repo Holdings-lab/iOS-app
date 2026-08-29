@@ -129,9 +129,20 @@ struct AssetPortfolioDisplay {
     }
 
     private static func makeCompositionSegments(snapshot: BrokerBalanceSnapshot) -> [AssetCompositionSegment] {
-        let categorizedAmounts = snapshot.holdings.reduce(into: [AssetHoldingCategory: Int]()) { result, holding in
+        let holdingValues = snapshot.holdings.reduce(into: [AssetHoldingCategory: Int]()) { result, holding in
             let category = AssetHoldingCategory(symbol: holding.symbol)
-            result[category, default: 0] += holding.evaluationAmount
+            result[category, default: 0] += holding.marketValue
+        }
+        let holdingValueTotal = holdingValues.values.reduce(0, +)
+        let investedAmount = max(snapshot.totalEvaluationAmount - snapshot.cashAmount, 0)
+        let categorizedAmounts: [AssetHoldingCategory: Int]
+
+        if holdingValueTotal > 0 {
+            categorizedAmounts = holdingValues.mapValues { holdingValue in
+                Int((Double(holdingValue) / Double(holdingValueTotal) * Double(investedAmount)).rounded())
+            }
+        } else {
+            categorizedAmounts = investedAmount > 0 ? [.stock: investedAmount] : [:]
         }
 
         let entries = [
@@ -163,7 +174,7 @@ struct AssetPortfolioDisplay {
                 title: displayName(for: holding),
                 subtitle: "\(holding.quantity)주 보유",
                 amountText: currency(holding.marketValue, code: holding.currencyCode),
-                profitText: "\(signedKRW(holding.profitLossAmount)) (\(percent(holding.profitLossRate)))",
+                profitText: "\(signedCurrency(holding.profitLossAmount, code: holding.currencyCode)) (\(percent(holding.profitLossRate)))",
                 profitTone: AssetProfitTone(value: holding.profitLossAmount),
                 isCash: false
             )
@@ -230,8 +241,12 @@ struct AssetPortfolioDisplay {
     }
 
     private static func signedKRW(_ value: Int) -> String {
+        signedCurrency(value, code: "KRW")
+    }
+
+    private static func signedCurrency(_ value: Int, code: String) -> String {
         let sign = value > 0 ? "+" : ""
-        return "\(sign)\(krw(value))"
+        return "\(sign)\(currency(value, code: code))"
     }
 
     private static func percent(_ value: Double) -> String {

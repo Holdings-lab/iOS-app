@@ -122,7 +122,7 @@ struct AssetView: View {
         Group {
             if let display = viewModel.portfolioDisplay {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("총 평가금액")
+                    Text("원화 환산 총 평가금액")
                         .font(.pretendard(13, weight: .regular))
                         .foregroundStyle(Color.white.opacity(0.72))
                         .padding(.bottom, 8)
