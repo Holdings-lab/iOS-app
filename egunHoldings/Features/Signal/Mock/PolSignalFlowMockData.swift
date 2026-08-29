@@ -220,71 +220,120 @@ nonisolated enum PolSignalFlowMockData {
     static let policyReadings: [PolSignalPolicyReading] = [
         PolSignalPolicyReading(
             id: 201,
-            dDay: "D-2",
-            institution: "미 상무부",
-            title: "반도체 보조금 2차 배분",
-            keywords: ["반도체", "보조금"],
-            readingLens: "정책 → 수혜 종목 흐름",
-            lensApplication: "CHIPS 보조금은 총액보다 집행 조건을 먼저 봐야 해요. 국내 생산 비중, 반도체 종류, 납기 같은 단서가 실제 수혜 기업을 가릅니다.",
-            whatHappened: "미 상무부가 CHIPS Act 2차 보조금 배분을 발표할 예정이에요. 총액보다 지급 조건과 대상 기업 범위가 시장의 첫 확인 포인트가 됩니다.",
-            typicalFlow: [
-                "발표 직전: ETF에 단기 매수 기대가 미리 붙어요.",
-                "발표 당일: 조건이 우호적이면 수혜 기대가 커지고, 보수적이면 실망 매물이 나올 수 있어요.",
-                "발표 후 1~2주: 누가 실제 수혜 기업인지에 따라 종목별 차별화가 시작돼요."
+            date: "5/28 업데이트",
+            institution: "AP",
+            sourceURL: URL(string: "https://apnews.com/article/8f5ed2813ba63df7ae9ccbe991688d29"),
+            title: "미·이란, 60일 휴전 연장 잠정 합의",
+            keywords: ["지정학", "원유", "빅테크"],
+            whatHappened: "미국과 이란 협상단이 3개월째 이어진 전쟁의 휴전을 60일 더 연장하고 핵 프로그램 관련 새 협상을 시작하는 잠정 합의에 도달했다는 보도가 나왔어요. 최종 승인이 남아 있어 확정된 평화 합의는 아니지만, 에너지 공급 불안과 시장 심리를 함께 볼 수 있는 뉴스예요.",
+            aiSummary: [
+                "휴전 연장안이 보도됐어요",
+                "원유 공급 불안과 연결돼요",
+                "위험자산 심리도 함께 봐요"
             ],
-            readMinutes: 2,
-            relevantKeywords: ["반도체", "환율"]
+            keywordLinks: [
+                PolSignalPolicyKeywordLink(kw: "지정학", why: "국가 간 휴전 협상과 중동 긴장이 기사 중심 소재예요."),
+                PolSignalPolicyKeywordLink(kw: "원유", why: "중동 정세는 유가와 에너지 공급 기사에 자주 연결돼요."),
+                PolSignalPolicyKeywordLink(kw: "빅테크", why: "지정학 리스크 완화는 성장주 투자심리와 함께 해석돼요.")
+            ],
+            followUps: [
+                "잠정 합의와 최종 합의는 무엇이 다를까요?",
+                "휴전 뉴스는 왜 유가와 같이 움직일까요?",
+                "원문에서 확인해야 할 조건은 무엇일까요?"
+            ],
+            readMinutes: 2
         ),
         PolSignalPolicyReading(
             id: 202,
-            dDay: "D-5",
-            institution: "한국은행 금통위",
-            title: "한은 금통위 회의",
-            keywords: ["금리", "통화정책"],
-            readingLens: "금리 → 자산군 자금 흐름",
-            lensApplication: "금통위는 결정 자체보다 결정문 문구가 더 중요할 때가 많아요. 물가 경로, 실물 부진 같은 표현이 다음 인하 기대를 움직입니다.",
-            whatHappened: "한국은행 금융통화위원회가 기준금리를 결정할 예정이에요. 시장은 동결을 우세하게 보지만, 결정문 문구가 다음 회의의 단서가 됩니다.",
-            typicalFlow: [
-                "회의 직전: 채권 금리는 예상 경로를 먼저 반영해요.",
-                "발표 직후: 결정문에 새 단어가 들어오면 채권과 리츠가 먼저 반응해요.",
-                "하루~이틀 뒤: 환율과 성장주가 인하 기대 강도를 후행해서 반영해요."
+            date: "5/28 08:30 EDT",
+            institution: "BEA",
+            sourceURL: URL(string: "https://www.bea.gov/index.php/news/2026/gdp-second-estimate-and-corporate-profits-1st-quarter-2026"),
+            title: "미국 1분기 GDP 2차 추정치 1.6%로 하향",
+            keywords: ["GDP", "금리", "QQQ"],
+            whatHappened: "미국 BEA가 2026년 1분기 실질 GDP 증가율 2차 추정치를 연율 1.6%로 발표했어요. 앞선 추정치보다 낮아진 수치라 성장 속도, 기업이익, 금리 기대를 함께 읽을 때 참고할 만한 거시경제 뉴스예요.",
+            aiSummary: [
+                "성장률 추정치가 낮아졌어요",
+                "기업이익과 같이 봐야 해요",
+                "금리 기대에 연결될 수 있어요"
             ],
-            readMinutes: 3,
-            relevantKeywords: ["금리", "채권"]
+            keywordLinks: [
+                PolSignalPolicyKeywordLink(kw: "GDP", why: "성장률 수정치가 기사 핵심 숫자예요."),
+                PolSignalPolicyKeywordLink(kw: "금리", why: "성장 둔화 여부는 연준 정책 기대와 함께 읽혀요."),
+                PolSignalPolicyKeywordLink(kw: "QQQ", why: "성장주 ETF는 경기와 금리 해석에 민감하게 반응해요.")
+            ],
+            followUps: [
+                "2차 추정치는 왜 처음 발표와 다를까요?",
+                "GDP와 기업이익은 어떻게 연결될까요?",
+                "성장 둔화가 금리 기대에 주는 의미는 무엇일까요?"
+            ],
+            readMinutes: 2
         ),
         PolSignalPolicyReading(
             id: 203,
-            dDay: "D-12",
-            institution: "산업부",
-            title: "재생에너지 의무비율 상향",
-            keywords: ["친환경", "재생에너지"],
-            readingLens: "의무비율 → 장기 수요 흐름",
-            lensApplication: "의무비율 정책은 발표 당일보다 몇 년에 걸친 수요 누적이 핵심이에요. 단기 모멘텀보다 누적 설치 용량 가이드를 먼저 읽으면 차분해집니다.",
-            whatHappened: "산업통상자원부가 신재생에너지 공급의무비율을 단계적으로 상향하는 안을 발표할 예정이에요. 발전사가 매입해야 하는 재생에너지 비중이 올라가는 구조입니다.",
-            typicalFlow: [
-                "발표 직후: 태양광과 풍력 ETF에 단기 기대가 붙어요.",
-                "한 달 안: 실제 입찰 일정이 공개되며 공급 가능한 기업이 좁혀져요.",
-                "분기 단위: 의무 이행률 발표 시점마다 기대가 다시 조정돼요."
+            date: "5/28 08:30 EDT",
+            institution: "BEA",
+            sourceURL: URL(string: "https://www.bea.gov/index.php/news/2026/personal-income-and-outlays-april-2026"),
+            title: "4월 PCE 물가 0.4% 상승, 소비지출 0.5% 증가",
+            keywords: ["PCE", "금리인하", "소비"],
+            whatHappened: "BEA의 4월 개인소득·지출 자료에서 PCE 가격지수는 전월 대비 0.4% 올랐고, 개인소비지출은 0.5% 증가했어요. PCE는 연준이 자주 보는 물가 지표라 금리 전망을 이해할 때 같이 확인하는 뉴스예요.",
+            aiSummary: [
+                "PCE 물가가 다시 올랐어요",
+                "소비지출도 늘어났어요",
+                "연준 금리 판단과 이어져요"
             ],
-            readMinutes: 2,
-            relevantKeywords: ["친환경", "태양광"]
+            keywordLinks: [
+                PolSignalPolicyKeywordLink(kw: "PCE", why: "이번 기사에서 가장 중요한 물가 지표예요."),
+                PolSignalPolicyKeywordLink(kw: "금리인하", why: "물가 흐름은 연준의 인하 시점 기대와 연결돼요."),
+                PolSignalPolicyKeywordLink(kw: "소비", why: "소비지출 증가가 가계 수요를 보여주는 단서예요.")
+            ],
+            followUps: [
+                "PCE와 CPI는 무엇이 다를까요?",
+                "근원 PCE는 왜 따로 볼까요?",
+                "소비지출 증가는 물가에 어떤 의미일까요?"
+            ],
+            readMinutes: 3
+        ),
+        PolSignalPolicyReading(
+            id: 204,
+            date: "5/28 08:30 EDT",
+            institution: "U.S. Census",
+            sourceURL: URL(string: "https://www.census.gov/economic-indicators/index.php"),
+            title: "미국 4월 내구재 주문 7.9% 급증",
+            keywords: ["제조업", "AI인프라", "항공"],
+            whatHappened: "미국 Census Bureau가 4월 내구재 신규 주문이 전월 대비 7.9% 늘었다고 발표했어요. 항공기 주문 급증이 큰 비중을 차지했고, 핵심 자본재 주문은 별도로 확인해야 해서 제조업 수요를 한 번에 단정하기보다는 세부 항목을 나눠 읽는 뉴스예요.",
+            aiSummary: [
+                "내구재 주문이 크게 늘었어요",
+                "항공기 주문 영향이 컸어요",
+                "제조업 수요를 나눠 봐요"
+            ],
+            keywordLinks: [
+                PolSignalPolicyKeywordLink(kw: "제조업", why: "내구재 주문은 생산과 설비 수요를 보여주는 지표예요."),
+                PolSignalPolicyKeywordLink(kw: "AI인프라", why: "기업 설비투자 흐름을 볼 때 함께 확인할 수 있어요."),
+                PolSignalPolicyKeywordLink(kw: "항공", why: "이번 증가폭에는 항공기 주문 효과가 크게 반영됐어요.")
+            ],
+            followUps: [
+                "내구재 주문은 왜 변동성이 클까요?",
+                "핵심 자본재 주문은 무엇을 뜻할까요?",
+                "항공기 주문을 제외하면 흐름이 달라질까요?"
+            ],
+            readMinutes: 2
         )
     ]
 
     // MARK: - Today Top 3 Theme Signals
 
     static let todayThemeSignals: [PortfolioThemeSignal] = [
-        // QQQ — 빅테크 — fall+cluster → review(조심하세요)
+        // QQQ — 빅테크 — NVIDIA 어닝·이란 휴전·미중 관세 완화 → adjust(대응하세요)
         PortfolioThemeSignal(
             id: UUID(),
             theme: .bigTech,
             myExposurePercent: 22,
-            verdictKind: .review,
+            verdictKind: .adjust,
             prescription: TodayDecisionPrescription(
-                summary: "빅테크 주식들이 이번 주 출렁일 가능성이 있어요. FOMC 발언 방향에 따라 달라질 수 있는 시점이에요.",
-                action: "빅테크 비중을 점검하세요",
+                summary: "NVIDIA 어닝 서프라이즈, 미중 관세 완화, 이란 휴전 연장 협상이 맞물리면서 빅테크 상승 여지가 높아요. 5거래일 내 QQQ +3.4% 예상.",
+                action: "빅테크 비중을 늘리세요",
                 nowPercent: "22%",
-                goalLabel: "권장 18%",
+                goalLabel: "목표 26%",
                 narrative: nil
             ),
             nextEventLabel: nil,
@@ -294,12 +343,12 @@ nonisolated enum PolSignalFlowMockData {
         PortfolioThemeSignal(
             id: UUID(),
             theme: .semiconductor,
-            myExposurePercent: 14,
+            myExposurePercent: 0,
             verdictKind: .adjust,
             prescription: TodayDecisionPrescription(
                 summary: "반도체 보조금 발표 결과에 따라 가격이 빠르게 움직일 수 있어요. 비중이 높아 직접 영향을 받아요.",
                 action: "반도체 비중을 줄이세요",
-                nowPercent: "14%",
+                nowPercent: "0%",
                 goalLabel: "목표 11%",
                 narrative: nil
             ),
@@ -310,12 +359,12 @@ nonisolated enum PolSignalFlowMockData {
         PortfolioThemeSignal(
             id: UUID(),
             theme: .financials,
-            myExposurePercent: 10,
+            myExposurePercent: 0,
             verdictKind: .watch,
             prescription: TodayDecisionPrescription(
                 summary: "금융주는 지금 특별히 행동할 필요 없어요. 다음 BIS 회의 결과를 지켜봐도 충분해요.",
                 action: "현재 비중을 유지하세요",
-                nowPercent: "10%",
+                nowPercent: "0%",
                 goalLabel: "유지 10%",
                 narrative: nil
             ),
@@ -326,10 +375,10 @@ nonisolated enum PolSignalFlowMockData {
         PortfolioThemeSignal(
             id: UUID(),
             theme: .greenEnergy,
-            myExposurePercent: 8,
+            myExposurePercent: 0,
             verdictKind: nil,
             prescription: nil,
-            nextEventLabel: "6/2 IEA 에너지 보고",
+            nextEventLabel: nil,
             relatedEventId: nil
         )
     ]

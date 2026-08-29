@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - ThemeSignalSection
 
-/// Today 탭 "내 포트폴리오 영향 Top 3" 섹션.
+/// Today 탭 "내 포트폴리오 Top 3" 섹션.
 /// 섹션 헤더 + ThemeSignalCard 목록을 조합하며,
 /// 카드별 독립 확장 상태를 관리한다.
 struct ThemeSignalSection: View {
@@ -29,7 +29,7 @@ struct ThemeSignalSection: View {
 
     private var sectionHeader: some View {
         HStack(alignment: .center) {
-            Text("내 포트폴리오 영향 Top 3")
+            Text("내 포트폴리오 Top 3")
                 .font(.pretendard(17, weight: .bold, relativeTo: .headline))
                 .foregroundStyle(PSColor.textPrimary)
 
@@ -138,7 +138,7 @@ struct ThemeSignalCard: View {
                     .foregroundStyle(PSColor.textPrimary)
                     .lineLimit(1)
 
-                Text("내 비중 \(signal.myExposurePercent)%")
+                Text("보유비중 \(signal.myExposurePercent)%")
                     .font(.pretendard(12, weight: .medium, relativeTo: .caption))
                     .foregroundStyle(PSColor.textSecondary)
                     .monospacedDigit()
@@ -177,9 +177,9 @@ struct ThemeSignalCard: View {
 
     private var a11yLabel: String {
         if let verdict = signal.verdictKind {
-            return "\(signal.theme.displayName) 테마, 내 비중 \(signal.myExposurePercent)%, \(verdict.sentimentLabel)"
+            return "\(signal.theme.displayName) 테마, 보유비중 \(signal.myExposurePercent)%, \(verdict.sentimentLabel)"
         }
-        return "\(signal.theme.displayName) 테마, 내 비중 \(signal.myExposurePercent)%, 이번 주 특이 신호 없음"
+        return "\(signal.theme.displayName) 테마, 보유비중 \(signal.myExposurePercent)%, 이번 주 특이 신호 없음"
     }
 
     private var a11yHint: String {
@@ -457,10 +457,10 @@ private struct ShimmerView: View {
         signal: PortfolioThemeSignal(
             id: UUID(),
             theme: .greenEnergy,
-            myExposurePercent: 8,
+            myExposurePercent: 0,
             verdictKind: nil,
             prescription: nil,
-            nextEventLabel: "6/2 IEA 에너지 보고",
+            nextEventLabel: nil,
             relatedEventId: nil
         ),
         isExpanded: false,

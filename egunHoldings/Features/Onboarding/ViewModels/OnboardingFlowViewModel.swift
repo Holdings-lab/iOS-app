@@ -3,23 +3,41 @@ import Foundation
 
 @MainActor
 final class OnboardingFlowViewModel: ObservableObject {
-    @Published private(set) var selectedSectors: Set<InterestSector> = []
-    @Published private(set) var selectedStyle: InvestmentStyleOption? = InvestmentProfile.balanced.legacyStyle
-    @Published private(set) var rebalancingPreference = OnboardingRebalancingPreference()
+    let userName: String
+
+    @Published var financialGoal: FinancialGoal = .seedMoney
+    @Published var targetAmount: Int64 = FinancialGoal.seedMoney.defaultTargetAmount
+    @Published var investmentHorizon: InvestmentHorizon?
+    @Published var maxDrawdownTolerance: MaxDrawdownTolerance?
+    @Published var investmentProfile: InvestmentProfile?
+    @Published private(set) var selectedWatchAssets: Set<WatchAssetSector> = []
     @Published private(set) var connectedInstitutionID: String?
-    @Published private(set) var isSavingInvestmentProfile = false
-    @Published private(set) var investmentProfileSaveError: String?
-    @Published private(set) var savedInvestmentProfile: InvestmentProfileResponse?
+    @Published private(set) var isBrokerageConnected = false
+    @Published private(set) var brokerageAccountId: Int64?
 
-    private let investmentProfileRepository: InvestmentProfileRepositoryProtocol
-    private var didLoadRemoteInvestmentProfile = false
+    // MARK: - Step 7 연결 연출 상태
 
-    init(investmentProfileRepository: InvestmentProfileRepositoryProtocol? = nil) {
-        self.investmentProfileRepository = investmentProfileRepository ?? LiveInvestmentProfileRepository()
-    }
+    @Published private(set) var activeLinkStage: BrokerageLinkStage?
+    @Published private(set) var completedLinkStages: Set<BrokerageLinkStage> = []
+    /// 연결이 끝난 뒤 요약 카드에 노출할 계좌 정보.
+    @Published private(set) var linkedAccount: LinkedDemoAccount?
+    @Published private(set) var brokerageLinkErrorMessage: String?
 
-    var allSectors: [InterestSector] {
-        InterestSector.onboardingOptions
+    private let onboardingRepository: OnboardingRepositoryProtocol
+    private let brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol
+    private let brokerBalanceRepository: BrokerBalanceRepositoryProtocol
+    private var hasCustomTargetAmount = false
+
+    init(
+        userName: String = "회원",
+        onboardingRepository: OnboardingRepositoryProtocol = LiveOnboardingRepository(),
+        brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol = LiveBrokerageConnectionRepository(),
+        brokerBalanceRepository: BrokerBalanceRepositoryProtocol = BackendPortfolioBalanceRepository()
+    ) {
+        self.userName = userName
+        self.onboardingRepository = onboardingRepository
+        self.brokerageConnectionRepository = brokerageConnectionRepository
+        self.brokerBalanceRepository = brokerBalanceRepository
     }
 
     var recommendedInstitution: AccountInstitution {
@@ -46,171 +64,52 @@ final class OnboardingFlowViewModel: ObservableObject {
         [AccountInstitution.koreaInvestmentID]
     }
 
-    var canAdvanceFromSectorStep: Bool {
-        !selectedSectors.isEmpty
-    }
-
-    var previewItems: [OnboardingNewsPreviewItem] {
-        let sectors = selectedSectors.isEmpty
-            ? [InterestSector.semiconductor]
-            : selectedSectors.sorted { $0.title < $1.title }
-
-        let uniqueItems = sectors
-            .flatMap(\.previewItems)
-
-        var seenIDs = Set<String>()
-        var result: [OnboardingNewsPreviewItem] = []
-
-        for item in uniqueItems where !seenIDs.contains(item.id) {
-            result.append(item)
-            seenIDs.insert(item.id)
-
-            if result.count == 1 {
-                break
-            }
-        }
-
-        return result
-    }
-
-    var selectedSectorSummary: String {
-        let titles = selectedSectors
-            .sorted { $0.title < $1.title }
-            .map(\.title)
-
-        return titles.isEmpty ? "선택 없음" : titles.joined(separator: ", ")
-    }
-
-    var selectedStyleSummary: String {
-        rebalancingPreference.investmentProfile.displayName
-    }
-
-    var selectedInvestmentGoalSummary: String {
-        rebalancingPreference.investmentGoal.title
-    }
-
-    var selectedInvestmentHorizonSummary: String {
-        rebalancingPreference.investmentHorizon.title
-    }
-
-    var selectedDrawdownSummary: String {
-        rebalancingPreference.maxDrawdownTolerance.title
-    }
-
-    var selectedDownturnBehaviorSummary: String {
-        rebalancingPreference.downturnBehavior.title
-    }
-
-    var selectedTargetCashWeightSummary: String {
-        "\(cashWeightPercent)%"
-    }
-
-    var selectedAssetPreferenceSummary: String {
-        rebalancingPreference.assetPreference.title
-    }
-
-    var connectedInstitutionSummary: String {
-        guard let institution = connectedInstitution else {
-            return "나중에 연결하기"
-        }
-
-        return institution.name
-    }
-
     var connectedInstitution: AccountInstitution? {
         guard let connectedInstitutionID else { return nil }
         return AuthMockData.brokerageInstitutions.first(where: { $0.id == connectedInstitutionID })
     }
 
-    var cashWeightPercent: Int {
-        Int((rebalancingPreference.targetCashWeight * 100).rounded())
-    }
+    // MARK: - Step 1~2: 투자 목적 · 목표 금액
 
-    var cashWeightDescription: String {
-        switch cashWeightPercent {
-        case ...5:
-            return "공격적 운용, 기회 포착에 유리해요"
-        case 6...15:
-            return "기본 현금 완충을 남겨요"
-        default:
-            return "조정 대응 여력이 넉넉히 돼요"
+    func selectFinancialGoal(_ goal: FinancialGoal) {
+        financialGoal = goal
+        if !hasCustomTargetAmount {
+            targetAmount = goal.defaultTargetAmount
         }
     }
 
-    func recommendedHorizon(for goal: InvestmentGoal) -> InvestmentHorizon {
-        switch goal {
-        case .preserve:
-            return .oneToThreeYears
-        case .steadyGrowth:
-            return .threeToFiveYears
-        case .activeReturn:
-            return .overFiveYears
-        }
+    func updateTargetAmount(_ amount: Int64) {
+        targetAmount = amount
+        hasCustomTargetAmount = amount != financialGoal.defaultTargetAmount
     }
 
-    func recommendedRiskSettings(for profile: InvestmentProfile) -> (drawdown: MaxDrawdownTolerance, downturn: DownturnBehavior) {
-        switch profile {
-        case .conservative:
-            return (.withinTen, .reduce)
-        case .balanced:
-            return (.withinTen, .hold)
-        case .aggressive:
-            return (.withinTwenty, .buyMore)
-        }
+    // MARK: - Step 5: 투자 성향 소프트컨펌
+
+    func profileConflictsWithDrawdown(_ profile: InvestmentProfile) -> Bool {
+        guard let maxDrawdownTolerance else { return false }
+        return !RiskProfileConsistency.isConsistent(profile: profile, tolerance: maxDrawdownTolerance)
     }
+
+    // MARK: - Step 6: 관심 섹터
+
+    var canAdvanceFromWatchAssetsStep: Bool {
+        (1...5).contains(selectedWatchAssets.count)
+    }
+
+    func toggleWatchAsset(_ sector: WatchAssetSector) {
+        if selectedWatchAssets.contains(sector) {
+            selectedWatchAssets.remove(sector)
+            return
+        }
+
+        guard selectedWatchAssets.count < 5 else { return }
+        selectedWatchAssets.insert(sector)
+    }
+
+    // MARK: - Step 7: 계좌 연결
 
     func canConnect(_ institution: AccountInstitution) -> Bool {
         connectableInstitutionIDs.contains(institution.id)
-    }
-
-    func toggleSector(_ sector: InterestSector) {
-        if selectedSectors.contains(sector) {
-            selectedSectors.remove(sector)
-        } else {
-            selectedSectors.insert(sector)
-        }
-    }
-
-    func selectInvestmentProfile(_ profile: InvestmentProfile) {
-        rebalancingPreference.investmentProfile = profile
-        selectedStyle = profile.legacyStyle
-        applyRecommendedRiskSettings(for: profile)
-        investmentProfileSaveError = nil
-    }
-
-    func selectInvestmentGoal(_ goal: InvestmentGoal) {
-        rebalancingPreference.investmentGoal = goal
-        rebalancingPreference.investmentHorizon = recommendedHorizon(for: goal)
-    }
-
-    func selectInvestmentHorizon(_ horizon: InvestmentHorizon) {
-        rebalancingPreference.investmentHorizon = horizon
-    }
-
-    func selectMaxDrawdownTolerance(_ tolerance: MaxDrawdownTolerance) {
-        rebalancingPreference.maxDrawdownTolerance = tolerance
-    }
-
-    func selectDownturnBehavior(_ behavior: DownturnBehavior) {
-        rebalancingPreference.downturnBehavior = behavior
-    }
-
-    func setTargetCashWeight(percent: Int) {
-        let boundedPercent = min(max(percent, 0), 30)
-        rebalancingPreference.targetCashWeight = Double(boundedPercent) / 100
-    }
-
-    func selectAssetPreference(_ preference: AssetPreference) {
-        rebalancingPreference.assetPreference = preference
-    }
-
-    func resetFundingDefaults() {
-        setTargetCashWeight(percent: 10)
-        selectAssetPreference(.etfAndStocks)
-    }
-
-    func connectRecommendedBroker() {
-        connectedInstitutionID = recommendedInstitution.id
     }
 
     func selectInstitution(_ institution: AccountInstitution) {
@@ -220,77 +119,143 @@ final class OnboardingFlowViewModel: ObservableObject {
 
     func skipBrokerageConnection() {
         connectedInstitutionID = nil
+        isBrokerageConnected = false
+        activeLinkStage = nil
+        completedLinkStages = []
+        linkedAccount = nil
+        brokerageAccountId = nil
+        brokerageLinkErrorMessage = nil
     }
 
-    private func applyRecommendedRiskSettings(for profile: InvestmentProfile) {
-        let settings = recommendedRiskSettings(for: profile)
-        rebalancingPreference.maxDrawdownTolerance = settings.drawdown
-        rebalancingPreference.downturnBehavior = settings.downturn
-    }
+    // MARK: - Step 8: 완료 처리
 
-    func makeOnboardingResult() -> OnboardingResult {
-        let orderedSectors = selectedSectors
-            .sorted { $0.title < $1.title }
-            .map(\.id)
-
-        return OnboardingResult(
-            connectedInstitutionIDs: connectedInstitutionID.map { [$0] } ?? [],
-            selectedSectorIDs: orderedSectors,
-            investmentStyleID: rebalancingPreference.investmentProfile.legacyStyle.rawValue,
-            rebalancingPreference: rebalancingPreference,
-            selectedAssetSymbols: [],
-            primaryAssetSymbol: nil
-        )
-    }
-
-    func loadInvestmentProfileIfAvailable(userId: Int64?) async {
-        guard let userId, !didLoadRemoteInvestmentProfile else { return }
-        didLoadRemoteInvestmentProfile = true
+    /// 서버가 요청을 정상 수신했다는 응답을 받았을 때만 true를 반환한다. 실패/미응답이어도
+    /// 온보딩 자체는 막지 않되, 호출부(Step8 완료 화면)가 이 결과를 보고 목업 대기 여부를 결정한다.
+    func submitSettings(userId: Int64?) async -> Bool {
+        guard let userId else { return false }
 
         do {
-            let response = try await investmentProfileRepository.fetchInvestmentProfile(userId: userId)
-            savedInvestmentProfile = response
-            selectInvestmentProfile(response.investmentProfile)
+            try await onboardingRepository.updateSettings(
+                userId: userId,
+                investmentHorizon: investmentHorizon ?? .threeToFiveYears,
+                maxDrawdownTolerance: maxDrawdownTolerance ?? .withinTen,
+                investmentProfile: investmentProfile ?? .balanced
+            )
+            return true
         } catch {
-            debugLog("투자성향 조회 실패: \(String(describing: error))")
+            return false
         }
     }
 
-    func saveInvestmentProfile(userId: Int64?) async -> Bool {
-        guard !isSavingInvestmentProfile else { return false }
+    func submitWatchAssets(userId: Int64?) async -> Bool {
+        guard let userId else { return false }
 
-        guard let userId else {
-            investmentProfileSaveError = "사용자 정보를 찾지 못했어요. 다시 로그인한 뒤 시도해주세요."
+        do {
+            try await onboardingRepository.updateWatchAssets(
+                userId: userId,
+                sectors: Array(selectedWatchAssets)
+            )
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Step 7 "연결하기" 시점에 호출된다.
+    ///
+    /// 서버의 KIS 모의투자 계좌를 연결하고, 동기화 후 포트폴리오를 조회한다.
+    /// 세 단계가 모두 성공한 경우에만 연결 완료로 처리한다.
+    func connectBrokerage(userId: Int64?, reduceMotion: Bool) async -> Bool {
+        guard let institutionID = connectedInstitutionID else { return false }
+        guard !isBrokerageConnected else { return true }
+
+        completedLinkStages = []
+        linkedAccount = nil
+        brokerageAccountId = nil
+        brokerageLinkErrorMessage = nil
+
+        guard userId != nil else {
+            brokerageLinkErrorMessage = "로그인 정보를 확인할 수 없어요. 다시 로그인해 주세요."
             return false
         }
 
-        isSavingInvestmentProfile = true
-        investmentProfileSaveError = nil
+        let stageDuration: UInt64 = reduceMotion ? 120_000_000 : 620_000_000
 
         do {
-            let response = try await investmentProfileRepository.updateInvestmentProfile(
-                userId: userId,
-                profile: rebalancingPreference.investmentProfile
+            activeLinkStage = .authenticating
+            async let minimumConnectionDelay: Void = Task.sleep(nanoseconds: stageDuration)
+            let connection = try await brokerageConnectionRepository.connectKISDemoAccount(
+                institutionID: institutionID
             )
-            savedInvestmentProfile = response
-            isSavingInvestmentProfile = false
+            try? await minimumConnectionDelay
+            brokerageAccountId = connection.accountId
+            completedLinkStages.insert(.authenticating)
+
+            activeLinkStage = .verifyingAccount
+            try await Task.sleep(nanoseconds: stageDuration)
+            guard connection.status == .connected else {
+                throw BrokerageConnectionError.connectionRejected
+            }
+            completedLinkStages.insert(.verifyingAccount)
+
+            activeLinkStage = .loadingHoldings
+            async let minimumPortfolioDelay: Void = Task.sleep(nanoseconds: stageDuration)
+            try await brokerageConnectionRepository.sync(accountId: connection.accountId)
+            let balance = try await brokerBalanceRepository.fetchPortfolioBalance()
+            try? await minimumPortfolioDelay
+            completedLinkStages.insert(.loadingHoldings)
+
+            linkedAccount = LinkedDemoAccount(
+                accountNumber: balance.accountNumber.isEmpty ? connection.accountNumber : balance.accountNumber,
+                holdingCount: balance.holdings.count,
+                totalEvaluationAmount: balance.totalEvaluationAmount
+            )
+            activeLinkStage = nil
+            isBrokerageConnected = true
             return true
         } catch {
-            debugLog("투자성향 저장 실패, 로컬 설정으로 계속 진행: \(String(describing: error))")
-            savedInvestmentProfile = InvestmentProfileResponse(
-                userId: userId,
-                investmentProfile: rebalancingPreference.investmentProfile,
-                displayName: rebalancingPreference.investmentProfile.displayName
-            )
-            investmentProfileSaveError = nil
-            isSavingInvestmentProfile = false
-            return true
+            activeLinkStage = nil
+            isBrokerageConnected = false
+            brokerageLinkErrorMessage = error.localizedDescription
+            return false
         }
     }
 
-    private func debugLog(_ message: String) {
-#if DEBUG
-        print("[Onboarding] \(message)")
-#endif
+    func submitGoal(userId: Int64?) async -> Bool {
+        guard let userId else { return false }
+
+        do {
+            try await onboardingRepository.updateGoal(
+                userId: userId,
+                financialGoal: financialGoal,
+                targetAmount: targetAmount
+            )
+            return true
+        } catch {
+            APIFallbackLog.log("PATCH /api/users/\(userId)/goal", error: error)
+            return false
+        }
+    }
+
+    func makeOnboardingResult() -> OnboardingResult {
+        let rebalancing = OnboardingRebalancingPreference(
+            investmentProfile: investmentProfile ?? .balanced,
+            investmentHorizon: investmentHorizon ?? .threeToFiveYears,
+            maxDrawdownTolerance: maxDrawdownTolerance ?? .withinTen
+        )
+
+        return OnboardingResult(
+            connectedInstitutionIDs: connectedInstitutionID.map { [$0] } ?? [],
+            selectedSectorIDs: [],
+            selectedKeywordIDs: [],
+            investmentStyleID: (investmentProfile ?? .balanced).legacyStyle.rawValue,
+            rebalancingPreference: rebalancing,
+            selectedAssetSymbols: [],
+            primaryAssetSymbol: nil,
+            financialGoal: financialGoal.rawValue,
+            targetAmount: targetAmount,
+            selectedWatchAssetIDs: selectedWatchAssets.map(\.rawValue),
+            isBrokerageConnected: isBrokerageConnected
+        )
     }
 }

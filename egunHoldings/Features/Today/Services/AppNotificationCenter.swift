@@ -11,6 +11,7 @@ final class AppNotificationCenter: ObservableObject {
     @Published private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
     @Published private(set) var deviceToken: String?
     @Published private(set) var remoteRegistrationError: String?
+    @Published private(set) var pendingPushRoute: PolSignalRoute?
 
     private let center: UNUserNotificationCenter
 
@@ -23,9 +24,15 @@ final class AppNotificationCenter: ObservableObject {
     }
 
     var latestUnreadAnalysisPayload: PolSignalAnalysisPayload? {
-        sortedNotifications
+        notifications
             .first { !$0.isRead && $0.analysisPayload != nil }?
             .analysisPayload
+    }
+
+    var todayPreviewNotification: AppNotificationItem? {
+        notifications.first { !$0.isRead && $0.kind == .news && $0.hasDetailContent }
+            ?? notifications.first { !$0.isRead && $0.hasDetailContent }
+            ?? notifications.first { !$0.isRead }
     }
 
     var authorizationStatusText: String {
@@ -64,7 +71,7 @@ final class AppNotificationCenter: ObservableObject {
 
     var groupedNotifications: [AppNotificationDayGroup] {
         let calendar = Calendar(identifier: .gregorian)
-        let grouped = Dictionary(grouping: sortedNotifications) { item in
+        let grouped = Dictionary(grouping: notifications) { item in
             calendar.startOfDay(for: item.occurredAt)
         }
 
@@ -75,13 +82,17 @@ final class AppNotificationCenter: ObservableObject {
             }
     }
 
-    private var sortedNotifications: [AppNotificationItem] {
-        notifications.sorted { $0.occurredAt > $1.occurredAt }
-    }
+    /// 시연 기준 시각 — 2026-05-28 09:15 KST 고정.
+    static let demoNow: Date = {
+        var c = DateComponents()
+        c.year = 2026; c.month = 5; c.day = 28; c.hour = 9; c.minute = 15
+        return Calendar(identifier: .gregorian).date(from: c) ?? Date()
+    }()
 
     private init(center: UNUserNotificationCenter = .current()) {
         self.center = center
-        notifications = Self.makeSeedNotifications()
+        notifications = Self.makeSeedNotifications(now: Self.demoNow)
+            .sorted { $0.occurredAt > $1.occurredAt }
 
         Task {
             await refreshAuthorizationStatus()
@@ -115,7 +126,11 @@ final class AppNotificationCenter: ObservableObject {
     }
 
     func markAsRead(_ item: AppNotificationItem) {
-        guard let index = notifications.firstIndex(where: { $0.id == item.id }) else { return }
+        markAsRead(notificationId: item.id)
+    }
+
+    func markAsRead(notificationId: String) {
+        guard let index = notifications.firstIndex(where: { $0.id == notificationId }) else { return }
         notifications[index].isRead = true
     }
 
@@ -137,15 +152,34 @@ final class AppNotificationCenter: ObservableObject {
     }
 
     func addInAppNotification(_ item: AppNotificationItem) {
-        notifications.append(item)
-        notifications.sort { $0.occurredAt > $1.occurredAt }
+        let insertionIndex = notifications.firstIndex { $0.occurredAt < item.occurredAt }
+            ?? notifications.endIndex
+        notifications.insert(item, at: insertionIndex)
+    }
+
+    func handlePushNotificationOpen(userInfo: [AnyHashable: Any]) {
+        if let notificationId = Self.stringValue(userInfo["notificationId"]) {
+            markAsRead(notificationId: notificationId)
+        }
+
+        pendingPushRoute = Self.pushRoute(from: userInfo)
+    }
+
+    func consumePendingPushRoute() -> PolSignalRoute? {
+        defer { pendingPushRoute = nil }
+        return pendingPushRoute
+    }
+
+    func signalRoute(for payload: PolSignalAnalysisPayload) -> PolSignalRoute {
+        Self.route(forEventId: payload.eventId)
     }
 
     func addCompletedAnalysisNotification(payload: PolSignalAnalysisPayload, event: PolSignalEvent) {
+        let ticker = event.exposures.first?.ticker ?? event.category
         let item = AppNotificationItem(
             kind: .signalAnalysis,
-            title: "\(event.title) 분석 완료",
-            message: "\(event.exposureSummary) 보유 중인 당신, 확인해보세요.",
+            title: "\(ticker) 변동 가능성 확인",
+            message: "보유한 \(ticker)의 변동 가능성이 커졌어요. 이유를 확인해보세요.",
             occurredAt: Date(),
             relatedTitle: event.title,
             analysisPayload: payload,
@@ -166,11 +200,15 @@ final class AppNotificationCenter: ObservableObject {
         }
 
         let item = AppNotificationItem(
-            kind: .volatility,
-            title: "자산 변동성 위험 확인",
-            message: "보유 자산 중 반도체 노출 종목 변동성이 평소보다 높아졌습니다.",
+            kind: .signalAnalysis,
+            title: "SOXX 변동 가능성 확인",
+            message: "보유한 SOXX의 변동 가능성이 커졌어요. 이유를 확인해보세요.",
             occurredAt: Date(),
-            relatedTitle: "SOXX, 삼성전자",
+            relatedTitle: "반도체",
+            analysisPayload: PolSignalAnalysisPayload(
+                eventId: 102,
+                analysisVersion: "test-notification"
+            ),
             isRead: false
         )
         addInAppNotification(item)
@@ -186,6 +224,10 @@ final class AppNotificationCenter: ObservableObject {
         if let payload = item.analysisPayload {
             userInfo["eventId"] = payload.eventId
             userInfo["analysisVersion"] = payload.analysisVersion
+            if let theme = Self.theme(forEventId: payload.eventId) {
+                userInfo["route"] = "signalThemeDetail"
+                userInfo["theme"] = theme.tickerId
+            }
         }
         content.userInfo = userInfo
 
@@ -207,53 +249,131 @@ final class AppNotificationCenter: ObservableObject {
         }
 
         return [
+            // 미-이란 휴전 연장 협상 뉴스 — 5/27(수) 저녁 발생
             AppNotificationItem(
-                id: "analysis-usd-103",
-                kind: .signalAnalysis,
-                title: "원/달러 1,490원 돌파 분석 완료",
-                message: "달러 자산 15% 보유 중인 당신, 확인해보세요.",
-                occurredAt: date(minutesAgo: 4),
-                relatedTitle: "eventId 103 · analysisVersion \(PolSignalFlowMockData.latestAnalysisPayload.analysisVersion)",
-                analysisPayload: PolSignalFlowMockData.latestAnalysisPayload,
-                isRead: false
-            ),
-            AppNotificationItem(
-                id: "policy-rate-cut",
-                kind: .policy,
-                title: "한은 기준금리 결정 업데이트",
-                message: "기준금리 인하가 발표되어 채권 ETF 영향도를 다시 계산했습니다.",
-                occurredAt: date(minutesAgo: 18),
-                relatedTitle: "TIGER 국채3년, 달러 예금",
-                isRead: false
-            ),
-            AppNotificationItem(
-                id: "volatility-soxx",
-                kind: .volatility,
-                title: "반도체 ETF 변동성 확대",
-                message: "SOXX와 삼성전자 관련 변동성이 높아져 보유 비중 점검이 필요합니다.",
-                occurredAt: date(minutesAgo: 74),
-                relatedTitle: "SOXX, 삼성전자",
-                isRead: false
-            ),
-            AppNotificationItem(
-                id: "news-chips",
+                id: "news-iran-ceasefire",
                 kind: .news,
-                title: "미국 반도체 보조금 기사 업데이트",
-                message: "보조금 2차 발표 전망 기사가 추가되어 관련 정책 브리핑이 갱신됐습니다.",
-                occurredAt: date(minutesAgo: 210),
-                relatedTitle: "미국 반도체 보조금 2차 발표",
-                isRead: true
-            ),
-            AppNotificationItem(
-                id: "asset-cash",
-                kind: .asset,
-                title: "현금 비중 변화 확인",
-                message: "오늘 자산 변동으로 현금 방어 비중이 목표 범위 안에 있는지 확인했습니다.",
-                occurredAt: date(minutesAgo: 1_430),
-                relatedTitle: "내 총자산",
-                isRead: true
+                title: "미-이란 휴전 연장 협상 타결 가능성 고조",
+                message: "지정학 리스크 완화. 빅테크·반도체 섹터 5거래일 내 상승 여지.",
+                occurredAt: date(minutesAgo: 90),
+                relatedTitle: "빅테크 (QQQ), 반도체",
+                isRead: false,
+                detailBody: "미국과 이란 협상단이 현재의 휴전을 연장하는 방향으로 협의 중인 것으로 알려졌습니다.\n\n지난 2월 말 발발한 중동 분쟁이 약 90일 만에 완화 국면에 접어들면서, 글로벌 에너지 공급망 불안이 해소되고 위험자산 선호 심리가 빠르게 회복되고 있습니다.\n\nNVIDIA의 어닝 서프라이즈(5/20, 매출 $81.6B · YoY +85%)와 5/12 미중 90일 관세 휴전에 이어, 이번 지정학 리스크 완화까지 맞물리면서 빅테크·반도체 섹터에 복합 상승 요인이 형성되고 있습니다.",
+                relatedSectors: ["빅테크 (QQQ)", "반도체"],
+                impactBullets: [
+                    "지정학 리스크 완화 → QQQ 등 빅테크 위험자산 매수 심리 개선",
+                    "에너지 공급 안정 → AI 데이터센터 운영비용 압박 감소",
+                    "NVIDIA 어닝 서프라이즈·미중 관세 완화와 맞물려 5거래일 내 급등 여지"
+                ],
+                sourceReferences: [
+                    AppNotificationSource(
+                        title: "미-이란 휴전 연장 협상 브리핑",
+                        subtitle: "뉴스 원문 · 2026.05.28 07:45"
+                    ),
+                    AppNotificationSource(
+                        title: "미중 90일 관세 휴전 발표",
+                        subtitle: "정책 원문 · 2026.05.12"
+                    ),
+                    AppNotificationSource(
+                        title: "NVIDIA FY2026 Q1 Results",
+                        subtitle: "기업 실적 원문 · Investor Relations",
+                        url: URL(string: "https://investor.nvidia.com/")
+                    )
+                ]
             )
         ]
-        .sorted { $0.occurredAt > $1.occurredAt }
+    }
+
+    private static func pushRoute(from userInfo: [AnyHashable: Any]) -> PolSignalRoute? {
+        if let theme = theme(from: userInfo) {
+            return .themeDetail(theme)
+        }
+
+        guard let eventId = intValue(userInfo["eventId"]) else {
+            return nil
+        }
+
+        if let theme = theme(forEventId: eventId) {
+            return route(for: theme)
+        }
+
+        return .detail(eventId)
+    }
+
+    private static func route(forEventId eventId: Int) -> PolSignalRoute {
+        if let theme = theme(forEventId: eventId) {
+            return route(for: theme)
+        }
+
+        return .detail(eventId)
+    }
+
+    private static func route(for theme: PortfolioThemeSignal.Theme) -> PolSignalRoute {
+        .themeDetail(theme)
+    }
+
+    private static func theme(from userInfo: [AnyHashable: Any]) -> PortfolioThemeSignal.Theme? {
+        let keys = ["theme", "ticker", "symbol", "assetTicker", "routeTheme"]
+        for key in keys {
+            if let theme = theme(from: userInfo[key]) {
+                return theme
+            }
+        }
+        return nil
+    }
+
+    private static func theme(forEventId eventId: Int) -> PortfolioThemeSignal.Theme? {
+        PolSignalFlowMockData.todayThemeSignals
+            .first { $0.relatedEventId == eventId }?
+            .theme
+    }
+
+    private static func theme(from value: Any?) -> PortfolioThemeSignal.Theme? {
+        guard let raw = stringValue(value) else { return nil }
+        let normalized = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: " ", with: "")
+            .uppercased()
+
+        switch normalized {
+        case "QQQ", "BIGTECH", "BIGTECHAI", "빅테크", "빅테크AI":
+            return .bigTech
+        case "SOXX", "SMH", "SEMICONDUCTOR", "SEMICONDUCTORS", "CHIP", "CHIPS", "반도체":
+            return .semiconductor
+        case "XLF", "FINANCIALS", "FINANCE", "금융":
+            return .financials
+        case "ICLN", "GREENENERGY", "CLEANENERGY", "ENERGY", "친환경":
+            return .greenEnergy
+        default:
+            return nil
+        }
+    }
+
+    private static func intValue(_ value: Any?) -> Int? {
+        if let value = value as? Int {
+            return value
+        }
+        if let value = value as? Int64 {
+            return Int(value)
+        }
+        if let value = value as? Double {
+            return Int(value)
+        }
+        if let value = value as? String {
+            return Int(value)
+        }
+        return nil
+    }
+
+    private static func stringValue(_ value: Any?) -> String? {
+        if let value = value as? String {
+            return value
+        }
+        if let value = value as? CustomStringConvertible {
+            return value.description
+        }
+        return nil
     }
 }

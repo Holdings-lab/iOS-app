@@ -1,5 +1,18 @@
 import Foundation
 
+/// 2026-08 서버 리팩터(`1bed8da feat(auth): require JWT for user APIs and drop path userId`) 반영.
+/// 사용자 스코프 엔드포인트는 더 이상 URL에 userId를 담지 않는다 — 서버가 `Authorization` 헤더의
+/// 액세스 토큰에서 `@CurrentUserId`로 사용자를 식별하고, 미인증 요청은 401로 막는다(JwtAuthenticationFilter
+/// PROTECTED_PREFIXES: `/api/me`, `/api/home`, `/api/events`, `/api/accounts`, `/api/portfolio`,
+/// `/api/holdings`, `/api/goal`, `/api/goal-progress`, `/api/daily-briefing`, `/api/session`,
+/// `/api/investment-profile`, `/api/newsroom`, `/api/onboarding`, `/api/watch-assets`,
+/// `/api/interest-sectors`, `/api/ml`). 컨트롤러 base path도 `/api/users/{id}/...`에서
+/// 리소스별 최상위 경로(`/api/me`, `/api/events`, `/api/newsroom`, `/api/onboarding`, `/api/portfolio` 등)로
+/// 재편됐다 — userId 제거뿐 아니라 경로 자체가 바뀐 함수가 대부분이다.
+///
+/// 반면 `/api/feeds/policy*`는 이번 리팩터에 포함되지 않았다 — JWT 보호 대상도 아니고(PROTECTED_PREFIXES에
+/// `/api/feeds` 없음), 여전히 `userId`를 쿼리 파라미터로 명시적으로 받는다(ContentFeedController 변경 없음).
+///
 nonisolated enum BackendEndpoint {
     static func emailSendCode(body: Data) -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/auth/email/send-code", method: .post, body: body)
@@ -9,8 +22,11 @@ nonisolated enum BackendEndpoint {
         Endpoint(baseURL: baseURL, path: "/api/auth/email/verify-code", method: .post, body: body)
     }
 
+    /// 2026-08부터 응답이 로그인과 동일한 `LoginResult`(accessToken/refreshToken 포함)로 바뀌었다.
+    /// 현재 iOS는 여전히 최소 필드(`AuthAccountResponseDTO`)만 디코딩해 토큰을 못 받는다 —
+    /// 회원가입 직후 자동 로그인시키려면 응답 DTO를 확장해야 한다(별도 확인 필요).
     static func register(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/register", method: .post, body: body)
+        Endpoint(baseURL: baseURL, path: "/api/auth/signup", method: .post, body: body)
     }
 
     static func login(body: Data) -> Endpoint {
@@ -18,85 +34,135 @@ nonisolated enum BackendEndpoint {
     }
 
     static func oauthLogin(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/oauth-login", method: .post, body: body)
+        Endpoint(baseURL: baseURL, path: "/api/auth/login/oauth", method: .post, body: body)
+    }
+
+    static func logout(body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/auth/logout", method: .post, body: body)
     }
 
     static func accounts() -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/auth/accounts", authorizationRequirement: .bearerToken)
     }
 
-    static func deleteAccount(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/delete/\(userId)", method: .delete, authorizationRequirement: .bearerToken)
+    static func deleteAccount() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me", method: .delete, authorizationRequirement: .bearerToken)
     }
 
     static func registerFCMToken(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/register-fcm-token", method: .post, body: body, authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/auth/fcm-token", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
-    static func updateNickname(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/users/\(userId)/nickname", method: .patch, body: body, authorizationRequirement: .bearerToken)
+    static func updateNickname(body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/nickname", method: .patch, body: body, authorizationRequirement: .bearerToken)
     }
 
-    static func changePassword(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/auth/users/\(userId)/change-password", method: .post, body: body, authorizationRequirement: .bearerToken)
+    static func changePassword(body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/password", method: .patch, body: body, authorizationRequirement: .bearerToken)
     }
 
-    static func me(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)", authorizationRequirement: .bearerToken)
+    static func me() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me", authorizationRequirement: .bearerToken)
     }
 
-    static func meProfile(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/profile", authorizationRequirement: .bearerToken)
+    static func meProfile() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/profile", authorizationRequirement: .bearerToken)
     }
 
-    static func investmentProfile(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/investment-profile", authorizationRequirement: .bearerToken)
+    static func watchAssets() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/watch-assets", authorizationRequirement: .bearerToken)
     }
 
-    static func updateInvestmentProfile(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/investment-profile", method: .patch, body: body, authorizationRequirement: .bearerToken)
+    static func meStudyStats() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/study-stats", authorizationRequirement: .bearerToken)
     }
 
-    static func watchAssets(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/watch-assets", authorizationRequirement: .bearerToken)
+    static func meSettings() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/settings", authorizationRequirement: .bearerToken)
     }
 
-    static func meStudyStats(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/study-stats", authorizationRequirement: .bearerToken)
+    static func updateNotificationSettings(body: Data) -> Endpoint {
+        Endpoint(
+            baseURL: baseURL,
+            path: "/api/me/settings/notifications",
+            method: .patch,
+            body: body,
+            authorizationRequirement: .bearerToken
+        )
     }
 
-    static func meSettings(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/settings", authorizationRequirement: .bearerToken)
+    static func sendTestNotification() -> Endpoint {
+        Endpoint(
+            baseURL: baseURL,
+            path: "/api/me/notifications/test",
+            method: .post,
+            authorizationRequirement: .bearerToken
+        )
     }
 
-    static func updateMeSettings(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/settings", method: .patch, body: body, authorizationRequirement: .bearerToken)
+    /// ⚠️ 예전 타깃(`PATCH /api/me/settings`)이 이번 리팩터로 사라졌다. 서버에 남은 동급 라우트는
+    /// `PATCH /api/investment-profile`뿐인데 필드가 `investmentHorizon`·`maxDrawdownTolerance` 2개뿐이라
+    /// `investmentProfile`(투자 성향)을 보낼 곳이 없다 — 온보딩 5/8 값이 저장 안 될 수 있음. 확인 필요.
+    static func updateInvestmentProfile(body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/investment-profile", method: .patch, body: body, authorizationRequirement: .bearerToken)
     }
 
-    static func updateWatchAssets(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/\(userId)/watch-assets", method: .post, body: body, authorizationRequirement: .bearerToken)
+    static func updateWatchAssets(body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/me/watch-assets", method: .post, body: body, authorizationRequirement: .bearerToken)
+    }
+
+    static func goal() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/goal-progress", authorizationRequirement: .bearerToken)
+    }
+
+    static func updateGoal(body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/goal", method: .patch, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func watchAssetOptions() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/watch-assets/options", authorizationRequirement: .bearerToken)
+        Endpoint(baseURL: baseURL, path: "/api/watch-assets/options", authorizationRequirement: .bearerToken)
     }
 
-    static func home(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/home", authorizationRequirement: .bearerToken)
+    static func dailyBriefing() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/daily-briefing", authorizationRequirement: .bearerToken)
     }
 
-    static func todayDashboard(userId: Int64) -> Endpoint {
-        homeBriefing(userId: userId)
+    static func todayHoldings() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/holdings", authorizationRequirement: .bearerToken)
     }
 
-    static func homeBriefing(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/home/briefing", authorizationRequirement: .bearerToken)
+    /// body 없이 호출하면 서버의 `KIS_MOCK_*` 설정으로 모의투자 계좌를 연결한다.
+    static func linkBrokerAccount() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/accounts", method: .post, authorizationRequirement: .bearerToken)
     }
 
-    static func homeSection(userId: Int64, _ sectionPath: HomeSectionPath) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/home/\(sectionPath.rawValue)", authorizationRequirement: .bearerToken)
+    static func brokerAccounts() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/accounts", authorizationRequirement: .bearerToken)
     }
 
+    static func syncBrokerAccount(accountId: Int64) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/accounts/\(accountId)/sync", method: .post, authorizationRequirement: .bearerToken)
+    }
+
+    static func newsroom(briefingDate: String? = nil) -> Endpoint {
+        Endpoint(
+            baseURL: baseURL,
+            path: "/api/newsroom",
+            queryItems: briefingDate.map { [URLQueryItem(name: "briefingDate", value: $0)] } ?? [],
+            authorizationRequirement: .bearerToken
+        )
+    }
+
+    static func newsroomDetail(ticker: String, briefingDate: String? = nil) -> Endpoint {
+        Endpoint(
+            baseURL: baseURL,
+            path: "/api/newsroom/\(escapedPathComponent(ticker))",
+            queryItems: briefingDate.map { [URLQueryItem(name: "briefingDate", value: $0)] } ?? [],
+            authorizationRequirement: .bearerToken
+        )
+    }
+
+    /// `/api/feeds/policy*`는 JWT 보호 대상이 아니고 userId를 여전히 쿼리로 명시해야 한다(서버 미변경).
     static func policyFeed(
         userId: Int64,
         limit: Int? = nil,
@@ -133,42 +199,30 @@ nonisolated enum BackendEndpoint {
         )
     }
 
-    static func events(userId: Int64, dateSegment: String = "all", category: String = "all") -> Endpoint {
+    static func events(dateSegment: String = "all", category: String = "all") -> Endpoint {
         Endpoint(
             baseURL: baseURL,
-            path: "/api/users/\(userId)/events",
+            path: "/api/events",
             queryItems: eventQuery(dateSegment: dateSegment, category: category),
             authorizationRequirement: .bearerToken
         )
     }
 
-    static func updateEventAlert(eventId: Int64, userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/events/\(eventId)/alerts", method: .post, body: body, authorizationRequirement: .bearerToken)
+    static func updateEventAlert(eventId: Int64, body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/events/\(eventId)/alerts", method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
-    static func eventSection(userId: Int64, _ sectionPath: EventSectionPath, dateSegment: String = "all", category: String = "all") -> Endpoint {
+    static func eventSection(_ sectionPath: EventSectionPath, dateSegment: String = "all", category: String = "all") -> Endpoint {
         let queryItems = sectionPath == .items
             ? eventQuery(dateSegment: dateSegment, category: category)
             : []
 
-        return Endpoint(baseURL: baseURL, path: "/api/users/\(userId)/events/\(sectionPath.rawValue)", queryItems: queryItems, authorizationRequirement: .bearerToken)
+        return Endpoint(baseURL: baseURL, path: "/api/events/\(sectionPath.rawValue)", queryItems: queryItems, authorizationRequirement: .bearerToken)
     }
 
-    static func signalDetail(id: String) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/signals/\(escapedPathComponent(id))", authorizationRequirement: .bearerToken)
-    }
-
-    static func signalThemes() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/signals/themes", authorizationRequirement: .bearerToken)
-    }
-
-    static func signalCards(theme: String) -> Endpoint {
-        Endpoint(
-            baseURL: baseURL,
-            path: "/api/signals/cards",
-            queryItems: [URLQueryItem(name: "theme", value: theme)],
-            authorizationRequirement: .bearerToken
-        )
+    /// 홈 브리핑의 보조 정책 신호. 기존 `/api/signals/**`는 서버에 없다.
+    static func homeSecondarySignals() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/home/signals/secondary", authorizationRequirement: .bearerToken)
     }
 
     static func heatmap(marketScope: String = "all", country: String = "all") -> Endpoint {
@@ -183,28 +237,12 @@ nonisolated enum BackendEndpoint {
         )
     }
 
-    static func portfolio(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)", authorizationRequirement: .bearerToken)
-    }
-
-    static func portfolioRebalancing(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)/rebalancing", authorizationRequirement: .bearerToken)
-    }
-
-    static func portfolioRebalancingPreview(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/portfolio/\(userId)/rebalancing/preview", method: .post, body: body, authorizationRequirement: .bearerToken)
+    static func portfolio() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/portfolio", authorizationRequirement: .bearerToken)
     }
 
     static func insightSection(_ sectionPath: InsightSectionPath) -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/insights/\(sectionPath.rawValue)", authorizationRequirement: .bearerToken)
-    }
-
-    static func trainRegression() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/ai/train-regression", method: .post, body: NetworkJSONCoding.encodeEmptyJSONObject(), authorizationRequirement: .bearerToken)
-    }
-
-    static func triggerAI(userId: Int64, body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/ai/trigger", queryItems: userQuery(userId), method: .post, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func health() -> Endpoint {
@@ -217,52 +255,10 @@ nonisolated enum BackendEndpoint {
             headers["X-Webhook-Secret"] = secret
         }
 
-        return Endpoint(baseURL: baseURL, path: "/api/internal/webhook/event", method: .post, headers: headers, body: body)
-    }
-
-    static func adminAccounts(page: Int = 0, size: Int = 100) -> Endpoint {
-        Endpoint(
-            baseURL: baseURL,
-            path: "/admin/accounts",
-            queryItems: [
-                URLQueryItem(name: "page", value: String(page)),
-                URLQueryItem(name: "size", value: String(size)),
-            ],
-            authorizationRequirement: .bearerToken
-        )
-    }
-
-    static func adminAddAccount(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/admin/accounts/add", method: .post, body: body, authorizationRequirement: .bearerToken)
-    }
-
-    static func adminChangePassword(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/admin/accounts/change-password", method: .post, body: body, authorizationRequirement: .bearerToken)
-    }
-
-    static func adminDeleteAccount(userId: Int64) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/admin/accounts/\(userId)", method: .delete, authorizationRequirement: .bearerToken)
-    }
-
-    static func adminUpdateFCMToken(userId: Int64, fcmToken: String) -> Endpoint {
-        Endpoint(
-            baseURL: baseURL,
-            path: "/admin/accounts/\(userId)/fcm-token",
-            queryItems: [URLQueryItem(name: "fcmToken", value: fcmToken)],
-            method: .patch,
-            authorizationRequirement: .bearerToken
-        )
-    }
-
-    static func adminSendNotification(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/admin/notifications/send", method: .post, body: body, authorizationRequirement: .bearerToken)
+        return Endpoint(baseURL: baseURL, path: "/api/internal/webhooks/events", method: .post, headers: headers, body: body)
     }
 
     private static let baseURL = NetworkConfiguration.backendBaseURL
-
-    private static func userQuery(_ userId: Int64) -> [URLQueryItem] {
-        [URLQueryItem(name: "userId", value: String(userId))]
-    }
 
     private static func eventQuery(dateSegment: String, category: String) -> [URLQueryItem] {
         [
@@ -298,17 +294,6 @@ nonisolated enum BackendEndpoint {
     }
 }
 
-nonisolated enum HomeSectionPath: String {
-    case checkpointTab = "tabs/checkpoints"
-    case detailTabs = "tabs/details"
-    case disclaimer
-    case featuredCard = "cards/featured"
-    case header
-    case portfolioCard = "cards/portfolio"
-    case quickInterpretation = "interpretations/quick"
-    case secondarySignals = "signals/secondary"
-}
-
 nonisolated enum PolicyFeedSectionPath: String {
     case cards
     case filters
@@ -325,8 +310,8 @@ nonisolated enum EventSectionPath: String {
 }
 
 nonisolated enum InsightSectionPath: String {
-    case columns
-    case legend
-    case rows
-    case viewTabs = "view-tabs"
+    case columns = "heatmap/columns"
+    case legend = "heatmap/legend"
+    case rows = "heatmap/rows"
+    case viewTabs = "tabs"
 }

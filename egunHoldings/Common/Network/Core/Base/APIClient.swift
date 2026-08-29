@@ -62,8 +62,8 @@ extension APIClient {
             return result
         }
 
-        if T.self == EmptyAPIResult.self {
-            return EmptyAPIResult() as! T
+        if let emptyResult = EmptyAPIResult() as? T {
+            return emptyResult
         }
 
         throw NetworkError.emptyResult(

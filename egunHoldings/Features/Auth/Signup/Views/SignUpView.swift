@@ -1,26 +1,16 @@
 import SwiftUI
 
 struct SignUpView: View {
-    let errorMessage: String?
     let onBackToLogin: () -> Void
-    let onResetError: () -> Void
-    let onSignUp: (_ name: String, _ email: String, _ password: String, _ confirmPassword: String, _ agreed: Bool) async -> Bool
     let onCompleted: (String) -> Void
 
     @StateObject private var viewModel: SignUpFlowViewModel
-    @State private var isSubmitting = false
 
     init(
-        errorMessage: String?,
         onBackToLogin: @escaping () -> Void,
-        onResetError: @escaping () -> Void,
-        onSignUp: @escaping (_ name: String, _ email: String, _ password: String, _ confirmPassword: String, _ agreed: Bool) async -> Bool,
         onCompleted: @escaping (String) -> Void
     ) {
-        self.errorMessage = errorMessage
         self.onBackToLogin = onBackToLogin
-        self.onResetError = onResetError
-        self.onSignUp = onSignUp
         self.onCompleted = onCompleted
         _viewModel = StateObject(wrappedValue: SignUpFlowViewModel())
     }
@@ -75,6 +65,13 @@ struct SignUpView: View {
                         onVerifyCode: viewModel.attemptVerification(with:),
                         onNext: viewModel.moveToPasswordSetup
                     )
+                    // 인증 카운트다운 틱은 이 단계에 머무는 동안에만 필요하다. 예전에는 SignUpView
+                    // 전체(NavigationStack 루트)에 걸려 있어서, 약관/비밀번호/완료 단계로 넘어간 뒤에도
+                    // 매초 구독이 살아 있었다. 라우트 콘텐츠에 붙여 이 화면이 스택에서 사라지면
+                    // 함께 취소되도록 한다.
+                    .onReceive(viewModel.verificationTimer) { _ in
+                        viewModel.tickVerificationTimer()
+                    }
                 case .passwordSetup:
                     SignupPasswordView(
                         email: viewModel.emailAddress,
@@ -86,7 +83,7 @@ struct SignUpView: View {
                             get: { viewModel.confirmPassword },
                             set: { viewModel.updateConfirmPassword($0) }
                         ),
-                        errorMessage: errorMessage,
+                        errorMessage: viewModel.errorMessage,
                         onBack: navigateBack,
                         onComplete: finishSignup
                     )
@@ -99,27 +96,15 @@ struct SignUpView: View {
         }
         .background(PFGradientBackground())
         .preferredColorScheme(.light)
-        .onReceive(viewModel.verificationTimer) { _ in
-            viewModel.tickVerificationTimer()
-        }
     }
 
     private func navigateBack() {
-        onResetError()
         viewModel.navigateBack()
     }
 
     private func finishSignup() {
-        guard !isSubmitting else { return }
-
-        onResetError()
-
         Task {
-            isSubmitting = true
-            let didSignUp = await viewModel.finishSignup(using: onSignUp)
-            isSubmitting = false
-
-            guard didSignUp else { return }
+            guard await viewModel.submitSignup() else { return }
             viewModel.moveToComplete()
         }
     }
@@ -127,10 +112,7 @@ struct SignUpView: View {
 
 #Preview {
     SignUpView(
-        errorMessage: nil,
         onBackToLogin: {},
-        onResetError: {},
-        onSignUp: { _, _, _, _, _ in true },
         onCompleted: { _ in }
     )
 }

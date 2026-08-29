@@ -3,107 +3,82 @@ import SwiftUI
 
 @MainActor
 final class TodayViewModel: ObservableObject {
-    @Published var activeSheet: TodaySheet?
     @Published private(set) var loadState: TodayLoadState = .idle
     @Published private(set) var userAssetProfile: UserAssetProfile
     @Published private(set) var portfolioSnapshot: PortfolioSnapshot
-    @Published private(set) var judgment: TodayJudgment
-    @Published private(set) var portfolio: TodayPortfolioSummary
-    @Published private(set) var topPolicy: TodayPolicyEvent?
-    @Published private(set) var policyEvents: [TodayPolicyEvent]
+    @Published private(set) var isAccountLinked: Bool
+    @Published private(set) var briefing: TodayBriefing
     @Published private(set) var holdings: [TodayHolding]
-    @Published private(set) var noActionReasons: [String]
-    @Published private(set) var noActionWatchCondition: String
-    @Published private(set) var primaryCheckpointText: String
-    @Published private(set) var dataUpdatedAt: String
-    @Published private(set) var dataSources: [String]
-    @Published private(set) var aiSummaryStatus: String
-    @Published private(set) var themeSignals: [PortfolioThemeSignal]
-    @Published private(set) var policyReadings: [PolSignalPolicyReading]
-    @Published private(set) var adjustmentProposal: PolSignalAdjustmentProposal?
-    @Published private(set) var apiConnectionStatuses: [TodayAPIConnectionStatus]
+    @Published private(set) var goalProgress: TodayGoalProgress?
+    @Published private(set) var newsItems: [TodayNewsItem]
 
     private let userId: Int64?
     private let repository: TodayRepositoryProtocol
+    private var brokerBalanceSnapshot: BrokerBalanceSnapshot?
     private var didLoad = false
+    private var refreshGeneration = 0
 
     init(
         userId: Int64? = nil,
         userAssetProfile: UserAssetProfile,
         portfolioSnapshot: PortfolioSnapshot,
-        policyEvents: [TodayPolicyEvent] = TodayMockData.policyEvents,
         holdings: [TodayHolding] = TodayMockData.holdings,
-        judgment: TodayJudgment = TodayMockData.judgment,
+        brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
         repository: TodayRepositoryProtocol? = nil
     ) {
         let dashboard = MockTodayRepository.makeDashboard(
             userId: userId,
             userAssetProfile: userAssetProfile,
             portfolioSnapshot: portfolioSnapshot,
-            policyEvents: policyEvents,
-            holdings: holdings,
-            judgment: judgment
+            holdings: holdings
         )
 
         self.userId = userId
         self.repository = repository ?? TodayRepositoryFactory.makeDefault()
+        self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.userAssetProfile = dashboard.userAssetProfile
         self.portfolioSnapshot = dashboard.portfolioSnapshot
-        self.judgment = dashboard.judgment
-        self.portfolio = dashboard.portfolio
-        let rankedPolicyEvents = Self.rankByImpact(dashboard.policyEvents)
-        self.topPolicy = rankedPolicyEvents.first ?? dashboard.topPolicy
-        self.policyEvents = rankedPolicyEvents
+        self.isAccountLinked = dashboard.isAccountLinked
+        self.briefing = dashboard.briefing
+        self.holdings = brokerBalanceSnapshot?.todayHoldings ?? dashboard.holdings
+        self.goalProgress = dashboard.goalProgress
+        self.newsItems = dashboard.newsItems
+    }
+
+    /// Preview/test-only constructor that bypasses the mock-first init and injects a full dashboard directly.
+    init(userId: Int64?, dashboard: TodayDashboard, loadState: TodayLoadState = .loaded, repository: TodayRepositoryProtocol? = nil) {
+        self.userId = userId
+        self.repository = repository ?? TodayRepositoryFactory.makeDefault()
+        self.brokerBalanceSnapshot = nil
+        self.userAssetProfile = dashboard.userAssetProfile
+        self.portfolioSnapshot = dashboard.portfolioSnapshot
+        self.isAccountLinked = dashboard.isAccountLinked
+        self.briefing = dashboard.briefing
         self.holdings = dashboard.holdings
-        self.noActionReasons = dashboard.noActionReasons
-        self.noActionWatchCondition = dashboard.noActionWatchCondition
-        self.primaryCheckpointText = dashboard.primaryCheckpointText
-        self.dataUpdatedAt = dashboard.dataUpdatedAt
-        self.dataSources = dashboard.dataSources
-        self.aiSummaryStatus = dashboard.aiSummaryStatus
-        self.themeSignals = dashboard.themeSignals
-        self.policyReadings = dashboard.policyReadings
-        self.adjustmentProposal = dashboard.adjustmentProposal
-        self.apiConnectionStatuses = dashboard.apiConnectionStatuses
+        self.goalProgress = dashboard.goalProgress
+        self.newsItems = dashboard.newsItems
+        self.loadState = loadState
+        self.didLoad = true
     }
 
     var connectedBrokerStatusText: String {
-        userAssetProfile.holdings.isEmpty ? "연결 전" : "한국투자증권 읽기 전용"
+        isAccountLinked ? "한국투자증권 읽기 전용" : "연결 전"
     }
 
-    var connectionStatusText: String {
-        switch loadState {
-        case .idle:
-            return "예시 데이터 사용 중"
-        case .loading:
-            return "서버 동기화 중"
-        case .loaded:
-            return "서버 데이터 연결됨"
-        case .usingFallback:
-            return "예시 데이터 사용 중"
-        }
-    }
+    var topHoldings: [TodayHolding] {
+        let positions = holdings.filter { $0.ticker != "ETC" }
+        let topThree = Array(positions.sorted { $0.weight > $1.weight }.prefix(3))
+        let remainder = max(0, 100 - topThree.reduce(0) { $0 + $1.weight })
 
-    var dataStatusFootnote: String {
-        switch loadState {
-        case .loaded:
-            return "서버에서 받은 Today 브리핑과 읽기 전용 보유 자산을 기준으로 구성합니다."
-        case .loading:
-            return "현재 서버 데이터를 동기화하고 있습니다. 동기화 전까지는 마지막 예시 브리핑을 보여줍니다."
-        case .usingFallback(let message):
-            return message.map { "\($0)" }
-                ?? "예시 데이터를 사용 중입니다. 실제 계좌 연결 시 실계좌 기준 분석으로 전환됩니다."
-        case .idle:
-            return "예시 데이터를 사용 중입니다. 실제 계좌 연결 시 실계좌 기준 분석으로 전환됩니다."
-        }
-    }
-
-    var dataStatusRows: [(String, String)] {
-        [
-            ("마지막 업데이트", dataUpdatedAt),
-            ("데이터 출처", dataSources.joined(separator: ", ")),
-            ("포트폴리오", connectedBrokerStatusText),
-            ("AI 요약", aiSummaryStatus)
+        guard remainder > 0 else { return topThree }
+        return topThree + [
+            TodayHolding(
+                id: "__rest",
+                name: "그 외 보유종목",
+                ticker: "ETC",
+                category: "ETC",
+                weight: remainder
+            )
         ]
     }
 
@@ -113,14 +88,56 @@ final class TodayViewModel: ObservableObject {
         await refresh()
     }
 
+    /// 잔고 조회 응답 등으로 상위(AppRouter) 세션 데이터가 갱신됐을 때 호출한다.
+    /// 예전에는 상위에서 `.id(portfolioSnapshot)`으로 화면을 통째로 재생성했는데,
+    /// 그러면 뷰모델·네비게이션 경로·스크롤 위치가 전부 초기화되고 로딩 스켈레톤이 다시 노출됐다.
+    /// 여기서는 로컬 파생 데이터만 즉시 갱신하고, 서버 재조회는 스켈레톤 없이 조용히 수행한다.
+    func updateSessionData(
+        userAssetProfile: UserAssetProfile,
+        portfolioSnapshot: PortfolioSnapshot,
+        brokerBalanceSnapshot: BrokerBalanceSnapshot?
+    ) {
+        guard userAssetProfile != self.userAssetProfile
+                || portfolioSnapshot != self.portfolioSnapshot
+                || brokerBalanceSnapshot != self.brokerBalanceSnapshot
+        else {
+            return
+        }
+
+        self.brokerBalanceSnapshot = brokerBalanceSnapshot
+
+        apply(
+            MockTodayRepository.makeDashboard(
+                userId: userId,
+                userAssetProfile: userAssetProfile,
+                portfolioSnapshot: portfolioSnapshot,
+                holdings: brokerBalanceSnapshot?.todayHoldings ?? holdings
+            )
+        )
+
+        guard didLoad else { return }
+        Task { await refresh(showsLoading: false) }
+    }
+
     func refresh() async {
+        await refresh(showsLoading: true)
+    }
+
+    private func refresh(showsLoading: Bool) async {
         guard userId != nil else {
-            apiConnectionStatuses = MockTodayRepository.mockConnectionStatuses(userId: nil)
             loadState = .usingFallback(message: nil)
             return
         }
 
-        loadState = .loading
+        // 이 refresh가 서버 응답을 기다리는 동안 더 최신 refresh(예: 잔고 갱신으로 인한
+        // updateSessionData 트리거)가 시작되면, 그 최신 refresh만 결과를 반영하게 한다.
+        // 그렇지 않으면 늦게 도착한 이전 응답이 이미 반영된 최신 데이터를 덮어쓸 수 있다.
+        refreshGeneration += 1
+        let generation = refreshGeneration
+
+        if showsLoading {
+            loadState = .loading
+        }
 
         do {
             let dashboard = try await repository.fetchDashboard(
@@ -128,64 +145,45 @@ final class TodayViewModel: ObservableObject {
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot
             )
+            guard generation == refreshGeneration else { return }
             apply(dashboard)
             loadState = .loaded
         } catch {
-            apiConnectionStatuses = MockTodayRepository.mockConnectionStatuses(userId: userId)
+            guard generation == refreshGeneration else { return }
             loadState = .usingFallback(message: Self.errorMessage(for: error))
         }
-    }
-
-    func present(_ sheet: TodaySheet) {
-        activeSheet = sheet
-    }
-
-    func relatedPolicies(for item: TodayExposureItem) -> [TodayPolicyEvent] {
-        Self.rankByImpact(
-            policyEvents.filter { policy in
-                policy.myExposure > 20 || policy.relatedAssets.contains { asset in
-                    asset.localizedCaseInsensitiveContains(item.theme)
-                }
-            }
-        )
     }
 
     private func apply(_ dashboard: TodayDashboard) {
         userAssetProfile = dashboard.userAssetProfile
         portfolioSnapshot = dashboard.portfolioSnapshot
-        judgment = dashboard.judgment
-        portfolio = dashboard.portfolio
-        let rankedPolicyEvents = Self.rankByImpact(dashboard.policyEvents)
-        topPolicy = rankedPolicyEvents.first ?? dashboard.topPolicy
-        policyEvents = rankedPolicyEvents
-        holdings = dashboard.holdings
-        noActionReasons = dashboard.noActionReasons
-        noActionWatchCondition = dashboard.noActionWatchCondition
-        primaryCheckpointText = dashboard.primaryCheckpointText
-        dataUpdatedAt = dashboard.dataUpdatedAt
-        dataSources = dashboard.dataSources
-        aiSummaryStatus = dashboard.aiSummaryStatus
-        themeSignals = dashboard.themeSignals
-        policyReadings = dashboard.policyReadings
-        adjustmentProposal = dashboard.adjustmentProposal
-        apiConnectionStatuses = dashboard.apiConnectionStatuses
+        isAccountLinked = dashboard.isAccountLinked
+        briefing = dashboard.briefing
+        holdings = brokerBalanceSnapshot?.todayHoldings ?? dashboard.holdings
+        goalProgress = dashboard.goalProgress
+        newsItems = dashboard.newsItems
     }
 
     private static func errorMessage(for error: Error) -> String {
         AppVocabulary.ErrorMessage.userFacing(for: error)
     }
+}
 
-    private static func rankByImpact(_ policies: [TodayPolicyEvent]) -> [TodayPolicyEvent] {
-        policies.sorted { lhs, rhs in
-            if lhs.myExposure != rhs.myExposure {
-                return lhs.myExposure > rhs.myExposure
-            }
+private extension BrokerBalanceSnapshot {
+    /// 수량이 아닌 각 포지션의 평가금액 합계를 분모로 사용한다.
+    var todayHoldings: [TodayHolding] {
+        let positions = holdings.filter { $0.evaluationAmount > 0 }
+        let totalAmount = positions.reduce(0) { $0 + $1.evaluationAmount }
+        guard totalAmount > 0 else { return [] }
 
-            if lhs.confidence != rhs.confidence {
-                return lhs.confidence > rhs.confidence
-            }
-
-            return lhs.id < rhs.id
+        return positions.map { holding in
+            TodayHolding(
+                id: holding.symbol,
+                name: holding.name,
+                ticker: holding.symbol,
+                category: holding.symbol,
+                weight: Int((Double(holding.evaluationAmount) / Double(totalAmount) * 100).rounded())
+            )
         }
     }
 }

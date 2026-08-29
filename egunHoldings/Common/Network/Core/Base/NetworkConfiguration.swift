@@ -22,40 +22,15 @@ nonisolated enum NetworkConfiguration {
         backendBaseURL
     }
 
-    static var tradingServerBaseURL: URL? {
-        if let configuredURL = configuredURL(forInfoKey: "TRADING_SERVER_BASE_URL") {
+    /// 액세스 토큰 갱신 엔드포인트. Info.plist에 별도 오버라이드가 없으면
+    /// 백엔드 베이스 URL의 `/api/auth/refresh`로 폴백한다(별도 설정 없이도 항상 동작하도록).
+    /// 항상 유효한 URL을 반환하므로(옵셔널 아님) 리프레시 관련 코드가 매번 nil 분기를 신경 쓸 필요가 없다.
+    static var authRefreshURL: URL {
+        if let configuredURL = configuredURL(forInfoKey: "AUTH_REFRESH_URL") {
             return configuredURL
         }
 
-        return backendBaseURL
-    }
-
-    static var authRefreshURL: URL? {
-        configuredURL(forInfoKey: "AUTH_REFRESH_URL")
-    }
-
-    static var tradingKisAccountNumber: String? {
-        if let configured = configuredString(forInfoKey: "TRADING_KIS_ACCOUNT_NUMBER") {
-            return configured
-        }
-
-#if DEBUG
-        return "50181876"
-#else
-        return nil
-#endif
-    }
-
-    static var tradingKisProductCode: String? {
-        if let configured = configuredString(forInfoKey: "TRADING_KIS_PRODUCT_CODE") {
-            return configured
-        }
-
-#if DEBUG
-        return "01"
-#else
-        return nil
-#endif
+        return backendBaseURL.appendingPathComponent("api/auth/refresh")
     }
 
     private static func configuredURL(forInfoKey key: String) -> URL? {

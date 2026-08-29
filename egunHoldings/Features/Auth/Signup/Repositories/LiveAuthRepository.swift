@@ -15,17 +15,6 @@ nonisolated private struct AuthRegisterRequestDTO: Encodable {
     let password: String
 }
 
-nonisolated private struct AuthLoginRequestDTO: Encodable {
-    let email: String
-    let password: String
-}
-
-nonisolated private struct OAuthLoginRequestDTO: Encodable {
-    let provider: String
-    let authorizationCode: String
-    let redirectUri: String
-}
-
 nonisolated private struct FCMTokenRequestDTO: Encodable {
     let userId: Int64
     let fcmToken: String
@@ -54,49 +43,7 @@ nonisolated private struct AuthAccountResponseDTO: Decodable {
     }
 }
 
-nonisolated private struct AuthLoginResponseDTO: Decodable {
-    let userId: Int64
-    let email: String
-    let nickname: String
-    let accessToken: String
-    let refreshToken: String?
-    let onboardingCompleted: Bool
-
-    func toDomain() -> AuthLoginSession {
-        AuthLoginSession(
-            userId: userId,
-            email: email,
-            nickname: nickname,
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            onboardingCompleted: onboardingCompleted
-        )
-    }
-}
-
-nonisolated private struct OAuthLoginResponseDTO: Decodable {
-    let userId: Int64
-    let email: String
-    let nickname: String
-    let accessToken: String
-    let refreshToken: String?
-    let onboardingCompleted: Bool
-    let newUser: Bool
-
-    func toDomain() -> OAuthLoginSession {
-        OAuthLoginSession(
-            userId: userId,
-            email: email,
-            nickname: nickname,
-            accessToken: accessToken,
-            refreshToken: refreshToken,
-            onboardingCompleted: onboardingCompleted,
-            newUser: newUser
-        )
-    }
-}
-
-nonisolated struct LiveAuthRepository: AuthRepositoryProtocol, EmailVerificationRepositoryProtocol {
+nonisolated struct LiveAuthRepository: RegistrationRepositoryProtocol, AccountManagementRepositoryProtocol, EmailVerificationRepositoryProtocol {
     private let apiClient: APIClient
 
     init(apiClient: APIClient = APIClientFactory.makeDefault()) {
@@ -132,32 +79,6 @@ nonisolated struct LiveAuthRepository: AuthRepositoryProtocol, EmailVerification
         return response.toDomain()
     }
 
-    func login(email: String, password: String) async throws -> AuthLoginSession {
-        let body = try NetworkJSONCoding.encodeJSON(
-            AuthLoginRequestDTO(email: email, password: password)
-        )
-        let response = try await apiClient.requestResult(
-            BackendEndpoint.login(body: body),
-            as: AuthLoginResponseDTO.self
-        )
-        return response.toDomain()
-    }
-
-    func oauthLogin(provider: String, authorizationCode: String, redirectUri: String) async throws -> OAuthLoginSession {
-        let body = try NetworkJSONCoding.encodeJSON(
-            OAuthLoginRequestDTO(
-                provider: provider,
-                authorizationCode: authorizationCode,
-                redirectUri: redirectUri
-            )
-        )
-        let response = try await apiClient.requestResult(
-            BackendEndpoint.oauthLogin(body: body),
-            as: OAuthLoginResponseDTO.self
-        )
-        return response.toDomain()
-    }
-
     func fetchAccounts() async throws -> [AuthAccountProfile] {
         let response = try await apiClient.requestResult(
             BackendEndpoint.accounts(),
@@ -168,7 +89,7 @@ nonisolated struct LiveAuthRepository: AuthRepositoryProtocol, EmailVerification
 
     func deleteAccount(userId: Int64) async throws -> AuthAccountProfile {
         let response = try await apiClient.requestResult(
-            BackendEndpoint.deleteAccount(userId: userId),
+            BackendEndpoint.deleteAccount(),
             as: AuthAccountResponseDTO.self
         )
         return response.toDomain()
@@ -188,7 +109,7 @@ nonisolated struct LiveAuthRepository: AuthRepositoryProtocol, EmailVerification
     func updateNickname(userId: Int64, nickname: String) async throws -> AuthAccountProfile {
         let body = try NetworkJSONCoding.encodeJSON(NicknameRequestDTO(nickname: nickname))
         let response = try await apiClient.requestResult(
-            BackendEndpoint.updateNickname(userId: userId, body: body),
+            BackendEndpoint.updateNickname(body: body),
             as: AuthAccountResponseDTO.self
         )
         return response.toDomain()
@@ -202,7 +123,7 @@ nonisolated struct LiveAuthRepository: AuthRepositoryProtocol, EmailVerification
             )
         )
         let response = try await apiClient.requestResult(
-            BackendEndpoint.changePassword(userId: userId, body: body),
+            BackendEndpoint.changePassword(body: body),
             as: AuthAccountResponseDTO.self
         )
         return response.toDomain()

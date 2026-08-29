@@ -51,16 +51,7 @@ struct SignalThemeDetailView: View {
 
     private var navigationHeader: some View {
         HStack(alignment: .center) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(PSColor.textPrimary)
-                    .frame(width: 32, height: 32)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            LiquidGlassBackButton(action: { dismiss() })
 
             Text(detail.theme.displayName)
                 .font(.pretendard(20, weight: .bold))
@@ -68,7 +59,7 @@ struct SignalThemeDetailView: View {
 
             Spacer(minLength: 0)
 
-            Text("이번 주 기준")
+            Text(detail.prediction.asOfDateLabel)
                 .font(.pretendard(11, weight: .medium))
                 .foregroundStyle(PSColor.textFaint)
                 .padding(.horizontal, 10)
@@ -92,7 +83,7 @@ struct SignalThemeDetailView: View {
                 SignalCardEmptyState(themeName: detail.theme.displayName)
             } else {
                 VStack(spacing: 10) {
-                    ForEach(detail.signalCards.prefix(3)) { card in
+                    ForEach(detail.signalCards.prefix(4)) { card in
                         SignalCardRow(card: card)
                     }
                 }
@@ -145,7 +136,7 @@ private struct PredictionSummaryCard: View {
                 .frame(height: 1)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("5거래일 후")
+                Text("5거래일 후 · \(prediction.targetDateLabel)")
                     .font(.pretendard(12, weight: .medium))
                     .foregroundStyle(PSColor.textFaint)
 
@@ -274,24 +265,65 @@ private struct SignalCardRow: View {
                     .padding(.bottom, 10)
                     .padding(.leading, 20)
 
-                HStack(spacing: 6) {
-                    Image(systemName: "newspaper")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(PSColor.textFaint)
+                if let urlString = card.newsURL, let url = URL(string: urlString) {
+                    sourceLink(title: newsTitle, source: card.newsSource, url: url)
+                        .padding(.leading, 20)
+                } else {
+                    HStack(spacing: 6) {
+                        Image(systemName: "newspaper")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(PSColor.textFaint)
 
-                    Text(newsTitle)
-                        .font(.pretendard(12, weight: .medium))
-                        .foregroundStyle(PSColor.textSecondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                        Text(newsTitle)
+                            .font(.pretendard(12, weight: .medium))
+                            .foregroundStyle(PSColor.textSecondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                    .padding(.leading, 20)
                 }
-                .padding(.leading, 20)
             }
         }
         .padding(.horizontal, 18)
         .padding(.vertical, 14)
         .background(PSColor.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: PSColor.cardShadow, radius: 6, x: 0, y: 1)
+    }
+
+    /// 실제 원문 기사로 이동하는 "원문 보기" 링크.
+    /// 파란 캡슐 + link 아이콘 + 우측 외부링크 아이콘으로 탭 가능함을 명시.
+    private func sourceLink(title: String, source: String?, url: URL) -> some View {
+        Link(destination: url) {
+            HStack(spacing: 8) {
+                Image(systemName: "link")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(PSColor.primary)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.pretendard(12, weight: .semibold))
+                        .foregroundStyle(PSColor.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+
+                    Text("원문 보기" + (source.map { " · \($0)" } ?? ""))
+                        .font(.pretendard(10, weight: .medium))
+                        .foregroundStyle(PSColor.textFaint)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(PSColor.primary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(PSColor.primarySoft, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

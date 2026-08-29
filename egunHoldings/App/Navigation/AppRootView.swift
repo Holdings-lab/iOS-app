@@ -20,6 +20,7 @@ struct AppRootView: View {
             case .onboarding:
                 OnboardingFlowView(
                     userId: router.session?.userId,
+                    userName: router.userName,
                     onLogout: router.logout,
                     onComplete: router.completeOnboarding
                 )
@@ -28,7 +29,8 @@ struct AppRootView: View {
                     userId: router.session?.userId,
                     userAssetProfile: router.userAssetProfile,
                     portfolioSnapshot: router.portfolioSnapshot,
-                    brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot
+                    brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot,
+                    onBrokerBalanceUpdated: router.updateBrokerBalance
                 )
             }
         }

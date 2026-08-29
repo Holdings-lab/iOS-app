@@ -2,11 +2,12 @@ import SwiftUI
 
 struct OnboardingFlowView: View {
     private enum OnboardingRoute: Hashable {
-        case riskProfile
-        case investmentGoal
-        case funds
-        case brokerageConnection
-        case brokerageLoading
+        case targetAmount
+        case horizon
+        case drawdown
+        case profile
+        case watchAssets
+        case brokerage
         case completion
     }
 
@@ -14,77 +15,76 @@ struct OnboardingFlowView: View {
     let onLogout: () -> Void
     let onComplete: (OnboardingResult) -> Void
 
-    @StateObject private var onboardingViewModel = OnboardingFlowViewModel()
+    @StateObject private var onboardingViewModel: OnboardingFlowViewModel
     @State private var path: [OnboardingRoute] = []
 
     init(
         userId: Int64? = nil,
+        userName: String = "회원",
         onLogout: @escaping () -> Void,
         onComplete: @escaping (OnboardingResult) -> Void
     ) {
         self.userId = userId
         self.onLogout = onLogout
         self.onComplete = onComplete
+        _onboardingViewModel = StateObject(wrappedValue: OnboardingFlowViewModel(userName: userName))
     }
 
     var body: some View {
         NavigationStack(path: $path) {
-            OnboardingPage1View(
+            OnboardingStep1GoalView(
                 viewModel: onboardingViewModel,
-                onNext: { path.append(.riskProfile) },
+                onNext: { path.append(.targetAmount) },
                 onBack: onLogout
             )
             .navigationDestination(for: OnboardingRoute.self) { route in
                 switch route {
-                case .riskProfile:
-                    OnboardingPage2View(
+                case .targetAmount:
+                    OnboardingStep2TargetAmountView(
                         viewModel: onboardingViewModel,
-                        onBack: navigateBack,
-                        onNext: { path.append(.investmentGoal) }
+                        onNext: { path.append(.horizon) },
+                        onBack: navigateBack
                     )
-                case .investmentGoal:
-                    OnboardingGoalView(
+                case .horizon:
+                    OnboardingStep3HorizonView(
                         viewModel: onboardingViewModel,
-                        onBack: navigateBack,
-                        onNext: { path.append(.funds) }
+                        onNext: { path.append(.drawdown) },
+                        onBack: navigateBack
                     )
-                case .funds:
-                    OnboardingFundsView(
+                case .drawdown:
+                    OnboardingStep4DrawdownView(
                         viewModel: onboardingViewModel,
-                        onBack: navigateBack,
-                        onNext: { path.append(.brokerageConnection) }
+                        onNext: { path.append(.profile) },
+                        onBack: navigateBack
                     )
-                case .brokerageConnection:
-                    OnboardingPage3View(
+                case .profile:
+                    OnboardingStep5ProfileView(
                         viewModel: onboardingViewModel,
-                        onBack: navigateBack,
-                        onNext: {
-                            path.append(onboardingViewModel.connectedInstitutionID == nil ? .completion : .brokerageLoading)
-                        }
+                        onNext: { path.append(.watchAssets) },
+                        onBack: navigateBack
                     )
-                case .brokerageLoading:
-                    OnboardingBrokerageLoadingView(
+                case .watchAssets:
+                    OnboardingStep6WatchAssetsView(
                         viewModel: onboardingViewModel,
-                        onSkip: {
-                            onboardingViewModel.skipBrokerageConnection()
-                            path.append(.completion)
-                        },
-                        onComplete: { path.append(.completion) }
+                        onNext: { path.append(.brokerage) },
+                        onBack: navigateBack
+                    )
+                case .brokerage:
+                    OnboardingStep7BrokerageView(
+                        viewModel: onboardingViewModel,
+                        userId: userId,
+                        onBack: navigateBack,
+                        onNext: { path.append(.completion) },
+                        onSkip: { path.append(.completion) }
                     )
                 case .completion:
-                    OnboardingPage4View(
-                        userId: userId,
+                    OnboardingStep8CompletionView(
                         viewModel: onboardingViewModel,
-                        onBack: navigateBack,
-                        onStart: {
-                            onComplete(onboardingViewModel.makeOnboardingResult())
-                        }
+                        userId: userId,
+                        onComplete: completeOnboarding
                     )
                 }
             }
-        }
-        .task(id: userId) {
-            await onboardingViewModel.loadInvestmentProfileIfAvailable(userId: userId)
         }
         .preferredColorScheme(.light)
     }
@@ -92,6 +92,10 @@ struct OnboardingFlowView: View {
     private func navigateBack() {
         guard !path.isEmpty else { return }
         path.removeLast()
+    }
+
+    private func completeOnboarding() {
+        onComplete(onboardingViewModel.makeOnboardingResult())
     }
 }
 

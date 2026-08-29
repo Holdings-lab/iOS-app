@@ -1,35 +1,90 @@
 import Foundation
 
 nonisolated struct LiveSignalRepository: SignalRepositoryProtocol {
+    private let userId: Int64?
     private let apiClient: APIClient
+    private let fallbackRepository: MockSignalRepository
 
-    init(apiClient: APIClient = APIClientFactory.makeDefault()) {
+    init(
+        userId: Int64? = nil,
+        apiClient: APIClient = APIClientFactory.makeDefault(),
+        fallbackRepository: MockSignalRepository = MockSignalRepository()
+    ) {
+        self.userId = userId
         self.apiClient = apiClient
+        self.fallbackRepository = fallbackRepository
     }
 
     func fetchThemeSignals() async throws -> [PortfolioThemeSignal] {
-        let dtos = try await apiClient.requestResult(
-            BackendEndpoint.signalThemes(),
-            as: [SignalThemeResponseDTO].self
-        )
-        return dtos.compactMap { $0.toDomain(relatedEventId: $0.relatedEventId) }
+        do {
+            let dtos = try await apiClient.requestResult(
+                BackendEndpoint.homeSecondarySignals(),
+                as: [HomeSecondarySignalDTO].self
+            )
+            return dtos.compactMap { $0.toDomain() }
+        } catch {
+            guard Self.shouldUseFallback(for: error) else {
+                throw error
+            }
+
+            APIFallbackLog.log("GET /api/home/signals/secondary", error: error)
+            return try await fallbackRepository.fetchThemeSignals()
+        }
     }
 
     func fetchSignalCards(theme: PortfolioThemeSignal.Theme) async throws -> [SignalCard] {
-        let dtos = try await apiClient.requestResult(
-            BackendEndpoint.signalCards(theme: theme.tickerId),
-            as: [SignalCardResponseDTO].self
-        )
-        return dtos.compactMap { $0.toDomain() }
+        do {
+            let dtos = try await apiClient.requestResult(
+                BackendEndpoint.homeSecondarySignals(),
+                as: [HomeSecondarySignalDTO].self
+            )
+            return dtos.compactMap { $0.toSignalCard(for: theme) }
+        } catch {
+            guard Self.shouldUseFallback(for: error) else {
+                throw error
+            }
+
+            APIFallbackLog.log("GET /api/home/signals/secondary", error: error)
+            return try await fallbackRepository.fetchSignalCards(theme: theme)
+        }
     }
 
     func fetchEvents() async throws -> [PolSignalEvent] {
-        // TODO: 백엔드 이벤트 목록 API 연결 시 구현.
-        throw URLError(.unsupportedURL)
+        guard let userId else {
+            return try await fallbackRepository.fetchEvents()
+        }
+
+        do {
+            let response = try await apiClient.requestResult(
+                BackendEndpoint.events(),
+                as: TodayEventsResponseDTO.self
+            )
+            let fallback = try await fallbackRepository.fetchEvents()
+            return response.toSignalEvents(fallback: fallback)
+        } catch {
+            guard Self.shouldUseFallback(for: error) else {
+                throw error
+            }
+
+            APIFallbackLog.log("GET /api/users/\(userId)/events", error: error)
+            return try await fallbackRepository.fetchEvents()
+        }
     }
 
     func fetchEvent(id: Int) async throws -> PolSignalEvent {
-        // TODO: 백엔드 이벤트 상세 API 연결 시 구현.
-        throw URLError(.unsupportedURL)
+        let events = try await fetchEvents()
+        if let event = events.first(where: { $0.id == id }) {
+            return event
+        }
+
+        return try await fallbackRepository.fetchEvent(id: id)
+    }
+
+    private static func shouldUseFallback(for error: Error) -> Bool {
+        if error is NetworkError {
+            return true
+        }
+
+        return (error as NSError).domain == NSURLErrorDomain
     }
 }

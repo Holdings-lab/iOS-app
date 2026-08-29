@@ -91,11 +91,7 @@ nonisolated struct PolicyNewsCardDTO: Decodable, Sendable {
             return date
         }
 
-        if let date = fractionalISO8601Formatter.date(from: value) {
-            return date
-        }
-
-        return iso8601Formatter.date(from: value)
+        return NetworkJSONCoding.parseISO8601(value)
     }
 
     private static func mapCategory(_ value: String?) -> PolicyNewsCategory {
@@ -157,17 +153,6 @@ nonisolated struct PolicyNewsCardDTO: Decodable, Sendable {
         return formatter
     }()
 
-    private static let iso8601Formatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        return formatter
-    }()
-
-    private static let fractionalISO8601Formatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter
-    }()
 }
 
 nonisolated struct PolicyNewsCardSentimentDTO: Decodable, Sendable {

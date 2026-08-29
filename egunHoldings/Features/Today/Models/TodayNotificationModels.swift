@@ -70,6 +70,21 @@ struct AppNotificationItem: Identifiable, Hashable {
     let relatedTitle: String?
     let analysisPayload: PolSignalAnalysisPayload?
     var isRead: Bool
+    /// 탭했을 때 시트에서 표시할 상세 본문. nil이면 분석 payload 또는 read-only 처리.
+    let detailBody: String?
+    /// 관련 섹터 태그 목록. 예: ["빅테크 (QQQ)", "반도체"]
+    let relatedSectors: [String]?
+    /// 내 자산 영향 bullet 목록.
+    let impactBullets: [String]?
+    /// 상세 화면에서 보여줄 뉴스/정책 원문 출처.
+    let sourceReferences: [AppNotificationSource]
+
+    var hasDetailContent: Bool {
+        detailBody != nil
+            || !(relatedSectors ?? []).isEmpty
+            || !(impactBullets ?? []).isEmpty
+            || !sourceReferences.isEmpty
+    }
 
     init(
         id: String = UUID().uuidString,
@@ -79,7 +94,11 @@ struct AppNotificationItem: Identifiable, Hashable {
         occurredAt: Date,
         relatedTitle: String? = nil,
         analysisPayload: PolSignalAnalysisPayload? = nil,
-        isRead: Bool = false
+        isRead: Bool = false,
+        detailBody: String? = nil,
+        relatedSectors: [String]? = nil,
+        impactBullets: [String]? = nil,
+        sourceReferences: [AppNotificationSource] = []
     ) {
         self.id = id
         self.kind = kind
@@ -89,6 +108,29 @@ struct AppNotificationItem: Identifiable, Hashable {
         self.relatedTitle = relatedTitle
         self.analysisPayload = analysisPayload
         self.isRead = isRead
+        self.detailBody = detailBody
+        self.relatedSectors = relatedSectors
+        self.impactBullets = impactBullets
+        self.sourceReferences = sourceReferences
+    }
+}
+
+struct AppNotificationSource: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let subtitle: String
+    let url: URL?
+
+    init(
+        id: String = UUID().uuidString,
+        title: String,
+        subtitle: String,
+        url: URL? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.subtitle = subtitle
+        self.url = url
     }
 }
 

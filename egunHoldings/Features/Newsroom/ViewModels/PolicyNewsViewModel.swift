@@ -25,7 +25,7 @@ final class PolicyNewsViewModel: ObservableObject {
     }
 
     var visibleNews: [PolicyNewsItem] {
-        news.sorted { $0.publishedAt > $1.publishedAt }
+        news
     }
 
     func news(matching categories: Set<PolicyNewsCategory>) -> [PolicyNewsItem] {
@@ -119,7 +119,7 @@ final class PolicyNewsViewModel: ObservableObject {
     }
 
     private func applyNews(_ items: [PolicyNewsItem]) {
-        news = items
+        news = items.sorted { $0.publishedAt > $1.publishedAt }
         presentPendingSummaryIfNeeded()
     }
 
@@ -139,19 +139,23 @@ final class PolicyNewsViewModel: ObservableObject {
     }
 
     private func bestNewsItem(matching request: NewsroomPolicySummaryRequest) -> PolicyNewsItem? {
-        visibleNews
+        let bestMatch = visibleNews.lazy
             .map { item in
-                (item: item, score: matchScore(item, request: request))
+                (item: item, score: self.matchScore(item, request: request))
             }
-            .sorted { lhs, rhs in
+            .max { lhs, rhs in
                 if lhs.score != rhs.score {
-                    return lhs.score > rhs.score
+                    return lhs.score < rhs.score
                 }
 
-                return lhs.item.publishedAt > rhs.item.publishedAt
+                return lhs.item.publishedAt < rhs.item.publishedAt
             }
-            .first { $0.score > 0 }?
-            .item ?? visibleNews.first
+
+        guard let bestMatch, bestMatch.score > 0 else {
+            return visibleNews.first
+        }
+
+        return bestMatch.item
     }
 
     private func matchScore(_ item: PolicyNewsItem, request: NewsroomPolicySummaryRequest) -> Int {

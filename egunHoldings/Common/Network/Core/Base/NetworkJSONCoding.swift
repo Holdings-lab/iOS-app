@@ -7,11 +7,7 @@ nonisolated enum NetworkJSONCoding {
             let container = try decoder.singleValueContainer()
             let value = try container.decode(String.self)
 
-            if let date = fractionalISO8601Formatter.date(from: value) {
-                return date
-            }
-
-            if let date = iso8601Formatter.date(from: value) {
+            if let date = parseISO8601(value) {
                 return date
             }
 
@@ -29,6 +25,10 @@ nonisolated enum NetworkJSONCoding {
 
     static func encodeEmptyJSONObject() -> Data {
         Data("{}".utf8)
+    }
+
+    static func parseISO8601(_ value: String) -> Date? {
+        fractionalISO8601Formatter.date(from: value) ?? iso8601Formatter.date(from: value)
     }
 
     private static let iso8601Formatter: ISO8601DateFormatter = {

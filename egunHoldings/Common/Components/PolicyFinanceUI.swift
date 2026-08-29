@@ -19,52 +19,6 @@ struct PFGradientBackground: View {
     }
 }
 
-struct PFStepHeader: View {
-    let title: String
-    let subtitle: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.pretendard(30, weight: .bold))
-                .foregroundStyle(Color.textPrimary)
-
-            Text(subtitle)
-                .font(.pretendard(15, weight: .medium))
-                .foregroundStyle(Color.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
-
-// KODEX light progress bar.
-struct PFProgressBar: View {
-    let progress: Double
-
-    var body: some View {
-        GeometryReader { proxy in
-            let clampedProgress = max(0, min(progress, 1))
-            let width = proxy.size.width * clampedProgress
-
-            ZStack(alignment: .leading) {
-                Capsule(style: .continuous)
-                    .fill(Color.kdxDivider)
-
-                Capsule(style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.brand, Color.brandLight],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(width: width)
-            }
-        }
-        .frame(height: 6)
-    }
-}
-
 struct PFInlineErrorText: View {
     let message: String
     var alignment: Alignment = .leading
@@ -136,42 +90,6 @@ struct PFContentScrollView<Content: View>: View {
                 }
             }
         }
-    }
-}
-
-// KODEX light surface card — white bg + hairline border, no shadow
-struct PFSurfaceCard<Content: View>: View {
-    private let padding: CGFloat
-    private let cornerRadius: CGFloat
-    private let selected: Bool
-    private let selectedTint: Color
-    private let content: Content
-
-    init(
-        padding: CGFloat = 16,
-        cornerRadius: CGFloat = KDXRadius.card,
-        selected: Bool = false,
-        selectedTint: Color = .brand,
-        @ViewBuilder content: () -> Content
-    ) {
-        self.padding = padding
-        self.cornerRadius = cornerRadius
-        self.selected = selected
-        self.selectedTint = selectedTint
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .padding(padding)
-            .background(Color.elevated, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(
-                        selected ? selectedTint.opacity(0.5) : Color.hairline,
-                        lineWidth: 1
-                    )
-            }
     }
 }
 

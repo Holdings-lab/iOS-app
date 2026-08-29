@@ -30,7 +30,7 @@ struct OnboardingV3StepHeader: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack {
-                OnboardingV3BackButton(action: onBack)
+                LiquidGlassBackButton(accessibilityLabel: "뒤로", action: onBack)
 
                 Spacer()
             }
@@ -38,37 +38,22 @@ struct OnboardingV3StepHeader: View {
     }
 }
 
-struct OnboardingV3BackButton: View {
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "chevron.left")
-                .font(.system(size: 19, weight: .semibold))
-                .foregroundStyle(Color.textPrimary)
-                .frame(width: 34, height: 34)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("뒤로")
-    }
-}
-
 struct ProgressBar: View {
     let step: Int
+    let totalSteps: Int
     let isCollapsed: Bool
 
     @State private var showsLabel = true
     @State private var usesCollapsedLayout = false
 
     private var progress: CGFloat {
-        CGFloat(step) / 4
+        CGFloat(step) / CGFloat(max(totalSteps, 1))
     }
 
     var body: some View {
         VStack(alignment: .trailing, spacing: usesCollapsedLayout ? 0 : 6) {
             if !usesCollapsedLayout {
-                Text("맞춤 설정 · \(step)/4")
+                Text("맞춤 설정 · \(step)/\(totalSteps)")
                     .font(.pretendard(11, weight: .medium))
                     .foregroundStyle(OnboardingV3Theme.muted)
                     .opacity(showsLabel ? 1 : 0)
@@ -172,6 +157,48 @@ struct OnboardingV3QuestionHeader: View {
     }
 }
 
+private struct OnboardingRevealModifier: ViewModifier {
+    let isRevealed: Bool
+    let index: Int
+    let baseDelay: Double
+    let step: Double
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isRevealed ? 1 : 0)
+            .offset(y: isRevealed ? 0 : 8)
+            .animation(
+                .easeOut(duration: 0.28).delay(baseDelay + Double(index) * step),
+                value: isRevealed
+            )
+    }
+}
+
+extension View {
+    /// 콘텐츠가 하나씩(index 순서대로) 순차 등장하도록 만든다. 리스트가 아닌 단일 블록은
+    /// index 기본값 0으로 두면 한 번에 페이드인된다.
+    func onboardingReveal(isRevealed: Bool, index: Int = 0, baseDelay: Double = 0, step: Double = 0.06) -> some View {
+        modifier(OnboardingRevealModifier(isRevealed: isRevealed, index: index, baseDelay: baseDelay, step: step))
+    }
+
+    /// 진입 시 콘텐츠를 살짝 늦춰 등장시켜 onboardingReveal의 순차 등장이 시작될 기준점을 만든다.
+    /// reduceMotion이 켜져 있으면 지연 없이 바로 전체를 보여준다.
+    func onboardingRevealSequence(
+        isRevealed: Binding<Bool>,
+        reduceMotion: Bool
+    ) -> some View {
+        task {
+            guard !reduceMotion else {
+                isRevealed.wrappedValue = true
+                return
+            }
+
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            isRevealed.wrappedValue = true
+        }
+    }
+}
+
 struct OnboardingV3BottomBar<Content: View>: View {
     let content: Content
 
@@ -210,6 +237,8 @@ struct OnboardingV3PrimaryButton: View {
             Text(title)
                 .font(.pretendard(16, weight: .semibold))
                 .foregroundStyle(Color.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
                 .frame(maxWidth: .infinity)
                 .frame(height: OnboardingV3Layout.bottomButtonHeight)
                 .background(OnboardingV3Theme.primary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -273,6 +302,130 @@ struct OnboardingV3Radio: View {
     }
 }
 
+struct OnboardingV3OptionCard: View {
+    let symbol: String
+    let title: String
+    var subtitle: String?
+    var trailingText: String?
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(alignment: .top, spacing: 14) {
+                Circle()
+                    .fill(isSelected ? OnboardingV3Theme.selectedBackground : Color(hex: "F1F5F9"))
+                    .frame(width: 40, height: 40)
+                    .overlay {
+                        Image(systemName: symbol)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(isSelected ? OnboardingV3Theme.primary : OnboardingV3Theme.muted)
+                    }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.pretendard(16, weight: .bold))
+                        .foregroundStyle(Color.textPrimary)
+
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.pretendard(13, weight: .regular))
+                            .foregroundStyle(OnboardingV3Theme.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                if let trailingText {
+                    Text(trailingText)
+                        .font(.pretendard(13, weight: .semibold))
+                        .foregroundStyle(isSelected ? OnboardingV3Theme.primary : OnboardingV3Theme.muted)
+                }
+
+                OnboardingV3Radio(isSelected: isSelected)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isSelected ? OnboardingV3Theme.selectedBackground : OnboardingV3Theme.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isSelected ? OnboardingV3Theme.primary : OnboardingV3Theme.border, lineWidth: isSelected ? 1.5 : 1)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct OnboardingV3FlowLayout: Layout {
+    let horizontalSpacing: CGFloat
+    let verticalSpacing: CGFloat
+
+    init(horizontalSpacing: CGFloat = 8, verticalSpacing: CGFloat = 10) {
+        self.horizontalSpacing = horizontalSpacing
+        self.verticalSpacing = verticalSpacing
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .greatestFiniteMagnitude
+        let layout = makeLayout(maxWidth: maxWidth, subviews: subviews)
+
+        return CGSize(
+            width: proposal.width ?? layout.width,
+            height: layout.height
+        )
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var xOffset: CGFloat = 0
+        var yOffset: CGFloat = 0
+        var rowHeight: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+
+            if xOffset > 0, xOffset + size.width > bounds.width {
+                xOffset = 0
+                yOffset += rowHeight + verticalSpacing
+                rowHeight = 0
+            }
+
+            subview.place(
+                at: CGPoint(x: bounds.minX + xOffset, y: bounds.minY + yOffset),
+                proposal: ProposedViewSize(size)
+            )
+
+            xOffset += size.width + horizontalSpacing
+            rowHeight = max(rowHeight, size.height)
+        }
+    }
+
+    private func makeLayout(maxWidth: CGFloat, subviews: Subviews) -> (width: CGFloat, height: CGFloat) {
+        var xOffset: CGFloat = 0
+        var yOffset: CGFloat = 0
+        var rowHeight: CGFloat = 0
+        var measuredWidth: CGFloat = 0
+
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+
+            if xOffset > 0, xOffset + size.width > maxWidth {
+                measuredWidth = max(measuredWidth, xOffset - horizontalSpacing)
+                xOffset = 0
+                yOffset += rowHeight + verticalSpacing
+                rowHeight = 0
+            }
+
+            xOffset += size.width + horizontalSpacing
+            rowHeight = max(rowHeight, size.height)
+        }
+
+        measuredWidth = max(measuredWidth, xOffset > 0 ? xOffset - horizontalSpacing : 0)
+
+        return (measuredWidth, yOffset + rowHeight)
+    }
+}
+
 struct OnboardingV3ScreenBackground: ViewModifier {
     func body(content: Content) -> some View {
         content
@@ -296,9 +449,9 @@ extension View {
             }
     }
 
-    func onboardingProgressOverlay(step: Int, isCollapsed: Bool) -> some View {
+    func onboardingProgressOverlay(step: Int, totalSteps: Int = 2, isCollapsed: Bool) -> some View {
         overlay(alignment: .top) {
-            ProgressBar(step: step, isCollapsed: isCollapsed)
+            ProgressBar(step: step, totalSteps: totalSteps, isCollapsed: isCollapsed)
                 .padding(.top, OnboardingV3Layout.progressTop)
         }
     }

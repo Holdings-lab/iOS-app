@@ -32,37 +32,10 @@ final class AppPushNotificationDelegate: NSObject, UIApplicationDelegate, UNUser
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        guard let payload = analysisPayload(from: response.notification.request.content.userInfo) else {
-            return
-        }
-
         await MainActor.run {
-            NotificationCenter.default.post(
-                name: .polSignalAnalysisPayloadReceived,
-                object: payload
+            AppNotificationCenter.shared.handlePushNotificationOpen(
+                userInfo: response.notification.request.content.userInfo
             )
         }
-    }
-
-    private func analysisPayload(from userInfo: [AnyHashable: Any]) -> PolSignalAnalysisPayload? {
-        let eventId: Int?
-        if let value = userInfo["eventId"] as? Int {
-            eventId = value
-        } else if let value = userInfo["eventId"] as? String {
-            eventId = Int(value)
-        } else {
-            eventId = nil
-        }
-
-        guard let eventId,
-              let analysisVersion = userInfo["analysisVersion"] as? String
-        else {
-            return nil
-        }
-
-        return PolSignalAnalysisPayload(
-            eventId: eventId,
-            analysisVersion: analysisVersion
-        )
     }
 }

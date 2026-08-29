@@ -14,7 +14,7 @@ struct FlowProgressHeader: View {
                     LiquidGlassBackButton(action: onBack)
                 } else {
                     Color.clear
-                        .frame(width: 34, height: 34)
+                        .frame(width: 44, height: 44)
                 }
 
                 Spacer()
@@ -52,14 +52,14 @@ struct LiquidGlassBackButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "chevron.left")
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(Color.textPrimary)
-                .frame(width: 34, height: 34)
+                // 피그마 "Liquid Glass Back" 스펙: 44×44 고정
+                .frame(width: 44, height: 44)
                 .contentShape(Circle())
         }
-        .buttonStyle(.glass)
-        .buttonBorderShape(.circle)
-        .controlSize(.small)
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
         .accessibilityLabel(accessibilityLabel)
     }
 }

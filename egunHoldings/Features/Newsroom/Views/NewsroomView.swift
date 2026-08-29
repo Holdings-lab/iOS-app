@@ -1,175 +1,177 @@
 import SwiftUI
+import UIKit
 
+/// 보유 종목 뉴스를 종목 단위로 종합한 일일 브리핑.
+/// 빈 자산 여부는 더 이상 클라이언트가 미리 판단하지 않는다 — 서버 응답의 emptyState가 기준이다
+/// (holdings가 비어 있으면 서버가 항상 emptyState를 함께 내려준다, NewsroomService.emptyTabResponse).
 @MainActor
 struct NewsroomView: View {
     let userAssetProfile: UserAssetProfile
+    var onAssetTabRequested: () -> Void = {}
 
-    @StateObject private var viewModel: PolicyNewsViewModel
-    @State private var feedMode: NewsroomFeedMode = .news
-    @State private var newsFilter: NewsroomNewsFilter = .latest
-    @State private var selectedMarketTicker: NewsroomMarketTicker?
-    @State private var selectedArticleItem: PolicyNewsItem?
+    @StateObject private var viewModel: NewsroomDigestViewModel
+    @State private var presentedHolding: NewsroomHoldingBriefing?
 
     init(
         userId: Int64? = nil,
         userAssetProfile: UserAssetProfile,
-        viewModel: PolicyNewsViewModel? = nil
+        onAssetTabRequested: @escaping () -> Void = {},
+        viewModel: NewsroomDigestViewModel? = nil
     ) {
         self.userAssetProfile = userAssetProfile
-        _viewModel = StateObject(wrappedValue: viewModel ?? PolicyNewsViewModel(userId: userId))
-    }
-
-    private var displayedItems: [PolicyNewsItem] {
-        switch newsFilter {
-        case .latest:
-            return viewModel.visibleNews.filter { $0.newsroomRelevanceLevel == .high || $0.sentiment == .caution }
-        case .holdings:
-            return viewModel.visibleNews.filter(isHoldingRelated)
-        }
-    }
-
-    private var displayedTickers: [NewsroomMarketTicker] {
-        NewsroomMarketData.tickers
-    }
-
-    private var learningContents: [NewsroomLearningContent] {
-        let categories = assetRelatedCategories
-        guard !categories.isEmpty else { return NewsroomLearningContentData.items }
-
-        return NewsroomLearningContentData.items.sorted { lhs, rhs in
-            let lhsMatches = categories.contains(lhs.category)
-            let rhsMatches = categories.contains(rhs.category)
-            if lhsMatches != rhsMatches {
-                return lhsMatches
-            }
-
-            return lhs.title < rhs.title
-        }
+        self.onAssetTabRequested = onAssetTabRequested
+        _viewModel = StateObject(wrappedValue: viewModel ?? NewsroomDigestViewModel(userId: userId))
     }
 
     var body: some View {
-        PFContentScrollView(
-            spacing: 20,
-            scrollsToTopOnAppear: true,
-            locksHorizontalOverflow: true
-        ) {
-            NewsroomHeaderView(
-                tickers: displayedTickers,
-                feedMode: feedMode,
-                onTickerTap: { selectedMarketTicker = $0 }
-            )
+        ZStack(alignment: .top) {
+            PFContentScrollView(
+                spacing: 20,
+                scrollsToTopOnAppear: true,
+                locksHorizontalOverflow: true
+            ) {
+                header
 
-            NewsroomFeedModePicker(selectedMode: $feedMode)
-
-            switch feedMode {
-            case .news:
-                newsContent
-            case .content:
-                learningContent
+                if let briefing = viewModel.briefing, briefing.holdings.isEmpty {
+                    NewsroomNoHoldingsCard(onRegister: onAssetTabRequested)
+                } else if let briefing = viewModel.briefing, briefing.hasNoRelevantNews {
+                    NewsroomNoRelatedNewsCard()
+                } else if viewModel.isLoading && viewModel.briefing == nil {
+                    NewsroomDigestSkeleton()
+                } else if let errorMessage = viewModel.errorMessage, viewModel.briefing == nil {
+                    NewsroomErrorCard(message: errorMessage) {
+                        viewModel.load()
+                    }
+                } else if let briefing = viewModel.briefing {
+                    briefingContent(briefing)
+                }
+            }
+            .refreshable {
+                await viewModel.refresh()
             }
 
-            NewsroomInfoBox(mode: feedMode)
+            if let refreshStatusMessage = viewModel.refreshStatusMessage {
+                refreshToast(refreshStatusMessage)
+                    .padding(.top, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.refreshStatusMessage)
         .policyFinanceLightTabChrome()
-        .navigationDestination(item: $selectedMarketTicker) { ticker in
-            NewsroomMarketDetailView(
-                selectedTicker: ticker,
-                quotes: NewsroomMarketData.quotes
-            )
+        .navigationDestination(item: $presentedHolding) { holding in
+            NewsroomDigestDetailView(viewModel: viewModel.makeDetailViewModel(for: holding))
         }
-        .navigationDestination(item: $selectedArticleItem) { item in
-            PolicyNewsArticleDetailView(item: item)
+        .onAppear {
+            viewModel.loadIfNeeded()
         }
+        #if DEBUG
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                scenarioMenu
+            }
+        }
+        #endif
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("뉴스룸")
+                .font(.pretendard(22, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
+                .tracking(-0.5)
+
+            if let briefing = viewModel.briefing {
+                Text([briefing.asOfAtText, briefing.subtitle].compactMap { $0 }.joined(separator: " · "))
+                    .font(.pretendard(12.5, weight: .medium))
+                    .foregroundStyle(Color.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("보유 자산의 최근 소식을 하나의 브리핑으로 정리해요")
+                    .font(.pretendard(12.5, weight: .medium))
+                    .foregroundStyle(Color.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
-    private var newsContent: some View {
-        NewsroomNewsFilterBar(selectedFilter: $newsFilter)
+    private func briefingContent(_ briefing: NewsroomBriefing) -> some View {
+        tickerSection(briefing)
 
-        if viewModel.isFeedLoading && viewModel.news.isEmpty {
-            NewsroomLoadingCard()
-        } else if let errorMessage = viewModel.feedErrorMessage, viewModel.news.isEmpty {
-            NewsroomErrorCard(message: errorMessage, onRetry: viewModel.loadNews)
-        } else if displayedItems.isEmpty {
-            NewsroomEmptyCard()
-        } else {
-            newsroomContent
-        }
+        NewsroomEndMarker(heartbeatText: nil)
     }
 
-    private var learningContent: some View {
-        NewsroomLearningContentSection(
-            title: "투자 학습 콘텐츠",
-            subtitle: "\(learningContents.count)개",
-            items: learningContents
-        )
-    }
+    private func tickerSection(_ briefing: NewsroomBriefing) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("내 보유 종목")
+                .font(.pretendard(16, weight: .bold))
+                .foregroundStyle(Color.textPrimary)
 
-    private var newsroomContent: some View {
-        NewsroomIndustrySummarySection(
-            title: newsFilter.title,
-            subtitle: "\(displayedItems.count)건",
-            items: displayedItems,
-            isSaved: viewModel.isSaved,
-            onSelect: { item in
-                present(item)
-            },
-            onToggleSave: viewModel.toggleSaved
-        )
-    }
-
-    private func present(_ item: PolicyNewsItem) {
-        selectedArticleItem = item
-    }
-
-    private var assetRelatedCategories: Set<PolicyNewsCategory> {
-        userAssetProfile.holdings.reduce(into: Set<PolicyNewsCategory>()) { categories, holding in
-            let text = normalized(holding.name)
-
-            if holding.category == .depositSavings || holding.category == .loan {
-                categories.insert(.interestRate)
-                categories.insert(.finance)
-            }
-
-            if text.contains("soxx") || text.contains("smh") || text.contains("반도체") || text.contains("삼성") || text.contains("sk") {
-                categories.insert(.semiconductor)
-            }
-
-            if text.contains("icln") || text.contains("에너지") || text.contains("재생") {
-                categories.insert(.energy)
-            }
-
-            if text.contains("은행") || text.contains("예금") || text.contains("대출") || text.contains("채권") {
-                categories.insert(.interestRate)
-                categories.insert(.finance)
-            }
-        }
-    }
-
-    private func isHoldingRelated(_ item: PolicyNewsItem) -> Bool {
-        let holdingNames = userAssetProfile.holdings.map { normalized($0.name) }
-        let tickerMatches = item.relatedTickers
-            .map(normalized)
-            .contains { ticker in
-                holdingNames.contains { holdingName in
-                    !ticker.isEmpty && (holdingName.contains(ticker) || ticker.contains(holdingName))
+            ForEach(briefing.holdings) { holding in
+                NewsroomTickerDigestRow.make(for: holding) {
+                    presentedHolding = holding
                 }
             }
-
-        return tickerMatches || assetRelatedCategories.contains(item.category)
+        }
     }
 
-    private func normalized(_ text: String) -> String {
-        text
-            .lowercased()
-            .replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "·", with: "")
-            .replacingOccurrences(of: "-", with: "")
+    private func refreshToast(_ message: String) -> some View {
+        Text(message)
+            .font(.pretendard(12.5, weight: .semibold))
+            .foregroundStyle(Color.textOnAccent)
+            .padding(.horizontal, 14)
+            .frame(height: 34)
+            .background(Color.textPrimary.opacity(0.88), in: Capsule())
+            .frame(maxWidth: .infinity)
+    }
+
+    #if DEBUG
+    private var scenarioMenu: some View {
+        Menu {
+            ForEach(NewsroomDigestScenario.allCases) { scenario in
+                Button(scenario.title) {
+                    viewModel.applyScenario(scenario)
+                }
+            }
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Color.textTertiary)
+        }
+    }
+    #endif
+}
+
+#Preview("뉴스 혼재") {
+    NavigationStack {
+        NewsroomView(
+            userAssetProfile: AppMockData.userAssetProfile,
+            viewModel: NewsroomDigestViewModel(
+                repository: MockNewsroomDigestRepository(scenario: .mixed)
+            )
+        )
     }
 }
 
-#Preview {
+#Preview("전 종목 조용") {
     NavigationStack {
-        NewsroomView(userAssetProfile: AppMockData.userAssetProfile)
+        NewsroomView(
+            userAssetProfile: AppMockData.userAssetProfile,
+            viewModel: NewsroomDigestViewModel(
+                repository: MockNewsroomDigestRepository(scenario: .allQuiet)
+            )
+        )
+    }
+}
+
+#Preview("종목 0개") {
+    NavigationStack {
+        NewsroomView(
+            userAssetProfile: UserAssetProfile(holdings: []),
+            viewModel: NewsroomDigestViewModel(
+                repository: MockNewsroomDigestRepository(scenario: .empty)
+            )
+        )
     }
 }

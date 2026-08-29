@@ -8,7 +8,9 @@ struct GlassCard: ViewModifier {
                 RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
                     .stroke(Color.hairline, lineWidth: 1)
             }
-            .shadow(color: Color.cardShadow, radius: 24, x: 0, y: 8)
+            // radius 4 / y 1은 ThemeSignalCard·AssetView 등 다른 카드들과 맞춘 값이다.
+            // 이전의 radius 24는 오프스크린 블러 렌더 패스 비용이 크고, 다른 카드와 톤도 달랐다.
+            .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 1)
     }
 }
 
@@ -56,37 +58,9 @@ struct KDXCard<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.elevated, in: shape)
             .overlay { shape.stroke(Color.hairline, lineWidth: 1) }
-            .shadow(color: Color.cardShadow, radius: 24, x: 0, y: 8)
-    }
-}
-
-// Subtle inner box — used inside KDXCard for secondary info.
-struct KDXInnerBox<Content: View>: View {
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        content
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(Color.subtle, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.hairline, lineWidth: 1)
-            }
-    }
-}
-
-struct KDXEyebrow: View {
-    let text: String
-
-    var body: some View {
-        Text(text)
-            .font(.pretendard(11, weight: .semibold))
-            .foregroundStyle(Color.brand)
+            // radius 4 / y 1은 ThemeSignalCard·AssetView 등 다른 카드들과 맞춘 값이다.
+            // 이전의 radius 24는 오프스크린 블러 렌더 패스 비용이 크고, 다른 카드와 톤도 달랐다.
+            .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 1)
     }
 }
 

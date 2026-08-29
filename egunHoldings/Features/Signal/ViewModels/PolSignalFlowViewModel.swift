@@ -16,13 +16,14 @@ final class PolSignalFlowViewModel: ObservableObject {
     private let repository: SignalRepositoryProtocol
 
     init(
-        repository: SignalRepositoryProtocol = SignalRepositoryFactory.makeDefault(),
+        userId: Int64? = nil,
+        repository: SignalRepositoryProtocol? = nil,
         vixText: String = PolSignalFlowMockData.vixText,
         vixChangeText: String = PolSignalFlowMockData.vixChangeText,
         vixCaption: String = PolSignalFlowMockData.vixCaption,
         adjustmentProposal: PolSignalAdjustmentProposal = PolSignalFlowMockData.adjustmentProposal
     ) {
-        self.repository = repository
+        self.repository = repository ?? SignalRepositoryFactory.makeDefault(userId: userId)
         self.vixText = vixText
         self.vixChangeText = vixChangeText
         self.vixCaption = vixCaption
@@ -86,7 +87,7 @@ final class PolSignalFlowViewModel: ObservableObject {
         do {
             return try await repository.fetchSignalCards(theme: theme)
         } catch {
-            return []
+            return (try? await MockSignalRepository().fetchSignalCards(theme: theme)) ?? []
         }
     }
 }

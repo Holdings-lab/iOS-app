@@ -3,5 +3,4 @@
 
 BACKEND_BASE_URL = https:/$()/holdings-lab.me
 ML_SERVICE_BASE_URL = https:/$()/holdings-lab.me
-TRADING_SERVER_BASE_URL = https:/$()/holdings-lab.me
 AUTH_REFRESH_URL =

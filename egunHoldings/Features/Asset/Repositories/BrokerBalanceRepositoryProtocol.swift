@@ -1,5 +1,5 @@
 import Foundation
 
 protocol BrokerBalanceRepositoryProtocol {
-    func fetchKisSandboxBalance() async throws -> BrokerBalanceSnapshot
+    func fetchPortfolioBalance() async throws -> BrokerBalanceSnapshot
 }
