@@ -17,6 +17,7 @@ struct NewsroomAndSignalAPIContractTests {
 
         #expect(briefing?.toDomain().holdings.first?.logoURL?.absoluteString == "https://cdn.example.com/logos/005930.png")
         #expect(detail?.toDomain().stock.logoURL?.absoluteString == "https://cdn.example.com/logos/005930.png")
+        #expect(detail?.toDomain().imageURL?.absoluteString == "https://cdn.example.com/news/hero.jpg")
         #expect(detail?.toDomain().sources.first?.thumbnailURL?.absoluteString == "https://cdn.example.com/news/1.jpg")
     }
 
@@ -45,7 +46,7 @@ struct NewsroomAndSignalAPIContractTests {
     }
 
     private var detailJSON: String {
-        #"{"stock":{"ticker":"005930","name":"삼성전자","logoUrl":"https://cdn.example.com/logos/005930.png"},"headline":"반도체 뉴스","sources":[{"title":"기사 제목","publisher":"뉴스","thumbnailUrl":"https://cdn.example.com/news/1.jpg"}]}"#
+        #"{"stock":{"ticker":"005930","name":"삼성전자","logoUrl":"https://cdn.example.com/logos/005930.png"},"headline":"반도체 뉴스","imageUrl":"https://cdn.example.com/news/hero.jpg","sources":[{"title":"기사 제목","publisher":"뉴스","thumbnailUrl":"https://cdn.example.com/news/1.jpg"}]}"#
     }
 
     private var secondarySignalsJSON: String {

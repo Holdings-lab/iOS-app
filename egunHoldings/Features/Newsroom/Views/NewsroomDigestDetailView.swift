@@ -170,6 +170,8 @@ struct NewsroomDigestDetailView: View {
                             image
                                 .resizable()
                                 .scaledToFill()
+                        } else if phase.error == nil {
+                            imageLoading
                         } else {
                             imageFallback
                         }
@@ -195,6 +197,14 @@ struct NewsroomDigestDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.brandTintBg.opacity(0.6))
+    }
+
+    private var imageLoading: some View {
+        ProgressView()
+            .tint(Color.brand)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.muted)
+            .accessibilityLabel("뉴스 대표 이미지를 불러오는 중")
     }
 
     private var loadingRow: some View {
@@ -318,6 +328,10 @@ private struct NewsroomSourceThumbnail: View {
                         image
                             .resizable()
                             .scaledToFill()
+                    } else if phase.error == nil {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(Color.textTertiary)
                     } else {
                         fallback
                     }
