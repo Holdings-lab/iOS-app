@@ -12,16 +12,57 @@ nonisolated struct TodayDailyBriefingResponseDTO: Decodable {
     let isAccountLinked: Bool?
     let dailyChangePct: Double?
     let drawdownPct: Double?
+    let maxDrawdownTolerance: Double?
     let status: String?
     let message: String?
 
     func toDomain(fallback: TodayBriefing) -> TodayBriefing {
-        TodayBriefing(
+        let drawdown = drawdownPct ?? fallback.drawdownFromPeakPercent
+        return TodayBriefing(
             todayChangePercent: dailyChangePct ?? fallback.todayChangePercent,
-            drawdownFromPeakPercent: drawdownPct ?? fallback.drawdownFromPeakPercent,
+            drawdownFromPeakPercent: drawdown,
             severity: TodayDTOMapper.severity(from: status, fallback: fallback.severity),
-            message: message ?? fallback.message
+            message: TodayBriefingMessage.make(
+                drawdownPercent: drawdown,
+                maxDrawdownTolerance: maxDrawdownTolerance,
+                fallback: message ?? fallback.message
+            )
         )
+    }
+}
+
+nonisolated enum TodayBriefingMessage {
+    static func make(
+        drawdownPercent: Double,
+        maxDrawdownTolerance: Double?,
+        fallback: String
+    ) -> String {
+        guard let maxDrawdownTolerance, maxDrawdownTolerance > 0 else {
+            return fallback
+        }
+
+        let drawdown = abs(min(drawdownPercent, 0))
+        let tolerance = maxDrawdownTolerance
+        let drawdownText = percentText(drawdown)
+        let toleranceText = percentText(tolerance)
+
+        if drawdown == 0 {
+            return "포트폴리오가 현재 고점 수준이에요. 설정한 허용 낙폭 -\(toleranceText)%까지 여유가 있어요."
+        }
+
+        if drawdown < tolerance * 0.5 {
+            return "최근 고점 대비 \(drawdownText)% 하락했어요. 설정한 허용 낙폭 -\(toleranceText)% 안에서 움직이고 있어요."
+        }
+
+        if drawdown < tolerance {
+            return "최근 고점 대비 \(drawdownText)% 하락했어요. 설정한 허용 낙폭 -\(toleranceText)%에 가까워지고 있어요."
+        }
+
+        return "최근 고점 대비 \(drawdownText)% 하락했어요. 설정한 허용 낙폭 -\(toleranceText)%에 도달했으니 포트폴리오를 점검해 보세요."
+    }
+
+    private static func percentText(_ value: Double) -> String {
+        value.rounded() == value ? String(Int(value)) : String(format: "%.1f", value)
     }
 }
 

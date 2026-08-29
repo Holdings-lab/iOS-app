@@ -52,6 +52,31 @@ struct BrokerageAPIContractTests {
         #expect(display.compositionSegments.map(\.percent) == [80, 20])
     }
 
+    @Test("일일 브리핑은 온보딩 허용 낙폭을 기준으로 안내 문구를 만든다")
+    func createsBriefingMessageFromDrawdownTolerance() {
+        #expect(
+            TodayBriefingMessage.make(
+                drawdownPercent: -3,
+                maxDrawdownTolerance: 10,
+                fallback: "fallback"
+            ) == "최근 고점 대비 3% 하락했어요. 설정한 허용 낙폭 -10% 안에서 움직이고 있어요."
+        )
+        #expect(
+            TodayBriefingMessage.make(
+                drawdownPercent: -8,
+                maxDrawdownTolerance: 10,
+                fallback: "fallback"
+            ) == "최근 고점 대비 8% 하락했어요. 설정한 허용 낙폭 -10%에 가까워지고 있어요."
+        )
+        #expect(
+            TodayBriefingMessage.make(
+                drawdownPercent: -10,
+                maxDrawdownTolerance: 10,
+                fallback: "fallback"
+            ) == "최근 고점 대비 10% 하락했어요. 설정한 허용 낙폭 -10%에 도달했으니 포트폴리오를 점검해 보세요."
+        )
+    }
+
     @Test("계좌 연결 요청이 실패하면 온보딩을 연결 완료로 표시하지 않는다")
     @MainActor
     func failedConnectionDoesNotAdvanceState() async {
