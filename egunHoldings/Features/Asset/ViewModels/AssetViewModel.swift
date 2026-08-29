@@ -129,41 +129,107 @@ struct AssetPortfolioDisplay {
     }
 
     private static func makeCompositionSegments(snapshot: BrokerBalanceSnapshot) -> [AssetCompositionSegment] {
-        let holdingValues = snapshot.holdings.reduce(into: [AssetHoldingCategory: Int]()) { result, holding in
-            let category = AssetHoldingCategory(symbol: holding.symbol)
-            result[category, default: 0] += holding.marketValue
-        }
-        let holdingValueTotal = holdingValues.values.reduce(0, +)
         let investedAmount = max(snapshot.totalEvaluationAmount - snapshot.cashAmount, 0)
-        let categorizedAmounts: [AssetHoldingCategory: Int]
-
-        if holdingValueTotal > 0 {
-            categorizedAmounts = holdingValues.mapValues { holdingValue in
-                Int((Double(holdingValue) / Double(holdingValueTotal) * Double(investedAmount)).rounded())
-            }
-        } else {
-            categorizedAmounts = investedAmount > 0 ? [.stock: investedAmount] : [:]
+        let categorizedAmounts = categorizedHoldingAmounts(snapshot: snapshot, investedAmount: investedAmount)
+        var entries = AssetCompositionCategory.displayOrder.compactMap { category -> AssetCompositionSource? in
+            guard let amount = categorizedAmounts[category], amount > 0 else { return nil }
+            return AssetCompositionSource(category: category, amount: amount)
         }
 
-        let entries = [
-            AssetCompositionSegment(
-                title: "ETF",
-                percent: percentInt(categorizedAmounts[.etf, default: 0], total: snapshot.totalEvaluationAmount),
-                color: AssetTabPalette.etfSegment
-            ),
-            AssetCompositionSegment(
-                title: "주식",
-                percent: percentInt(categorizedAmounts[.stock, default: 0], total: snapshot.totalEvaluationAmount),
-                color: AssetTabPalette.stockSegment
-            ),
-            AssetCompositionSegment(
-                title: "현금",
-                percent: percentInt(snapshot.cashAmount, total: snapshot.totalEvaluationAmount),
-                color: AssetTabPalette.cashSegment
-            )
-        ]
+        if snapshot.cashAmount > 0 {
+            entries.append(.cash(snapshot.cashAmount))
+        }
 
-        return entries.filter { $0.percent > 0 }
+        return makeCompositionSegments(entries: entries, total: snapshot.totalEvaluationAmount)
+    }
+
+    /// 원화와 외화 종목을 같은 원시 숫자로 합산하지 않는다. 원화 종목은 그대로 쓰고,
+    /// 외화 종목은 서버가 내려준 전체 투자 평가금액 중 남는 원화 금액으로 비례 배분한다.
+    /// 따라서 화면의 모든 분류 금액은 항상 총 평가금액과 합계가 맞는다.
+    private static func categorizedHoldingAmounts(
+        snapshot: BrokerBalanceSnapshot,
+        investedAmount: Int
+    ) -> [AssetCompositionCategory: Int] {
+        guard investedAmount > 0 else { return [:] }
+
+        var domesticAmounts: [AssetCompositionCategory: Int] = [:]
+        var foreignAmounts: [AssetCompositionCategory: Int] = [:]
+
+        for holding in snapshot.holdings where holding.marketValue > 0 {
+            let category = AssetCompositionCategory(holding: holding)
+            if holding.currencyCode.uppercased() == "KRW" {
+                domesticAmounts[category, default: 0] += holding.marketValue
+            } else {
+                foreignAmounts[category, default: 0] += holding.marketValue
+            }
+        }
+
+        let domesticTotal = domesticAmounts.values.reduce(0, +)
+        let foreignBudget = max(investedAmount - domesticTotal, 0)
+        let allocatedForeign = allocate(foreignAmounts, total: foreignBudget)
+        let combined = domesticAmounts.merging(allocatedForeign, uniquingKeysWith: +)
+
+        if combined.isEmpty {
+            return [.other: investedAmount]
+        }
+        return allocate(combined, total: investedAmount)
+    }
+
+    private static func makeCompositionSegments(
+        entries: [AssetCompositionSource],
+        total: Int
+    ) -> [AssetCompositionSegment] {
+        let percents = roundedAllocation(entries.map(\.amount), total: total)
+
+        return zip(entries, percents).compactMap { entry, percent in
+            guard percent > 0 else { return nil }
+            return AssetCompositionSegment(title: entry.title, percent: percent, color: entry.color)
+        }
+    }
+
+    /// 최대 잔여 방식으로 정수 비율의 합계를 정확히 100으로 맞춘다.
+    private static func roundedAllocation(_ amounts: [Int], total: Int) -> [Int] {
+        guard total > 0, amounts.isEmpty == false else { return Array(repeating: 0, count: amounts.count) }
+
+        let raw = amounts.map { Double($0) / Double(total) * 100 }
+        var result = raw.map { Int($0.rounded(.down)) }
+        let remainder = max(0, 100 - result.reduce(0, +))
+        let indices = raw.indices.sorted { index, otherIndex in
+            let fraction = raw[index] - Double(result[index])
+            let otherFraction = raw[otherIndex] - Double(result[otherIndex])
+            return fraction == otherFraction ? index < otherIndex : fraction > otherFraction
+        }
+
+        for index in indices.prefix(remainder) {
+            result[index] += 1
+        }
+        return result
+    }
+
+    /// 입력 비중을 지정 합계에 맞춰 배분한다. 통화별 원시 금액을 보정할 때 사용한다.
+    private static func allocate(
+        _ amounts: [AssetCompositionCategory: Int],
+        total: Int
+    ) -> [AssetCompositionCategory: Int] {
+        let positiveAmounts = amounts.filter { $0.value > 0 }
+        let amountTotal = positiveAmounts.values.reduce(0, +)
+        guard total > 0, amountTotal > 0 else { return [:] }
+
+        let ordered = AssetCompositionCategory.displayOrder.filter { positiveAmounts[$0] != nil }
+        let raw = ordered.map { Double(positiveAmounts[$0, default: 0]) / Double(amountTotal) * Double(total) }
+        var allocated = raw.map { Int($0.rounded(.down)) }
+        let remainder = max(0, total - allocated.reduce(0, +))
+        let indices = raw.indices.sorted { index, otherIndex in
+            let fraction = raw[index] - Double(allocated[index])
+            let otherFraction = raw[otherIndex] - Double(allocated[otherIndex])
+            return fraction == otherFraction ? index < otherIndex : fraction > otherFraction
+        }
+
+        for index in indices.prefix(remainder) {
+            allocated[index] += 1
+        }
+
+        return Dictionary(uniqueKeysWithValues: zip(ordered, allocated))
     }
 
     private static func makeHoldingRows(snapshot: BrokerBalanceSnapshot) -> [AssetPortfolioHoldingRow] {
@@ -219,11 +285,6 @@ struct AssetPortfolioDisplay {
     private static func profitRate(profitAmount: Int, purchaseAmount: Int) -> Double {
         guard purchaseAmount > 0 else { return 0 }
         return Double(profitAmount) / Double(purchaseAmount) * 100
-    }
-
-    private static func percentInt(_ amount: Int, total: Int) -> Int {
-        guard total > 0 else { return 0 }
-        return Int((Double(amount) / Double(total) * 100).rounded())
     }
 
     private static func krw(_ value: Int) -> String {
@@ -302,21 +363,115 @@ enum AssetProfitTone {
     }
 }
 
-private enum AssetHoldingCategory {
-    case etf
-    case stock
+enum AssetCompositionCategory: Hashable, Sendable {
+    case stockETF
+    case individualStock
+    case bond
+    case goldCommodity
+    case reit
+    case other
 
-    init(symbol: String) {
-        let normalized = symbol.uppercased()
-        if Self.etfSymbols.contains(normalized) {
-            self = .etf
+    static let displayOrder: [AssetCompositionCategory] = [
+        .stockETF, .individualStock, .bond, .goldCommodity, .reit, .other
+    ]
+
+    init(holding: BrokerHoldingSnapshot) {
+        self.init(symbol: holding.symbol, name: holding.name, productType: holding.productType)
+    }
+
+    init(symbol: String, name: String, productType: String?) {
+        let ticker = symbol.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let normalizedName = name.uppercased()
+        let normalizedType = productType?.uppercased() ?? ""
+        let isExplicitETF = normalizedType.contains("ETF")
+            || Self.knownStockETFSymbols.contains(ticker)
+            || normalizedName.contains("ETF")
+            || Self.koreanETFPrefixes.contains { normalizedName.hasPrefix($0) }
+
+        if Self.bondSymbols.contains(ticker) || normalizedType.contains("BOND") || normalizedType.contains("채권") {
+            self = .bond
+        } else if Self.goldCommoditySymbols.contains(ticker) {
+            self = .goldCommodity
+        } else if Self.reitSymbols.contains(ticker) || normalizedType.contains("REIT") || normalizedType.contains("리츠") {
+            self = .reit
+        } else if isExplicitETF, Self.containsAny(Self.bondKeywords, in: normalizedName) {
+            self = .bond
+        } else if isExplicitETF, Self.containsAny(Self.goldCommodityKeywords, in: normalizedName) {
+            self = .goldCommodity
+        } else if isExplicitETF, Self.containsAny(Self.reitKeywords, in: normalizedName) {
+            self = .reit
+        } else if isExplicitETF {
+            self = .stockETF
+        } else if normalizedType.contains("FUND") || normalizedType.contains("ETN") {
+            self = .other
         } else {
-            self = .stock
+            self = .individualStock
         }
     }
 
-    private static let etfSymbols: Set<String> = [
-        "QQQ", "SOXX", "XLF", "SPY", "VOO", "IVV", "VTI", "TLT", "GLD",
-        "ICLN", "XLE", "SMH", "DIA", "IWM", "ARKK"
+    var title: String {
+        switch self {
+        case .stockETF: return "주식 ETF"
+        case .individualStock: return "개별주"
+        case .bond: return "채권·채권 ETF"
+        case .goldCommodity: return "금·원자재 ETF"
+        case .reit: return "리츠"
+        case .other: return "기타"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .stockETF: return AssetTabPalette.stockETFSegment
+        case .individualStock: return AssetTabPalette.stockSegment
+        case .bond: return AssetTabPalette.bondSegment
+        case .goldCommodity: return AssetTabPalette.goldCommoditySegment
+        case .reit: return AssetTabPalette.reitSegment
+        case .other: return AssetTabPalette.otherSegment
+        }
+    }
+
+    private static func containsAny(_ keywords: [String], in value: String) -> Bool {
+        keywords.contains { value.contains($0) }
+    }
+
+    private static let knownStockETFSymbols: Set<String> = [
+        "QQQ", "SOXX", "XLF", "SPY", "VOO", "IVV", "VTI", "ICLN", "XLE", "SMH", "DIA", "IWM", "ARKK",
+        "XLK", "XLV", "XLP", "XLY", "XLB", "XLI", "XLU", "VUG", "VTV", "SCHD", "SPLG", "KWEB"
     ]
+    private static let bondSymbols: Set<String> = [
+        "TLT", "IEF", "SHY", "BND", "AGG", "LQD", "HYG", "TIP", "VGIT", "VCSH", "VGLT", "EMB"
+    ]
+    private static let goldCommoditySymbols: Set<String> = [
+        "GLD", "IAU", "GLDM", "SGOL", "SIVR", "SLV", "USO", "DBC", "PDBC", "COMT"
+    ]
+    private static let reitSymbols: Set<String> = [
+        "VNQ", "SCHH", "XLRE", "IYR", "RWR", "USRT", "REM"
+    ]
+    private static let koreanETFPrefixes = ["KODEX", "TIGER", "KBSTAR", "ARIRANG", "HANARO", "KOSEF", "TIMEFOLIO", "RISE", "PLUS", "ACE", "SOL"]
+    private static let bondKeywords = ["BOND", "TREASURY", "국채", "채권", "회사채", "단기채", "장기채"]
+    private static let goldCommodityKeywords = ["GOLD", "금", "SILVER", "은", "OIL", "원유", "COMMODITY", "원자재"]
+    private static let reitKeywords = ["REIT", "리츠"]
+}
+
+private struct AssetCompositionSource {
+    let title: String
+    let color: Color
+    let amount: Int
+
+    init(category: AssetCompositionCategory, amount: Int) {
+        title = category.title
+        color = category.color
+        self.amount = amount
+    }
+
+    static func cash(_ amount: Int) -> AssetCompositionSource {
+        AssetCompositionSource(title: "현금", color: AssetTabPalette.cashSegment, amount: amount)
+    }
+
+    private init(title: String, color: Color, amount: Int) {
+        self.title = title
+        self.color = color
+        self.amount = amount
+    }
 }

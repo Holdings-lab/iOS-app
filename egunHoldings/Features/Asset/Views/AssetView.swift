@@ -605,8 +605,12 @@ enum AssetTabPalette {
     static let up = Color(hex: "16A34A")
     static let down = Color(hex: "DC2626")
     static let neutral = PSColor.textFaint
-    static let etfSegment = PSColor.primary
+    static let stockETFSegment = PSColor.primary
     static let stockSegment = Color(hex: "8D96A3")
+    static let bondSegment = Color(hex: "5B9BD5")
+    static let goldCommoditySegment = Color(hex: "C89B3C")
+    static let reitSegment = Color(hex: "8D70C9")
+    static let otherSegment = Color(hex: "64748B")
     static let cashSegment = Color(hex: "C5CAD3")
 }
 

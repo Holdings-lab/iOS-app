@@ -3,6 +3,8 @@ import Foundation
 struct BrokerHoldingSnapshot: Codable, Equatable, Sendable {
     let symbol: String
     let name: String
+    /// 증권사가 제공하는 상품 구분. 해외 ETF는 STOCK으로 내려올 수 있어 티커·이름 규칙과 함께 사용한다.
+    let productType: String?
     let quantity: Int
     /// 서버가 내려주는 1주당 현재가. 없으면 기존 총 평가액을 표시값으로 사용한다.
     let currentPrice: Decimal?

@@ -58,6 +58,7 @@ private nonisolated struct BackendAccountPortfolioDTO: Decodable {
 private nonisolated struct BackendAssetPositionDTO: Decodable {
     let itemCode: String
     let itemName: String
+    let productType: String?
     let quantity: Decimal
     let purchaseUnitPrice: Decimal
     let presentPrice: Decimal?
@@ -71,6 +72,7 @@ private nonisolated struct BackendAssetPositionDTO: Decodable {
         BrokerHoldingSnapshot(
             symbol: itemCode,
             name: itemName,
+            productType: productType,
             quantity: quantity.intValue,
             currentPrice: presentPrice,
             currencyCode: currencyCode ?? "KRW",

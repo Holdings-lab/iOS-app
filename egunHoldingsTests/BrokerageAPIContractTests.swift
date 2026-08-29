@@ -45,11 +45,41 @@ struct BrokerageAPIContractTests {
         #expect(balance.holdings.first?.currentPrice == 100_000)
         #expect(balance.holdings.first?.marketValue == 1_000_000)
         #expect(balance.holdings.first?.currencyCode == "USD")
+        #expect(balance.holdings.first?.productType == "STOCK")
         let display = AssetPortfolioDisplay(snapshot: balance)
         #expect(display.holdings.first?.amountText == "$1,000,000")
         #expect(display.holdings.first?.profitText == "+$200,000 (+25.0%)")
-        #expect(display.compositionSegments.map(\.title) == ["주식", "현금"])
+        #expect(display.compositionSegments.map(\.title) == ["개별주", "현금"])
         #expect(display.compositionSegments.map(\.percent) == [80, 20])
+    }
+
+    @Test("보유 종목을 실질 자산군으로 분류해 총 평가금액 비율을 만든다")
+    func classifiesAssetAllocation() {
+        let snapshot = BrokerBalanceSnapshot(
+            broker: "KIS",
+            environment: "MOCK",
+            accountNumber: "1234567801",
+            productCode: "01",
+            totalEvaluationAmount: 1_000,
+            stockEvaluationAmount: 800,
+            cashAmount: 200,
+            totalPurchaseAmount: 800,
+            totalProfitLossAmount: 0,
+            holdings: [
+                holding(symbol: "QQQ", name: "INVESCO QQQ TRUST", productType: "STOCK", value: 300),
+                holding(symbol: "005930", name: "삼성전자", productType: "STOCK", value: 100),
+                holding(symbol: "TLT", name: "iShares 20+ Year Treasury Bond ETF", productType: "STOCK", value: 200),
+                holding(symbol: "GLD", name: "SPDR Gold Shares", productType: "STOCK", value: 100),
+                holding(symbol: "VNQ", name: "Vanguard Real Estate ETF", productType: "STOCK", value: 100)
+            ],
+            fetchedAt: Date()
+        )
+
+        let display = AssetPortfolioDisplay(snapshot: snapshot)
+
+        #expect(display.compositionSegments.map(\.title) == ["주식 ETF", "개별주", "채권·채권 ETF", "금·원자재 ETF", "리츠", "현금"])
+        #expect(display.compositionSegments.map(\.percent) == [30, 10, 20, 10, 10, 20])
+        #expect(display.compositionSegments.map(\.percent).reduce(0, +) == 100)
     }
 
     @Test("일일 브리핑은 온보딩 허용 낙폭을 기준으로 안내 문구를 만든다")
@@ -100,7 +130,23 @@ struct BrokerageAPIContractTests {
     }
 
     private var portfolioJSON: String {
-        #"{"estimatedDepositAsset":1250000,"cashBalance":250000,"totalPurchaseAmount":800000,"totalValuationAmount":1000000,"totalValuationGainLoss":200000,"totalProfitRate":25,"positions":[{"itemCode":"005930","itemName":"삼성전자","quantity":10,"purchaseUnitPrice":80000,"presentPrice":100000,"purchaseAmount":800000,"valuationAmount":1000000,"valuationGainLoss":200000,"profitRate":25,"currencyCode":"USD"}],"byBroker":{"KIS_1234567801":{"accountId":17,"accountNumber":"1234567801","brokerName":"KIS","estimatedDepositAsset":1250000,"cashBalance":250000,"positions":[],"lastSyncedAt":"2026-08-27T10:00:00"}},"lastSyncedAt":"2026-08-27T10:00:00"}"#
+        #"{"estimatedDepositAsset":1250000,"cashBalance":250000,"totalPurchaseAmount":800000,"totalValuationAmount":1000000,"totalValuationGainLoss":200000,"totalProfitRate":25,"positions":[{"itemCode":"005930","itemName":"삼성전자","productType":"STOCK","quantity":10,"purchaseUnitPrice":80000,"presentPrice":100000,"purchaseAmount":800000,"valuationAmount":1000000,"valuationGainLoss":200000,"profitRate":25,"currencyCode":"USD"}],"byBroker":{"KIS_1234567801":{"accountId":17,"accountNumber":"1234567801","brokerName":"KIS","estimatedDepositAsset":1250000,"cashBalance":250000,"positions":[],"lastSyncedAt":"2026-08-27T10:00:00"}},"lastSyncedAt":"2026-08-27T10:00:00"}"#
+    }
+
+    private func holding(symbol: String, name: String, productType: String?, value: Int) -> BrokerHoldingSnapshot {
+        BrokerHoldingSnapshot(
+            symbol: symbol,
+            name: name,
+            productType: productType,
+            quantity: 1,
+            currentPrice: nil,
+            currencyCode: "KRW",
+            averagePurchasePrice: value,
+            purchaseAmount: value,
+            evaluationAmount: value,
+            profitLossAmount: 0,
+            profitLossRate: 0
+        )
     }
 
     private func envelope(resultJSON: String) -> Data {
