@@ -266,7 +266,7 @@ struct TodayHoldingsTop3Card: View {
         }
     }
 
-    /// Top3 보유 종목 + "기타"(전체 포트폴리오 대비 나머지 비중) 합성 행.
+    /// 뷰모델이 금액 기준으로 계산한 Top3와 기타 행을 표시한다.
     private var rows: [TodayHoldingRowData] {
         var sectorColors: [String: Color] = [:]
         let mapped: [TodayHoldingRowData] = holdings.map { holding in
@@ -284,17 +284,7 @@ struct TodayHoldingsTop3Card: View {
             )
         }
 
-        let remainder = 100 - holdings.reduce(0) { $0 + $1.weight }
-        guard remainder > 0 else { return mapped }
-        return mapped + [
-            TodayHoldingRowData(
-                id: "__rest",
-                ticker: "기타",
-                name: "그 외 보유종목",
-                weightPercent: remainder,
-                color: Self.otherColor
-            )
-        ]
+        return mapped
     }
 }
 
@@ -330,7 +320,7 @@ private struct TodayHoldingRow: View {
                     .monospacedDigit()
             }
 
-            // 바 너비는 Top3 중 최댓값/합계가 아니라 holding 자신의 절대 비중(weight / 100)만 반영한다.
+            // 바 너비는 전체 보유 평가금액 대비 절대 비중만 반영한다.
             GeometryReader { proxy in
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
                     .fill(Color.muted)
@@ -360,9 +350,9 @@ struct TodayGoalProgressCard: View {
                         .foregroundStyle(Color.textPrimary)
                     Spacer()
                     if let goalProgress {
-                        Text(goalProgress.status.label)
+                        Text(goalProgress.displayStatusLabel)
                             .font(.pretendard(12, weight: .semibold))
-                            .foregroundStyle(goalProgress.status.color)
+                            .foregroundStyle(goalProgress.displayColor)
                     }
                 }
 
@@ -372,8 +362,8 @@ struct TodayGoalProgressCard: View {
                             RoundedRectangle(cornerRadius: 4, style: .continuous)
                                 .fill(Color.muted)
                             RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(goalProgress.status.color)
-                                .frame(width: proxy.size.width * CGFloat(goalProgress.progressPercent) / 100.0)
+                                .fill(goalProgress.displayColor)
+                                .frame(width: proxy.size.width * CGFloat(goalProgress.clampedProgressPercent) / 100.0)
                                 .animation(.easeInOut(duration: 0.5), value: goalProgress.progressPercent)
                         }
                     }
@@ -382,7 +372,7 @@ struct TodayGoalProgressCard: View {
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
                         Text("\(goalProgress.progressPercent)%")
                             .font(.pretendard(20, weight: .bold))
-                            .foregroundStyle(Color.textPrimary)
+                            .foregroundStyle(goalProgress.isGoalAchieved ? Color.brand : Color.textPrimary)
                             .monospacedDigit()
                         Text("\(goalProgress.goalLabel) · \(goalProgress.scheduleDeltaText)")
                             .font(.pretendard(13, weight: .medium))

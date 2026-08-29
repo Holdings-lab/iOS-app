@@ -38,6 +38,7 @@ struct RootTabView: View {
                 userId: userId,
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
+                brokerBalanceSnapshot: brokerBalanceSnapshot,
                 externalSignalRoute: $todaySignalRoute,
                 onAssetTabRequested: {
                     selectedTab = .asset

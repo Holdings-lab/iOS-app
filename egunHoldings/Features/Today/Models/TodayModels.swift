@@ -81,6 +81,23 @@ struct TodayGoalProgress {
     let progressPercent: Int
     let status: TodayGoalStatus
     let scheduleDeltaText: String
+
+    /// 실제 진행률은 유지하되, 막대는 카드 폭을 넘지 않도록 표시값만 제한한다.
+    var clampedProgressPercent: Int {
+        min(max(progressPercent, 0), 100)
+    }
+
+    var isGoalAchieved: Bool {
+        progressPercent >= 100
+    }
+
+    var displayStatusLabel: String {
+        isGoalAchieved ? "목표 달성" : status.label
+    }
+
+    var displayColor: Color {
+        isGoalAchieved ? Color.brand : status.color
+    }
 }
 
 // MARK: - News (Section 4)

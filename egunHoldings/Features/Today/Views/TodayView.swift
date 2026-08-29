@@ -26,6 +26,7 @@ struct TodayView: View {
     private let userId: Int64?
     private let userAssetProfile: UserAssetProfile
     private let portfolioSnapshot: PortfolioSnapshot
+    private let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     private let onAssetTabRequested: () -> Void
     private let onNewsroomTabRequested: () -> Void
     private let onSignalRouteRequested: (PolSignalRoute) -> Void
@@ -35,6 +36,7 @@ struct TodayView: View {
         userId: Int64? = nil,
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
+        brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
         viewModel: TodayViewModel? = nil,
         externalSignalRoute: Binding<PolSignalRoute?> = .constant(nil),
         onAssetTabRequested: @escaping () -> Void = {},
@@ -45,6 +47,7 @@ struct TodayView: View {
         self.userId = userId
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
+        self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.onAssetTabRequested = onAssetTabRequested
         self.onNewsroomTabRequested = onNewsroomTabRequested
         self.onSignalRouteRequested = onSignalRouteRequested
@@ -53,7 +56,8 @@ struct TodayView: View {
             wrappedValue: viewModel ?? TodayViewModel(
                 userId: userId,
                 userAssetProfile: userAssetProfile,
-                portfolioSnapshot: portfolioSnapshot
+                portfolioSnapshot: portfolioSnapshot,
+                brokerBalanceSnapshot: brokerBalanceSnapshot
             )
         )
         _policyNewsViewModel = StateObject(wrappedValue: PolicyNewsViewModel(userId: userId))
@@ -180,6 +184,9 @@ struct TodayView: View {
             .onChange(of: userAssetProfile) { _, _ in
                 syncSessionData()
             }
+            .onChange(of: brokerBalanceSnapshot) { _, _ in
+                syncSessionData()
+            }
             .onChange(of: policyNewsViewModel.presentedItem) { _, item in
                 syncPolicyNewsDestination(with: item)
             }
@@ -209,7 +216,11 @@ struct TodayView: View {
     }
 
     private func syncSessionData() {
-        viewModel.updateSessionData(userAssetProfile: userAssetProfile, portfolioSnapshot: portfolioSnapshot)
+        viewModel.updateSessionData(
+            userAssetProfile: userAssetProfile,
+            portfolioSnapshot: portfolioSnapshot,
+            brokerBalanceSnapshot: brokerBalanceSnapshot
+        )
     }
 
     private func openNewsItem(_ item: TodayNewsItem) {

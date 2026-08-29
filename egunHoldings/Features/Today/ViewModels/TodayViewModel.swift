@@ -14,6 +14,7 @@ final class TodayViewModel: ObservableObject {
 
     private let userId: Int64?
     private let repository: TodayRepositoryProtocol
+    private var brokerBalanceSnapshot: BrokerBalanceSnapshot?
     private var didLoad = false
     private var refreshGeneration = 0
 
@@ -22,6 +23,7 @@ final class TodayViewModel: ObservableObject {
         userAssetProfile: UserAssetProfile,
         portfolioSnapshot: PortfolioSnapshot,
         holdings: [TodayHolding] = TodayMockData.holdings,
+        brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
         repository: TodayRepositoryProtocol? = nil
     ) {
         let dashboard = MockTodayRepository.makeDashboard(
@@ -33,11 +35,12 @@ final class TodayViewModel: ObservableObject {
 
         self.userId = userId
         self.repository = repository ?? TodayRepositoryFactory.makeDefault()
+        self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.userAssetProfile = dashboard.userAssetProfile
         self.portfolioSnapshot = dashboard.portfolioSnapshot
         self.isAccountLinked = dashboard.isAccountLinked
         self.briefing = dashboard.briefing
-        self.holdings = dashboard.holdings
+        self.holdings = brokerBalanceSnapshot?.todayHoldings ?? dashboard.holdings
         self.goalProgress = dashboard.goalProgress
         self.newsItems = dashboard.newsItems
     }
@@ -46,6 +49,7 @@ final class TodayViewModel: ObservableObject {
     init(userId: Int64?, dashboard: TodayDashboard, loadState: TodayLoadState = .loaded, repository: TodayRepositoryProtocol? = nil) {
         self.userId = userId
         self.repository = repository ?? TodayRepositoryFactory.makeDefault()
+        self.brokerBalanceSnapshot = nil
         self.userAssetProfile = dashboard.userAssetProfile
         self.portfolioSnapshot = dashboard.portfolioSnapshot
         self.isAccountLinked = dashboard.isAccountLinked
@@ -62,7 +66,20 @@ final class TodayViewModel: ObservableObject {
     }
 
     var topHoldings: [TodayHolding] {
-        Array(holdings.sorted { $0.weight > $1.weight }.prefix(3))
+        let positions = holdings.filter { $0.ticker != "ETC" }
+        let topThree = Array(positions.sorted { $0.weight > $1.weight }.prefix(3))
+        let remainder = max(0, 100 - topThree.reduce(0) { $0 + $1.weight })
+
+        guard remainder > 0 else { return topThree }
+        return topThree + [
+            TodayHolding(
+                id: "__rest",
+                name: "그 외 보유종목",
+                ticker: "ETC",
+                category: "ETC",
+                weight: remainder
+            )
+        ]
     }
 
     func load() async {
@@ -75,17 +92,26 @@ final class TodayViewModel: ObservableObject {
     /// 예전에는 상위에서 `.id(portfolioSnapshot)`으로 화면을 통째로 재생성했는데,
     /// 그러면 뷰모델·네비게이션 경로·스크롤 위치가 전부 초기화되고 로딩 스켈레톤이 다시 노출됐다.
     /// 여기서는 로컬 파생 데이터만 즉시 갱신하고, 서버 재조회는 스켈레톤 없이 조용히 수행한다.
-    func updateSessionData(userAssetProfile: UserAssetProfile, portfolioSnapshot: PortfolioSnapshot) {
-        guard userAssetProfile != self.userAssetProfile || portfolioSnapshot != self.portfolioSnapshot else {
+    func updateSessionData(
+        userAssetProfile: UserAssetProfile,
+        portfolioSnapshot: PortfolioSnapshot,
+        brokerBalanceSnapshot: BrokerBalanceSnapshot?
+    ) {
+        guard userAssetProfile != self.userAssetProfile
+                || portfolioSnapshot != self.portfolioSnapshot
+                || brokerBalanceSnapshot != self.brokerBalanceSnapshot
+        else {
             return
         }
+
+        self.brokerBalanceSnapshot = brokerBalanceSnapshot
 
         apply(
             MockTodayRepository.makeDashboard(
                 userId: userId,
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
-                holdings: holdings
+                holdings: brokerBalanceSnapshot?.todayHoldings ?? holdings
             )
         )
 
@@ -133,12 +159,31 @@ final class TodayViewModel: ObservableObject {
         portfolioSnapshot = dashboard.portfolioSnapshot
         isAccountLinked = dashboard.isAccountLinked
         briefing = dashboard.briefing
-        holdings = dashboard.holdings
+        holdings = brokerBalanceSnapshot?.todayHoldings ?? dashboard.holdings
         goalProgress = dashboard.goalProgress
         newsItems = dashboard.newsItems
     }
 
     private static func errorMessage(for error: Error) -> String {
         AppVocabulary.ErrorMessage.userFacing(for: error)
+    }
+}
+
+private extension BrokerBalanceSnapshot {
+    /// 수량이 아닌 각 포지션의 평가금액 합계를 분모로 사용한다.
+    var todayHoldings: [TodayHolding] {
+        let positions = holdings.filter { $0.evaluationAmount > 0 }
+        let totalAmount = positions.reduce(0) { $0 + $1.evaluationAmount }
+        guard totalAmount > 0 else { return [] }
+
+        return positions.map { holding in
+            TodayHolding(
+                id: holding.symbol,
+                name: holding.name,
+                ticker: holding.symbol,
+                category: holding.symbol,
+                weight: Int((Double(holding.evaluationAmount) / Double(totalAmount) * 100).rounded())
+            )
+        }
     }
 }
