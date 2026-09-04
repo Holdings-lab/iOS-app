@@ -38,4 +38,66 @@ final class egunHoldingsUITests: XCTestCase {
             XCUIApplication().launch()
         }
     }
+
+    /// iPhone 12 mini(360pt 폭)에서도 데모의 세 핵심 탭이 가로로 잘리지 않는지 확인한다.
+    /// 이 테스트는 iOS 26 이상 iPhone 12 mini 시뮬레이터에서 실행한다.
+    @MainActor
+    func testMainTabsKeepVisibleContentWithinScreenWidth() throws {
+        let tabCases = [
+            (launchValue: "today", title: "오늘"),
+            (launchValue: "newsroom", title: "뉴스룸"),
+            (launchValue: "asset", title: "내 자산"),
+        ]
+
+        for tabCase in tabCases {
+            let app = XCUIApplication()
+            app.launchArguments = [
+                "-ui-testing-main-tabs",
+                "-ui-testing-main-tab",
+                tabCase.launchValue,
+            ]
+            app.launch()
+
+            XCTAssertTrue(app.wait(for: .runningForeground, timeout: 3))
+            XCTAssertEqual(app.frame.width, 360, accuracy: 1, "iPhone 12 mini(360pt 폭)에서 실행해야 합니다.")
+            XCTAssertTrue(app.staticTexts[tabCase.title].waitForExistence(timeout: 5), "\(tabCase.title) 화면을 찾을 수 없습니다.")
+            assertVisibleElementsStayWithinAppWidth(in: app, tabLabel: tabCase.title)
+            attachScreenshot(of: app, named: "iPhone 12 mini - \(tabCase.title)")
+            app.terminate()
+        }
+    }
+
+    @MainActor
+    private func assertVisibleElementsStayWithinAppWidth(
+        in app: XCUIApplication,
+        tabLabel: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let appFrame = app.frame
+        let tolerance: CGFloat = 1
+        let overflowingElements = app.descendants(matching: .any).allElementsBoundByIndex.filter { element in
+            let frame = element.frame
+            let isVerticallyVisible = frame.maxY > appFrame.minY && frame.minY < appFrame.maxY
+            let extendsPastHorizontalBounds = frame.minX < appFrame.minX - tolerance
+                || frame.maxX > appFrame.maxX + tolerance
+
+            return element.exists && !frame.isEmpty && isVerticallyVisible && extendsPastHorizontalBounds
+        }
+
+        XCTAssertTrue(
+            overflowingElements.isEmpty,
+            "\(tabLabel) 탭에서 화면 폭을 벗어난 요소: \(overflowingElements.map(\.description).joined(separator: ", "))",
+            file: file,
+            line: line
+        )
+    }
+
+    @MainActor
+    private func attachScreenshot(of app: XCUIApplication, named name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
 }

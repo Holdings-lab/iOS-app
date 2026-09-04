@@ -12,18 +12,20 @@ struct RootTabView: View {
     let portfolioSnapshot: PortfolioSnapshot
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     let onBrokerBalanceUpdated: (BrokerBalanceSnapshot) -> Void
-    @State private var selectedTab: RootTab = .today
+    @State private var selectedTab: RootTab
     @State private var todaySignalRoute: PolSignalRoute?
     @State private var presentedSignalRoute: PolSignalRoute?
     @ObservedObject private var notificationCenter = AppNotificationCenter.shared
 
     init(
+        initialTab: RootTab = .today,
         userId: Int64? = nil,
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
         onBrokerBalanceUpdated: @escaping (BrokerBalanceSnapshot) -> Void = { _ in }
     ) {
+        _selectedTab = State(initialValue: initialTab)
         self.userId = userId
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot

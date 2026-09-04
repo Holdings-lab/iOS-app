@@ -526,7 +526,7 @@ private struct AssetHoldingDisplayRow: View {
                 Text(holding.title)
                     .font(.pretendard(15, weight: .semibold))
                     .foregroundStyle(AssetTabPalette.textPrimary)
-                    .lineLimit(1)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(holding.subtitle)
                     .font(.pretendard(13, weight: .regular))
