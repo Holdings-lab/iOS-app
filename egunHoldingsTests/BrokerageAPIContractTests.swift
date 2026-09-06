@@ -130,7 +130,7 @@ struct BrokerageAPIContractTests {
     }
 
     private var portfolioJSON: String {
-        #"{"estimatedDepositAsset":1250000,"cashBalance":250000,"totalPurchaseAmount":800000,"totalValuationAmount":1000000,"totalValuationGainLoss":200000,"totalProfitRate":25,"positions":[{"itemCode":"005930","itemName":"삼성전자","productType":"STOCK","quantity":10,"purchaseUnitPrice":80000,"presentPrice":100000,"purchaseAmount":800000,"valuationAmount":1000000,"valuationGainLoss":200000,"profitRate":25,"currencyCode":"USD"}],"byBroker":{"KIS_1234567801":{"accountId":17,"accountNumber":"1234567801","brokerName":"KIS","estimatedDepositAsset":1250000,"cashBalance":250000,"positions":[],"lastSyncedAt":"2026-08-27T10:00:00"}},"lastSyncedAt":"2026-08-27T10:00:00"}"#
+        #"{"estimatedDepositAsset":1250000,"cashBalance":250000,"totalPurchaseAmount":800000,"totalValuationAmount":1000000,"totalValuationGainLoss":200000,"totalProfitRate":25,"positions":[{"itemCode":"005930","itemName":"삼성전자","productType":"STOCK","quantity":10,"profitRate":25,"currencyCode":"USD","fxRate":1350,"native":{"purchaseUnitPrice":80000,"presentPrice":100000,"purchaseAmount":800000,"valuationAmount":1000000,"gainLoss":200000},"krw":{"purchaseAmount":1080000000,"valuationAmount":1350000000,"gainLoss":270000000}}],"lastSyncedAt":"2026-08-27T10:00:00"}"#
     }
 
     private func holding(symbol: String, name: String, productType: String?, value: Int) -> BrokerHoldingSnapshot {

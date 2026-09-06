@@ -7,11 +7,13 @@ private nonisolated struct BackendPortfolioResponseDTO: Decodable {
     let totalValuationAmount: Decimal
     let totalValuationGainLoss: Decimal
     let positions: [BackendAssetPositionDTO]
-    let byBroker: [String: BackendAccountPortfolioDTO]
+    /// 최신 서버 합산 응답에는 계좌별 요약이 포함되지 않는다. 이전 응답과의 호환을 위해
+    /// 값이 있을 때만 계좌 번호와 증권사명을 표시용 모델에 반영한다.
+    let byBroker: [String: BackendAccountPortfolioDTO]?
     let lastSyncedAt: String?
 
     func toDomain(now: Date = Date()) -> BrokerBalanceSnapshot {
-        let account = byBroker.values.first
+        let account = byBroker?.values.first
         let totalAsset = estimatedDepositAsset.positiveValue
             ?? (totalValuationAmount + cashBalance)
 
@@ -60,13 +62,16 @@ private nonisolated struct BackendAssetPositionDTO: Decodable {
     let itemName: String
     let productType: String?
     let quantity: Decimal
-    let purchaseUnitPrice: Decimal
+    /// 이전 서버 계약의 평면 금액 필드. 배포 중인 서버는 native/krw 중첩 구조를 쓴다.
+    let purchaseUnitPrice: Decimal?
     let presentPrice: Decimal?
-    let purchaseAmount: Decimal
-    let valuationAmount: Decimal
-    let valuationGainLoss: Decimal
+    let purchaseAmount: Decimal?
+    let valuationAmount: Decimal?
+    let valuationGainLoss: Decimal?
     let profitRate: Decimal
     let currencyCode: String?
+    let native: BackendPositionNativeDTO?
+    let krw: BackendPositionKrwDTO?
 
     func toDomain() -> BrokerHoldingSnapshot {
         BrokerHoldingSnapshot(
@@ -74,15 +79,29 @@ private nonisolated struct BackendAssetPositionDTO: Decodable {
             name: itemName,
             productType: productType,
             quantity: quantity.intValue,
-            currentPrice: presentPrice,
+            currentPrice: native?.presentPrice ?? presentPrice,
             currencyCode: currencyCode ?? "KRW",
-            averagePurchasePrice: purchaseUnitPrice.intValue,
-            purchaseAmount: purchaseAmount.intValue,
-            evaluationAmount: valuationAmount.intValue,
-            profitLossAmount: valuationGainLoss.intValue,
+            averagePurchasePrice: (native?.purchaseUnitPrice ?? purchaseUnitPrice ?? 0).intValue,
+            purchaseAmount: (native?.purchaseAmount ?? purchaseAmount ?? krw?.purchaseAmount ?? 0).intValue,
+            evaluationAmount: (native?.valuationAmount ?? valuationAmount ?? krw?.valuationAmount ?? 0).intValue,
+            profitLossAmount: (native?.gainLoss ?? valuationGainLoss ?? krw?.gainLoss ?? 0).intValue,
             profitLossRate: profitRate.doubleValue
         )
     }
+}
+
+private nonisolated struct BackendPositionNativeDTO: Decodable {
+    let purchaseUnitPrice: Decimal?
+    let presentPrice: Decimal?
+    let purchaseAmount: Decimal?
+    let valuationAmount: Decimal?
+    let gainLoss: Decimal?
+}
+
+private nonisolated struct BackendPositionKrwDTO: Decodable {
+    let purchaseAmount: Decimal?
+    let valuationAmount: Decimal?
+    let gainLoss: Decimal?
 }
 
 private nonisolated extension Decimal {
