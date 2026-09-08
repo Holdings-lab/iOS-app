@@ -1,0 +1,3096 @@
+1
+00:00:00,000 --> 00:00:04,800
+on thursday you will have uh the other instructor john wright who was pure earlier for those of you
+
+2
+00:00:04,800 --> 00:00:12,240
+who are early um he'll be teaching you about one of my only friends but let's talk about divide and
+
+3
+00:00:12,240 --> 00:00:18,240
+copper and make sure that we get a little bit more practice and internalize why this is a very
+
+4
+00:00:18,240 --> 00:00:25,680
+important method for algorithms so to quickly recap what we did last time we talked about matrix
+
+5
+00:00:25,680 --> 00:00:30,560
+multiplication and saw the strassens algorithm which was similar to character but for mediancies
+
+6
+00:00:31,360 --> 00:00:37,120
+and then the second half of the lecture was about this problem called median selection or k selection
+
+7
+00:00:37,760 --> 00:00:42,880
+and uh we already said last time that this was going to be significantly sort of harder
+
+8
+00:00:42,880 --> 00:00:49,440
+than thinking about carrots so we're going to continue the trend of making things difficult to
+
+9
+00:00:49,440 --> 00:00:54,960
+do today we're definitely leveling up really fast in the first four lectures of the class i think the
+
+10
+00:00:54,960 --> 00:01:00,800
+first and second lecture were pretty easy the third lecture might have shown some level of difficulty
+
+11
+00:01:00,800 --> 00:01:05,920
+and we're going to off that level a little bit but don't worry we're going to make sure that you follow
+
+12
+00:01:05,920 --> 00:01:12,640
+along and you understand that important what we're going to do today is continue with the median
+
+13
+00:01:12,640 --> 00:01:18,080
+selection we sort of i'm going to do a quick recap of what we did and then we'll pick up every lesson
+
+14
+00:01:18,720 --> 00:01:24,880
+and then we'll talk about um why we can do this with both ends as long as we can select
+
+15
+00:01:24,960 --> 00:01:33,360
+students and we will go over one last example by then conquer the social curve problem okay so let's
+
+16
+00:01:33,360 --> 00:01:39,200
+recap what we learned about media selection problem the selection or k selection problem more generally
+
+17
+00:01:39,200 --> 00:01:45,600
+was this problem that i gave you an array that was not sorted and i asked you to find the kth smallest
+
+18
+00:01:45,600 --> 00:01:51,440
+number in that array so when k was equal to one this would then find the minimum um elements
+
+19
+00:01:52,000 --> 00:02:00,240
+when k was equal to the length it was fine and when k was equal to half of the length was the exact
+
+20
+00:02:00,240 --> 00:02:06,480
+median problem so we wanted to solve this problem more generally for k and we knew that there was a very
+
+21
+00:02:06,480 --> 00:02:13,120
+trivial algorithm of sorting the entire array that takes n log n and then going to the location k
+
+22
+00:02:14,800 --> 00:02:21,280
+shifted to the one index and then literally picking that so there was a trivial login algorithm which we
+
+23
+00:02:21,280 --> 00:02:26,880
+discussed last time and then we said that we want to do all of n because we believe we can do this
+
+24
+00:02:26,880 --> 00:02:35,360
+rather faster so our idea for doing of n was the idea of using pivots just like what you had seen in
+
+25
+00:02:35,360 --> 00:02:41,360
+foot sort and ideal pivot was that somebody gives you a pivot you don't know where it comes from
+
+26
+00:02:42,000 --> 00:02:48,720
+but that allows you to split your array to three pieces that's right and center left are all the
+
+27
+00:02:48,720 --> 00:02:54,000
+elements that are smaller than the pivot right are all the elements that are larger than the pivot
+
+28
+00:02:54,000 --> 00:03:01,040
+and center itself are all the elements that are in fact equal and what we said was that this actually
+
+29
+00:03:01,040 --> 00:03:08,560
+gave us a very natural sort of recursive ball because what you would do is to say that well if i'm
+
+30
+00:03:08,560 --> 00:03:16,560
+trying to select k of this entire array i'll take a look and see if k is smaller than the number of
+
+31
+00:03:16,560 --> 00:03:24,640
+elements in sl it means that the k at smallest element has to be in sl and i would recursively do a search
+
+32
+00:03:24,640 --> 00:03:32,080
+in sl or the k at smallest if it was somewhere in the middle then all of those middle elements are
+
+33
+00:03:32,080 --> 00:03:39,360
+indeed the pivot itself so i would return the pivot and if it was larger than sl plus sr the length of
+
+34
+00:03:39,360 --> 00:03:47,040
+it then i will be recursing on this s and this is the recursion i'm looking in sr the only non-trivial bit
+
+35
+00:03:47,040 --> 00:03:54,240
+here is that because i delete a whole bunch of preceding uh elements i need to shift k by
+
+36
+00:03:54,240 --> 00:03:59,200
+the number of elements that i delete so this is the recursion call and we did all of this last
+
+37
+00:03:59,200 --> 00:04:05,440
+time so this is a very quick reminder and towards the end of the lecture we talked about well this
+
+38
+00:04:05,440 --> 00:04:13,120
+recurrence algorithm of course how will you do it depends on what the length of sl and sr and if sl and
+
+39
+00:04:13,120 --> 00:04:20,880
+sr are pretty balanced then this recurrence can be solved fast if they're not balanced as in the
+
+40
+00:04:20,880 --> 00:04:25,680
+pivot but maybe in one corner or the other corner this recurrence is not going together
+
+41
+00:04:27,760 --> 00:04:36,320
+so this led us to talk about length of pivot sorry length of sl and sr in terms of whether or
+
+42
+00:04:36,320 --> 00:04:41,840
+not you chose a good pivot and those of you who remember we had a discussion you guys talked to each
+
+43
+00:04:41,840 --> 00:04:47,280
+other i gave you four different options for the pivot and you told me that the pivot was that was
+
+44
+00:04:47,280 --> 00:04:54,240
+exactly in the middle was the best pivot it gave me the most balanced sl and sr and made sure my
+
+45
+00:04:54,240 --> 00:05:01,280
+recurrence very quickly diminished and then you gave me examples where a pivot was kind of in the middle
+
+46
+00:05:01,280 --> 00:05:08,080
+but not exactly in the middle and that was the second best voice of pivot it was a good pivot not the
+
+47
+00:05:08,080 --> 00:05:14,400
+ideal but good and then we saw that if the pivot was exactly in the corners it was a bad pivot this algorithm
+
+48
+00:05:14,400 --> 00:05:22,720
+would have taken so what we're going to formalize now is that idea of what is a good enough pivot this
+
+49
+00:05:22,720 --> 00:05:28,960
+is just a continuation of the conversation we were having at the end of the lecture so let's start this
+
+50
+00:05:28,960 --> 00:05:39,760
+is now fresh fish material for this lecture let's pretend that the pivot we picked was guaranteed to be in the
+
+51
+00:05:39,760 --> 00:05:45,840
+middle half of my array what the middle half means means that it was somewhere between and over fourth
+
+52
+00:05:45,840 --> 00:05:54,960
+smallest and three and over fourth smallest element i want you guys to compute the runtime of this select
+
+53
+00:05:54,960 --> 00:06:02,400
+sk so let's take a few maybe two minutes because it's the beginning of the class and i want you guys
+
+54
+00:06:02,400 --> 00:06:07,600
+to warm along and recall what we did last night what i'm asking you to do is assume this is the pivot
+
+55
+00:06:08,160 --> 00:06:13,760
+i want you to write down the reference relationship here for me which means that it's best for you
+
+56
+00:06:13,760 --> 00:06:20,560
+to first figure out what's the maximum length of s elements okay 90 seconds and i'll come back and ask
+
+57
+00:06:20,560 --> 00:06:33,040
+to chain right over for you yeah
+
+58
+00:06:33,040 --> 00:06:40,040
+Yeah.
+
+59
+00:06:40,040 --> 00:06:45,040
+Yeah.
+
+60
+00:06:45,040 --> 00:06:50,040
+Yeah.
+
+61
+00:06:50,040 --> 00:06:55,040
+Yeah.
+
+62
+00:06:55,040 --> 00:06:58,040
+Yeah.
+
+63
+00:06:58,040 --> 00:07:02,040
+Yeah.
+
+64
+00:07:02,040 --> 00:07:06,040
+Yeah.
+
+65
+00:07:06,040 --> 00:07:10,040
+Yeah.
+
+66
+00:07:10,040 --> 00:07:16,040
+Yeah.
+
+67
+00:07:16,040 --> 00:07:22,040
+Yeah.
+
+68
+00:07:22,040 --> 00:07:26,040
+Yeah.
+
+69
+00:07:26,040 --> 00:07:30,040
+Yeah.
+
+70
+00:07:30,040 --> 00:07:36,040
+Yeah.
+
+71
+00:07:36,040 --> 00:07:38,040
+Yeah.
+
+72
+00:07:38,040 --> 00:07:40,040
+Yeah.
+
+73
+00:07:40,040 --> 00:07:42,040
+Yeah.
+
+74
+00:07:42,040 --> 00:07:44,040
+Yeah.
+
+75
+00:07:44,040 --> 00:07:46,040
+Yeah.
+
+76
+00:07:46,040 --> 00:07:56,040
+Yeah.
+
+77
+00:07:56,040 --> 00:07:58,040
+Yeah.
+
+78
+00:07:58,040 --> 00:08:06,040
+So I have a volunteer for the first question, which is what is the maximum length of SL and
+
+79
+00:08:06,040 --> 00:08:08,040
+R?
+
+80
+00:08:08,040 --> 00:08:12,040
+The maximum length of SL and SR is 3N over 4.
+
+81
+00:08:12,040 --> 00:08:13,040
+Thank you.
+
+82
+00:08:13,040 --> 00:08:14,040
+Yeah.
+
+83
+00:08:14,040 --> 00:08:15,040
+Yeah.
+
+84
+00:08:15,040 --> 00:08:19,040
+So what Sinatra said was that this is at most 3N over 4.
+
+85
+00:08:19,040 --> 00:08:21,040
+Can you explain why?
+
+86
+00:08:21,040 --> 00:08:27,040
+Do you want to explain your reasoning?
+
+87
+00:08:27,040 --> 00:08:29,040
+Good to read that.
+
+88
+00:08:29,040 --> 00:08:31,040
+Do you want to explain your reasoning?
+
+89
+00:08:31,040 --> 00:08:32,040
+Okay.
+
+90
+00:08:32,040 --> 00:08:33,040
+Okay.
+
+91
+00:08:33,040 --> 00:08:44,040
+So we know for a fact that SL is no bigger than the 3N over 4, the smallest element.
+
+92
+00:08:44,040 --> 00:08:54,040
+And so what that means is that SL, everything to its left is no larger than the 3N over 4.
+
+93
+00:08:54,040 --> 00:09:01,040
+And you can apply the same logic to SR and being the 3N over 4 is the largest.
+
+94
+00:09:01,040 --> 00:09:02,040
+Sounds good.
+
+95
+00:09:02,040 --> 00:09:03,040
+Sounds good.
+
+96
+00:09:03,040 --> 00:09:10,040
+So I guess what Sinatra said was that I'm going to keep switching between audience mode and
+
+97
+00:09:10,040 --> 00:09:13,040
+using the feeling so we can see how it works.
+
+98
+00:09:13,040 --> 00:09:21,040
+The reason for this is that what we know is that the length of SL is going to be larger
+
+99
+00:09:21,040 --> 00:09:30,040
+than n over 4 just because the place that I put my pivot was after the n over 4.
+
+100
+00:09:30,040 --> 00:09:39,040
+And if the size of SL is larger than n over 4, then by necessity, the size of SR has to
+
+101
+00:09:39,040 --> 00:09:41,040
+be smaller than 3N over.
+
+102
+00:09:41,040 --> 00:09:50,040
+And you can also do this vice versa for the size of SR being small and concluding, sorry,
+
+103
+00:09:50,040 --> 00:10:05,040
+being, well, saying that SR, oops, sorry, saying that SR was at least n over 4 as well.
+
+104
+00:10:05,040 --> 00:10:17,040
+And concluding that SL would have been less than true.
+
+105
+00:10:17,040 --> 00:10:18,040
+Okay.
+
+106
+00:10:18,040 --> 00:10:24,040
+With that in mind, can someone tell me the recurrence relation for the second problem?
+
+107
+00:10:24,040 --> 00:10:35,040
+SR What was your name?
+
+108
+00:10:35,040 --> 00:10:36,040
+Okay.
+
+109
+00:10:36,040 --> 00:10:50,040
+So Jay is saying that it's going to be Tn is at most T of n, well, 3N over 4 plus, what
+
+110
+00:10:50,040 --> 00:10:52,040
+was the addition you gave me?
+
+111
+00:10:52,040 --> 00:10:53,040
+Plus profit.
+
+112
+00:10:53,040 --> 00:11:00,040
+And the reason here is that, well, we started with a problem of size n, and we go to only
+
+113
+00:11:00,040 --> 00:11:02,040
+one of these SL for SR.
+
+114
+00:11:02,040 --> 00:11:04,040
+And we know that the size is at most 3N over 4.
+
+115
+00:11:04,040 --> 00:11:07,040
+So that's where this 3N over 4 comes in.
+
+116
+00:11:07,040 --> 00:11:10,040
+The O of n is what we discussed last time.
+
+117
+00:11:10,040 --> 00:11:14,040
+It was the fact that you could do all of the work in a layer by like splitting everything
+
+118
+00:11:14,040 --> 00:11:17,040
+into three pieces by doing a linear scan.
+
+119
+00:11:17,040 --> 00:11:23,040
+Okay, so this is the recurrence relation.
+
+120
+00:11:23,040 --> 00:11:25,040
+And of course, we want to solve this recurrence relation.
+
+121
+00:11:25,040 --> 00:11:28,040
+And thankfully, we already all know master theorem.
+
+122
+00:11:28,040 --> 00:11:30,040
+We have to practice it a bit more.
+
+123
+00:11:30,040 --> 00:11:34,040
+But this fits master theorem perfectly with A being 1.
+
+124
+00:11:34,040 --> 00:11:38,040
+A is the branching factor because we only go to one problem.
+
+125
+00:11:38,040 --> 00:11:40,040
+So A is whatever goes here.
+
+126
+00:11:40,040 --> 00:11:45,040
+B being whatever n is being divided by.
+
+127
+00:11:45,040 --> 00:11:47,040
+So it's 4 over 3.
+
+128
+00:11:47,040 --> 00:11:51,040
+And then D is whatever we are getting here.
+
+129
+00:11:51,040 --> 00:11:53,040
+So D is equal to 1.
+
+130
+00:11:53,040 --> 00:12:01,040
+And if I put this into the master theorem, what I found is in this first case, where the
+
+131
+00:12:01,040 --> 00:12:02,040
+tree is actually not wide.
+
+132
+00:12:02,040 --> 00:12:04,040
+It's pretty narrow.
+
+133
+00:12:04,040 --> 00:12:07,040
+And all of the work is being done at the top.
+
+134
+00:12:07,040 --> 00:12:09,040
+So it's off and narrow.
+
+135
+00:12:09,040 --> 00:12:16,040
+So this is the guarantee that if somebody tells you the pivot is always in the middle half,
+
+136
+00:12:16,040 --> 00:12:17,040
+then you're good to go.
+
+137
+00:12:17,040 --> 00:12:19,040
+This algorithm runs in profit.
+
+138
+00:12:19,040 --> 00:12:23,040
+Now the problem is that we don't know where this pivot is.
+
+139
+00:12:23,040 --> 00:12:28,040
+What I want to do is that even though we use the master theorem, I want to do this problem
+
+140
+00:12:28,040 --> 00:12:34,040
+one more time with the tree method because in 10 minutes, I'm going to use the tree method
+
+141
+00:12:34,040 --> 00:12:37,040
+for a slightly different version of this algorithm.
+
+142
+00:12:37,040 --> 00:12:43,040
+And it really helps bring this kind of the tree method back.
+
+143
+00:12:43,040 --> 00:12:49,040
+So what the tree method is saying here is exactly what we've done so far.
+
+144
+00:12:49,040 --> 00:12:56,040
+That if I'm guaranteed that the pivot is in the middle half, then I'm going from a problem
+
+145
+00:12:56,040 --> 00:13:00,040
+of size n to a problem of size n over 4.
+
+146
+00:13:00,040 --> 00:13:07,040
+Every time my problem size is being multiplied by 3 over 4 until I finish.
+
+147
+00:13:07,040 --> 00:13:16,040
+And then I would do that tree method is to say that, well, each node is going to be of
+
+148
+00:13:16,040 --> 00:13:21,040
+size n times 3 quarter to the power of i, i being the layer, just because the node size
+
+149
+00:13:21,040 --> 00:13:25,040
+is shrinking by being multiplied by 3 over 4.
+
+150
+00:13:25,040 --> 00:13:30,040
+And then that means that the contribution is literally c times that.
+
+151
+00:13:30,040 --> 00:13:35,040
+And the reason the contribution is literally c times that is, remember, we are saying tn
+
+152
+00:13:35,040 --> 00:13:42,040
+is t of n times 3 over 4 plus cn.
+
+153
+00:13:42,040 --> 00:13:44,040
+This is the O of n.
+
+154
+00:13:44,040 --> 00:13:51,040
+So this is exactly what we are getting here by placing the size of the problem into that
+
+155
+00:13:51,040 --> 00:13:54,040
+equation and multiplying it by c.
+
+156
+00:13:54,040 --> 00:13:59,040
+So what that means is that the total amount of work that I'm doing on all the layers is,
+
+157
+00:13:59,040 --> 00:14:01,040
+again, this geometric stuff.
+
+158
+00:14:01,040 --> 00:14:07,040
+And it goes from layer 0 to the last layer, which happens to be the depth, oops, the depth
+
+159
+00:14:07,040 --> 00:14:14,040
+of this tree, which is log n to the base 4 over 3.
+
+160
+00:14:14,040 --> 00:14:21,040
+And then summing over this quantity, which is the total work done pair of layer i.
+
+161
+00:14:21,040 --> 00:14:27,040
+And this is a geometric series with ratio r being less than 1.
+
+162
+00:14:27,040 --> 00:14:29,040
+This is the ratio of r being less than 1.
+
+163
+00:14:29,040 --> 00:14:34,040
+And you know that for geometric series where that ratio is less than 1, this essentially
+
+164
+00:14:34,040 --> 00:14:39,040
+you kind of, it becomes a constant and goes away, and that's where your c of n.
+
+165
+00:14:39,040 --> 00:14:40,040
+Okay.
+
+166
+00:14:40,040 --> 00:14:45,040
+So this is if you wanted to do the tree method instead of doing the math.
+
+167
+00:14:45,040 --> 00:14:46,040
+Any questions?
+
+168
+00:14:46,040 --> 00:14:47,040
+Yes.
+
+169
+00:14:47,040 --> 00:14:48,040
+.
+
+170
+00:14:48,040 --> 00:14:49,040
+How was your name?
+
+171
+00:14:49,040 --> 00:14:54,040
+Amy asks, why did you put an alpha bound rather than an inequality?
+
+172
+00:14:54,040 --> 00:15:13,040
+Just to make it very clear, this should have been an inequality and the previous page was
+
+173
+00:15:13,040 --> 00:15:14,040
+an inequality.
+
+174
+00:15:14,040 --> 00:15:17,040
+Let me explain why it is an inequality one more time.
+
+175
+00:15:17,040 --> 00:15:25,040
+Then we went to here, and this is why we have inequality as well.
+
+176
+00:15:25,040 --> 00:15:28,040
+I asked what's the maximum size of sr and sl?
+
+177
+00:15:28,040 --> 00:15:31,040
+Because the pivot could be anywhere in the middle.
+
+178
+00:15:31,040 --> 00:15:36,040
+If the pivot was literally in the middle, then you would have two equal sizes of n over
+
+179
+00:15:36,040 --> 00:15:46,040
+2 n over 2, so your recurrence relationship at that point would have been
+
+180
+00:15:46,040 --> 00:15:47,040
+n over 2.
+
+181
+00:15:47,040 --> 00:15:59,040
+If pivot is exactly at 1 over 2, then sl and sr would have both been n over 2.
+
+182
+00:15:59,040 --> 00:16:07,040
+And then the recurrence would have been t of n is at most t of n over 2 plus w of n,
+
+183
+00:16:07,040 --> 00:16:12,040
+which is smaller than what we wrote here.
+
+184
+00:16:12,040 --> 00:16:17,040
+You're being conservative because I'm not guaranteeing that the pivot is exactly in the middle.
+
+185
+00:16:17,040 --> 00:16:19,040
+I'm just guaranteeing that it's in the middle half.
+
+186
+00:16:19,040 --> 00:16:24,040
+And that's why it's an upper bound rather than equal.
+
+187
+00:16:24,040 --> 00:16:25,040
+Okay.
+
+188
+00:16:25,040 --> 00:16:26,040
+Good question.
+
+189
+00:16:26,040 --> 00:16:29,040
+We're making sure that we're understanding all of these.
+
+190
+00:16:29,040 --> 00:16:30,040
+Okay.
+
+191
+00:16:30,040 --> 00:16:32,040
+So let me summarize our thoughts so far.
+
+192
+00:16:32,040 --> 00:16:39,040
+The thought so far is that any pivot that's kind of in the middle, formally kind of in the middle,
+
+193
+00:16:39,040 --> 00:16:44,040
+if it's between n over 4 and 3 over 4, is a good pivot.
+
+194
+00:16:44,040 --> 00:16:47,040
+We're going to call it good pivot from now on.
+
+195
+00:16:47,040 --> 00:16:53,040
+And then it's going to make sure that my runtime is going to be off end.
+
+196
+00:16:53,040 --> 00:17:02,040
+And the point is that more than half of the elements in my array are actually good pivots.
+
+197
+00:17:02,040 --> 00:17:10,040
+So, which means that up to now, we said, imagine one of your good friends gave you a good pivot.
+
+198
+00:17:10,040 --> 00:17:13,040
+But now you could be your own good friend.
+
+199
+00:17:13,040 --> 00:17:19,040
+In the sense that more than half of these pivots are actual elements are actually pretty reasonable pivots.
+
+200
+00:17:19,040 --> 00:17:26,040
+So if you randomly just take one of these pivots, half the time you are indeed against the pivots.
+
+201
+00:17:26,040 --> 00:17:39,040
+So what this means is that, in a way, if I give you two tries, in some sense, one of those tries was a good pivot.
+
+202
+00:17:39,040 --> 00:17:44,040
+So you could kind of think about this as maybe my runtime is just going to double up.
+
+203
+00:17:44,040 --> 00:17:51,040
+Because it takes me two tries to synthesize a pivot that would have been a good pivot.
+
+204
+00:17:51,040 --> 00:17:54,040
+So I know once I have a good pivot, what's my runtime?
+
+205
+00:17:54,040 --> 00:17:57,040
+That's exactly what we're going to formalize.
+
+206
+00:17:57,040 --> 00:17:59,040
+If you didn't swallow, that's okay.
+
+207
+00:17:59,040 --> 00:18:01,040
+We're going to mathematically say what I just said.
+
+208
+00:18:01,040 --> 00:18:06,040
+But the whole point is that I don't need a good pivot at every time.
+
+209
+00:18:06,040 --> 00:18:11,040
+I just want pivots that are good half the time.
+
+210
+00:18:11,040 --> 00:18:15,040
+Because every time I have a good pivot, I get a shrinkage in my car.
+
+211
+00:18:15,040 --> 00:18:20,040
+So if it takes me twice the number of tries to get one good pivot,
+
+212
+00:18:20,040 --> 00:18:26,040
+essentially, you know what that means is that the runtime of me randomly picking pivots
+
+213
+00:18:26,040 --> 00:18:32,040
+is the same as twice the runtime of a good friend guaranteeing a good pivot.
+
+214
+00:18:32,040 --> 00:18:33,040
+Okay.
+
+215
+00:18:33,040 --> 00:18:38,040
+So how do we formalize this?
+
+216
+00:18:38,040 --> 00:18:47,040
+It seems like I'm already talking about randomness and expectations of what that randomness outcome is.
+
+217
+00:18:47,040 --> 00:18:51,040
+The claim that you're going to see is the following.
+
+218
+00:18:51,040 --> 00:19:01,040
+That there is a randomized algorithm for select SK with expected runtime of all time.
+
+219
+00:19:01,040 --> 00:19:04,040
+Here, what it says is pretty important.
+
+220
+00:19:04,040 --> 00:19:05,040
+Randomized?
+
+221
+00:19:05,040 --> 00:19:06,040
+What does it mean to be randomized?
+
+222
+00:19:06,040 --> 00:19:09,040
+And what does it mean to have an expected runtime?
+
+223
+00:19:09,040 --> 00:19:19,040
+I will tell you that not every semester people get to learn about randomized algorithms in CS 170 at least at this stage of the class.
+
+224
+00:19:19,040 --> 00:19:26,040
+But we actually wanted to include this randomized algorithm here to give you a little bit of a taste of what you're going to see towards the end of the semester.
+
+225
+00:19:26,040 --> 00:19:30,040
+We're going to have a module on randomized algorithms, which is very, very cool.
+
+226
+00:19:30,040 --> 00:19:35,040
+So, but for those of you who remember quick select, that was a randomized algorithm.
+
+227
+00:19:35,040 --> 00:19:37,040
+It was randomly clicking to this.
+
+228
+00:19:37,040 --> 00:19:41,040
+Now we're going to see why quick, sorry, quick stores from before.
+
+229
+00:19:41,040 --> 00:19:44,040
+And we're going to see if the equivalent is here.
+
+230
+00:19:44,040 --> 00:19:46,040
+So what's a randomized algorithm?
+
+231
+00:19:46,040 --> 00:19:52,040
+We typically think about algorithms up to now in terms of their worst case performance.
+
+232
+00:19:52,040 --> 00:19:55,040
+Like if the instance was as bad as possible.
+
+233
+00:19:55,040 --> 00:20:06,040
+What that means is that inherently we are thinking about an adversary who is in the world and trying to create the worst instance knowing what kind of an algorithm we are running.
+
+234
+00:20:06,040 --> 00:20:12,040
+So that when we guarantee that it runs at O of N, it truly always runs in O of N and no worse.
+
+235
+00:20:12,040 --> 00:20:14,040
+Randomized algorithms are different.
+
+236
+00:20:14,040 --> 00:20:24,040
+The role of the adversary changes in the sense that the adversary is still there because, and it can see some things, but not everything.
+
+237
+00:20:24,040 --> 00:20:29,040
+So what a randomized algorithm processes is that you write down your algorithm description.
+
+238
+00:20:29,040 --> 00:20:37,040
+The adversary gets to see that description and choose potentially a really bad instance given that description.
+
+239
+00:20:37,040 --> 00:20:47,040
+But what the adversary does not see is that it doesn't see what are those random points that you're throwing as you go along.
+
+240
+00:20:47,040 --> 00:20:51,040
+So the random bits, those are not visible to the adversary.
+
+241
+00:20:51,040 --> 00:21:03,040
+So in some sense, what the adversary sees is that its choice of that problem can depend on the algorithm description, but not on the realization of the point process.
+
+242
+00:21:03,040 --> 00:21:13,040
+So in this case, what that means is that the algorithm and the adversary can know that you're randomly picking pivots and can design a bad instance for it.
+
+243
+00:21:13,040 --> 00:21:18,040
+But it doesn't know which pivot at what time was the pivot type.
+
+244
+00:21:18,040 --> 00:21:19,040
+Okay.
+
+245
+00:21:19,040 --> 00:21:26,040
+Now, with that in mind, the way we talk about randomized algorithm performance is to talk about expected values.
+
+246
+00:21:26,040 --> 00:21:38,040
+Expected runtime is essentially looking at that P of N that so far we have been talking as it being a runtime and taking an expectation over it.
+
+247
+00:21:38,040 --> 00:21:39,040
+Exactly.
+
+248
+00:21:39,040 --> 00:21:44,040
+Because now runtime is a random variable.
+
+249
+00:21:44,040 --> 00:21:52,040
+It's the runtime indeed depends on which pivot was realized and what lengths of SL and SR were realized.
+
+250
+00:21:52,040 --> 00:21:54,040
+So it's a random variable.
+
+251
+00:21:54,040 --> 00:22:00,040
+And as a result, we need to talk about its expectation or its distribution.
+
+252
+00:22:00,040 --> 00:22:15,040
+So what that means is now that what we are going to prove to limit this, to show that this expected value is small, is to say that whenever this T of N is large, it's possible.
+
+253
+00:22:15,040 --> 00:22:19,040
+Maybe you chose terrible pivots and T of N was large.
+
+254
+00:22:19,040 --> 00:22:23,040
+But we are going to show that that happens with very, very tiny problems.
+
+255
+00:22:23,040 --> 00:22:28,040
+So in expectation, T of N is going to be true.
+
+256
+00:22:28,040 --> 00:22:33,040
+This is high-level ideas about randomized algorithms, unexpected values.
+
+257
+00:22:33,040 --> 00:22:40,040
+Any questions before we see how this actually gets implemented for the median select problem?
+
+258
+00:22:40,040 --> 00:22:41,040
+Okay.
+
+259
+00:22:41,040 --> 00:22:50,040
+I told you guys we're going to come back to the tree method.
+
+260
+00:22:50,040 --> 00:22:53,040
+So we are coming back to the tree method.
+
+261
+00:22:53,040 --> 00:22:59,040
+So, before, I did the tree method consuming kind of like a worst case.
+
+262
+00:22:59,040 --> 00:23:02,040
+Amy said, like, where did the upper bound come from?
+
+263
+00:23:02,040 --> 00:23:12,040
+Well, because I was working with a worst case situation of saying that, well, you shrink with three-way N over four, maybe more, but no less.
+
+264
+00:23:12,040 --> 00:23:21,040
+Now, when I'm thinking about the tree method that comes out of the randomized pivot selection, it's possible that sometimes your pivot is not good.
+
+265
+00:23:21,040 --> 00:23:25,040
+Maybe from the very first problem, this pivot was not a good pivot.
+
+266
+00:23:25,040 --> 00:23:40,040
+So when I used it as a pivot, it generated a pretty large SL or SR of size N minus five.
+
+267
+00:23:40,040 --> 00:23:42,040
+But this was not a good pivot.
+
+268
+00:23:42,040 --> 00:23:51,040
+And maybe I will choose some not great pivots until at some point I actually do choose a reasonably good pivot.
+
+269
+00:23:51,040 --> 00:23:58,040
+As in, I shrink N minus eight to something that is three N over four minus six.
+
+270
+00:23:58,040 --> 00:24:02,040
+Maybe I, again, choose a pretty good pivot.
+
+271
+00:24:02,040 --> 00:24:09,040
+But this is what a tree method might look like when I'm tracking the size of the solved problems after randomized algorithms.
+
+272
+00:24:09,040 --> 00:24:19,040
+Now, what I want to do is still to analyze the total amount of work that's being done in all layers.
+
+273
+00:24:19,040 --> 00:24:23,040
+That summation of the geometric series, that's kind of the stuff I know how to do.
+
+274
+00:24:23,040 --> 00:24:28,040
+I want to massage this tree to get that.
+
+275
+00:24:28,040 --> 00:24:29,040
+How do I do this?
+
+276
+00:24:29,040 --> 00:24:37,040
+The idea is that it's true that in some steps I don't get good pivots, but there are steps where I do get a good pivot.
+
+277
+00:24:37,040 --> 00:24:51,040
+So what I'm going to do is to not look at one layer at a time, but look at phases that these layers do shrink significantly.
+
+278
+00:24:51,040 --> 00:24:53,040
+What do I mean formally?
+
+279
+00:24:53,040 --> 00:25:00,040
+I mean, a phase is defined by a beginning and a beginning layer and an ending layer.
+
+280
+00:25:00,040 --> 00:25:18,040
+And the ending layer, you should think about it as SI plus one is not inclusive, is the layer where finally the problem size at SI is being multiplied by three N over four or small.
+
+281
+00:25:18,040 --> 00:25:21,040
+What phases look like here or like this?
+
+282
+00:25:21,040 --> 00:25:25,040
+I told you guys that the first few parts I picked were not good pivots.
+
+283
+00:25:25,040 --> 00:25:31,040
+I didn't see a shrinkage to something that was three N over fours or less.
+
+284
+00:25:31,040 --> 00:25:34,040
+But then I do see it as sometimes here.
+
+285
+00:25:34,040 --> 00:25:44,040
+So the beginning, S0 here, is literally layer zero.
+
+286
+00:25:44,040 --> 00:25:50,040
+And S1 is whichever layer this is.
+
+287
+00:25:50,040 --> 00:26:09,040
+Because the size of the stop problem at phase, the first layer of the phase SI plus one, is literally smaller than three N over four times the size of the problem at the beginning of this.
+
+288
+00:26:09,040 --> 00:26:10,040
+Okay?
+
+289
+00:26:10,040 --> 00:26:21,040
+Now, what I'm claiming is that before, I used to talk about the size of the stop problem at the layer.
+
+290
+00:26:21,040 --> 00:26:25,040
+Now I'm going to talk about the size of the problem at the phase.
+
+291
+00:26:25,040 --> 00:26:38,040
+In particular, what I'm saying is that at phase I, the size of any layer that fits under that layer, that phase, is going to be at most N times three quarters to the place.
+
+292
+00:26:38,040 --> 00:26:43,040
+And by now, this should look very familiar.
+
+293
+00:26:43,040 --> 00:26:50,040
+Because essentially, stop problems, sorry, phases, are taking the place of layers first.
+
+294
+00:26:50,040 --> 00:26:57,040
+Each phase, she receives a shrinkage of T of N by being multiplied by three over four.
+
+295
+00:26:57,040 --> 00:27:07,040
+So after I phases, then my problem of force is going to be smaller than N times three quarters to the power.
+
+296
+00:27:07,040 --> 00:27:16,040
+And then, with that in mind, the way I'm going to do the runtime, is to do the runtime over layers, but count them as part of phases.
+
+297
+00:27:16,040 --> 00:27:21,040
+In the sense that, I want to know how long is phase I, that's true.
+
+298
+00:27:21,040 --> 00:27:36,040
+But from then on, I just imagine, like, I used this lemma here that says that every layer that is in this phase I is going to have a size that is three over four to the power of I times X.
+
+299
+00:27:36,040 --> 00:27:43,040
+And as a result, the total work that I have to do is C and Q to three over four to the power of I.
+
+300
+00:27:43,040 --> 00:27:47,040
+This looks exactly like the three methods we did so far.
+
+301
+00:27:47,040 --> 00:27:51,040
+The only difference is that I'm multiplying it by length of the phase.
+
+302
+00:27:51,040 --> 00:27:54,040
+Okay, so let's take a second.
+
+303
+00:27:54,040 --> 00:27:56,040
+Any questions right now?
+
+304
+00:27:56,040 --> 00:27:59,040
+I'm going to actually compute this total runtime.
+
+305
+00:27:59,040 --> 00:28:02,040
+But any questions about the definition of the phase?
+
+306
+00:28:02,040 --> 00:28:03,040
+Perfect time to ask.
+
+307
+00:28:03,040 --> 00:28:07,040
+Any questions about why either of these two lemmas are correct?
+
+308
+00:28:07,040 --> 00:28:09,040
+This is a time for us.
+
+309
+00:28:09,040 --> 00:28:15,040
+Because from now on, from the next one, I'm going to just move the last one.
+
+310
+00:28:15,040 --> 00:28:16,040
+Yes.
+
+311
+00:28:20,040 --> 00:28:21,040
+Great question.
+
+312
+00:28:21,040 --> 00:28:24,040
+What's your name?
+
+313
+00:28:24,040 --> 00:28:25,040
+Nithya?
+
+314
+00:28:25,040 --> 00:28:26,040
+Nithya.
+
+315
+00:28:26,040 --> 00:28:30,040
+Nithya asked, how do I know how many phases there are?
+
+316
+00:28:30,040 --> 00:28:40,040
+Because as you can see, I put this thing here, which is my max number of phases.
+
+317
+00:28:40,040 --> 00:28:51,040
+The way we know that there are at most log of n to the base of four over three number of phases is very similar to how we do the depth of the original three.
+
+318
+00:28:51,040 --> 00:28:59,040
+Because each phase, I am multiplying my problem size by three over four.
+
+319
+00:28:59,040 --> 00:29:04,040
+It means that my last phase ends once I get to a problem of size one.
+
+320
+00:29:04,040 --> 00:29:13,040
+So the number of times I can divide by four over three and still remain above one is exactly this small.
+
+321
+00:29:13,040 --> 00:29:16,040
+Other questions?
+
+322
+00:29:20,040 --> 00:29:21,040
+Okay.
+
+323
+00:29:21,040 --> 00:29:25,040
+So, let's talk about now what the length of the phase is.
+
+324
+00:29:25,040 --> 00:29:27,040
+This is the number I want to prove.
+
+325
+00:29:27,040 --> 00:29:32,040
+And length of the phase has to be a random variable because it depends on how good your pivots work, right?
+
+326
+00:29:32,040 --> 00:29:34,040
+It depends on the location of the phase.
+
+327
+00:29:34,040 --> 00:29:52,040
+So, I'm going to say that the length of the phase, you can think about it as the number of tries it gets until you finally shrink the problem you started with.
+
+328
+00:29:52,040 --> 00:29:59,040
+You finally shrink the problem you started with at a ratio of three over four.
+
+329
+00:29:59,040 --> 00:30:04,040
+Because once you shrink it, the phase ends and a new phase starts.
+
+330
+00:30:04,040 --> 00:30:19,040
+So, what this means is in fact that the length of the phase is at most the number of tries, independent tries that it gets for you to get a pivot that's a good pivot that falls in the middle half.
+
+331
+00:30:19,040 --> 00:30:23,040
+Now, this is a subtle point.
+
+332
+00:30:23,040 --> 00:30:26,040
+Let's take a second to see why that's true.
+
+333
+00:30:26,040 --> 00:30:44,040
+What I'm saying is that, what I'm saying is that, well, maybe you start with n, you go to n-2, whatever, at some point you fall below where you started.
+
+334
+00:30:44,040 --> 00:30:48,040
+So, I'm saying that I'm looking at the length of the phase.
+
+335
+00:30:48,040 --> 00:31:10,040
+And the claim I'm making is that, the minute you hit pivot in the middle half, phase ends.
+
+336
+00:31:10,040 --> 00:31:15,040
+And the new one starts.
+
+337
+00:31:15,040 --> 00:31:20,040
+That's the claim I'm making.
+
+338
+00:31:20,040 --> 00:31:23,040
+I'm not saying that this is the only way to end the phase.
+
+339
+00:31:23,040 --> 00:31:32,040
+It's possible that you just chip at your n slowly one at a time until it falls below three n over a quarter, three n over a quarter.
+
+340
+00:31:32,040 --> 00:31:45,040
+But what is definitely true is that if you do get a big ax and get a good pivot and multiply the problem by three over four, the phase ends.
+
+341
+00:31:45,040 --> 00:31:57,040
+But as a result, the length of the phase definitely is at most the number of tries you can do until you get this pivot.
+
+342
+00:31:57,040 --> 00:32:00,040
+Any questions about the claim?
+
+343
+00:32:00,040 --> 00:32:05,040
+Any questions about the question?
+
+344
+00:32:05,040 --> 00:32:08,040
+Are things set up?
+
+345
+00:32:08,040 --> 00:32:16,040
+Yeah, so the question was that when you're going from n to n minus 2 to n minus 5, you're still shrinking your rate, and you seem to be not accounting for it.
+
+346
+00:32:16,040 --> 00:32:25,920
+Yeah, so the question was that when you're going from n to n minus 2 to n minus 5, you're
+
+347
+00:32:25,920 --> 00:32:29,960
+still shrinking your array, and you seem to be not accounting for it, is that what you're
+
+348
+00:32:29,960 --> 00:32:30,960
+saying?
+
+349
+00:32:30,960 --> 00:32:38,420
+The point that I'm saying is that to fall in the middle half of n, as you chip away n,
+
+350
+00:32:38,420 --> 00:32:43,880
+it just becomes more likely that you will fall in that, because you are deleting the
+
+351
+00:32:43,880 --> 00:32:45,200
+right and the left.
+
+352
+00:32:45,200 --> 00:32:51,540
+So the probability that you fall in the middle half is at least one of our two.
+
+353
+00:32:51,540 --> 00:32:57,440
+It's right that once you start chipping a little bit, you are more likely to fall in the middle,
+
+354
+00:32:57,440 --> 00:33:13,040
+but we are not even accounting for that, we are kind of upper bounding that.
+
+355
+00:33:13,040 --> 00:33:19,380
+Basically, you should, you should, like, algorithmically speaking, you are moving, and I guess what
+
+356
+00:33:19,380 --> 00:33:25,720
+is that even as you move, as you delete some parts, and the middle half changes that you're
+
+357
+00:33:25,720 --> 00:33:32,460
+discussing, the computation of this, getting a pivot in the middle half, could be done by
+
+358
+00:33:32,460 --> 00:33:42,800
+saying that middle half of n, because this is strictly a worst case situation than when you have already
+
+359
+00:33:42,800 --> 00:33:49,140
+chipped your way, and then finally hits the three at all.
+
+360
+00:33:49,140 --> 00:33:57,480
+Exactly, that's a great question.
+
+361
+00:33:57,480 --> 00:34:02,480
+So the other question is, if I go back, why do I pick the middle half?
+
+362
+00:34:02,480 --> 00:34:05,480
+Could I not have picked the middle nine over ten?
+
+363
+00:34:05,480 --> 00:34:13,820
+Absolutely, you can, and we usually do that as it can work for you, so I usually have a slide here that says practice out.
+
+364
+00:34:13,820 --> 00:34:24,480
+Okay, good. So everyone seems to be with me on this claim that the length of a phase is at most the number of random tries
+
+365
+00:34:24,480 --> 00:34:35,480
+times, until a pivot is a good time. So with that in mind, let's take 60 seconds, and look at the probability that you get a pivot that's good in the first try.
+
+366
+00:34:35,480 --> 00:34:41,480
+You don't get it in the first try, but you get it in the second try. You don't get it in the second try, you get it on the third try.
+
+367
+00:34:41,480 --> 00:34:46,480
+And then you do the same with n. I want you guys to actually offer problems this.
+
+368
+00:34:46,480 --> 00:35:02,480
+In the sense that I want you guys to compute what is the probability that n minus first try is not good pivot.
+
+369
+00:35:02,480 --> 00:35:04,480
+And then you get it in the second try.
+
+370
+00:35:04,480 --> 00:35:06,480
+And then you get it in the second try.
+
+371
+00:35:06,480 --> 00:35:09,480
+And then you get it in the second try, but pivot.
+
+372
+00:35:09,480 --> 00:35:17,480
+And I'll turn back. Take 60 seconds, and we'll come back and go over what you did.
+
+373
+00:35:17,480 --> 00:35:46,480
+And then you'll have your name.
+
+374
+00:35:46,480 --> 00:35:48,480
+Yes.
+
+375
+00:36:16,480 --> 00:36:44,480
+Fifteen more seconds.
+
+376
+00:36:44,480 --> 00:36:47,480
+Okay.
+
+377
+00:36:47,480 --> 00:36:54,480
+Can you guys tell me, I feel like maybe you can all shout it.
+
+378
+00:36:54,480 --> 00:36:59,480
+What is the probability you came up with for length being equal to two?
+
+379
+00:36:59,480 --> 00:37:02,480
+One, two, three.
+
+380
+00:37:02,480 --> 00:37:05,480
+One, four, one over two to the power of two.
+
+381
+00:37:05,480 --> 00:37:08,480
+They're the same.
+
+382
+00:37:08,480 --> 00:37:10,480
+For length being equal to three.
+
+383
+00:37:10,480 --> 00:37:12,480
+One, two, three.
+
+384
+00:37:12,480 --> 00:37:14,480
+One, eight.
+
+385
+00:37:14,480 --> 00:37:16,480
+And for the last one.
+
+386
+00:37:16,480 --> 00:37:18,480
+One over two to the M.
+
+387
+00:37:18,480 --> 00:37:20,480
+One over two to the M.
+
+388
+00:37:20,480 --> 00:37:26,480
+Exactly because this does that the first M minus one tries had to fail.
+
+389
+00:37:26,480 --> 00:37:27,480
+Oops.
+
+390
+00:37:27,480 --> 00:37:31,480
+And that's this.
+
+391
+00:37:31,480 --> 00:37:39,480
+And the second, the last try had to succeed.
+
+392
+00:37:39,480 --> 00:37:43,480
+I did this by assuming it over to it exactly.
+
+393
+00:37:43,480 --> 00:37:45,480
+But actually, you can do this at home.
+
+394
+00:37:45,480 --> 00:37:53,480
+If the probability of not getting a good pivot is like slightly different rather than being
+
+395
+00:37:53,480 --> 00:37:55,480
+exactly a half, it still works.
+
+396
+00:37:55,480 --> 00:37:56,480
+It still works.
+
+397
+00:37:56,480 --> 00:38:00,480
+Like you have P, one minus P, and it sort of, it works slightly.
+
+398
+00:38:00,480 --> 00:38:01,480
+Okay.
+
+399
+00:38:01,480 --> 00:38:07,480
+So with that in mind, now what we have to do is literally compute this expectation.
+
+400
+00:38:07,480 --> 00:38:17,480
+And an expected value, as we all have learned in our previous classes, is the sum of any integer
+
+401
+00:38:17,480 --> 00:38:23,480
+M from one to infinity and the probability that our random value was that.
+
+402
+00:38:23,480 --> 00:38:34,480
+So what this means is that the expected length is literally the sum over all M, M from zero to M from one to infinity.
+
+403
+00:38:34,480 --> 00:38:40,480
+And the probability that M is indeed the length of mine.
+
+404
+00:38:40,480 --> 00:38:42,480
+This is actually a difficult computation.
+
+405
+00:38:42,480 --> 00:38:44,480
+So I'm not going to ask you guys to compute it.
+
+406
+00:38:44,480 --> 00:38:52,480
+But if somebody in the class already looks at this and knows how to do this sum, please raise your hand and let me know.
+
+407
+00:38:52,480 --> 00:38:55,480
+I will do it otherwise for you regardless.
+
+408
+00:38:55,480 --> 00:38:56,480
+Yes.
+
+409
+00:38:56,480 --> 00:39:05,480
+What's your name?
+
+410
+00:39:05,480 --> 00:39:16,480
+I noticed that this looks like the expectation of a geometric just because in the previous line, we had this path once the one over to the power of two, three, four.
+
+411
+00:39:16,480 --> 00:39:20,480
+It is, except that there is an extra M before it.
+
+412
+00:39:20,480 --> 00:39:24,480
+So it looks like that, but it's not exactly geometric series.
+
+413
+00:39:24,480 --> 00:39:26,480
+But it's very related.
+
+414
+00:39:26,480 --> 00:39:32,480
+And we can see how, yeah, then exactly.
+
+415
+00:39:32,480 --> 00:39:33,480
+So you're on the right track.
+
+416
+00:39:33,480 --> 00:39:36,480
+And we're going to do that.
+
+417
+00:39:36,480 --> 00:39:46,480
+Anybody knows what this ends up being without thinking?
+
+418
+00:39:46,480 --> 00:39:47,480
+Good.
+
+419
+00:39:47,480 --> 00:39:48,480
+So both of you are correct.
+
+420
+00:39:48,480 --> 00:39:49,480
+What's your name?
+
+421
+00:39:49,480 --> 00:39:50,480
+Yeah.
+
+422
+00:39:50,480 --> 00:39:52,480
+So David and Angela are both on the right track.
+
+423
+00:39:52,480 --> 00:39:55,480
+They're like, it's not exactly geometric, but this is geometric arithmetic series.
+
+424
+00:39:55,480 --> 00:40:00,480
+And the way to do it is what I'm going to do now.
+
+425
+00:40:00,480 --> 00:40:01,480
+Okay.
+
+426
+00:40:01,480 --> 00:40:17,480
+So to do this, I'll use two colors, is let me first write what we replace in the fact that we computed this to be half to the power of M at most.
+
+427
+00:40:17,480 --> 00:40:28,480
+So the way this goes is that this is going to be M from one to infinity, M half to the power of M.
+
+428
+00:40:28,480 --> 00:40:37,480
+And David said this, but the way to do this is to do a little subtraction trick, which I'm going to do next.
+
+429
+00:40:37,480 --> 00:40:41,480
+Let me call this total sum S.
+
+430
+00:40:41,480 --> 00:40:52,480
+And I'm going to make the following sort of transformation on S by saying that I want to look at what is S over 2.
+
+431
+00:40:52,480 --> 00:41:02,480
+But S over 2 is equivalent to dividing each of these by like, sorry, taking one of the powers of M out.
+
+432
+00:41:02,480 --> 00:41:07,480
+When I have half to the power of M, just saying half to the power of M minus 1.
+
+433
+00:41:07,480 --> 00:41:10,480
+M plus 1 since this is inverted M.
+
+434
+00:41:10,480 --> 00:41:26,480
+So what I'm saying is that this is actually equivalent to saying that I sum from 0 to infinity M to half M plus 1.
+
+435
+00:41:26,480 --> 00:41:35,480
+Just thinking that whenever you divide this half to the power of M by another half, that M is going to become M.
+
+436
+00:41:35,480 --> 00:41:41,480
+So this is just true by looking at a very simple arithmetic.
+
+437
+00:41:41,480 --> 00:41:54,480
+But now let me expand this, because I like to expand this by trying to make another formula that looks like the recipe of some S that we have.
+
+438
+00:41:54,480 --> 00:42:07,480
+That means that I'm happy to do 0 to infinity and give M plus 1 here.
+
+439
+00:42:07,480 --> 00:42:10,480
+Now what I have to do is that I went from M to M plus 1.
+
+440
+00:42:10,480 --> 00:42:14,480
+So I have to subtract the little thing that I added.
+
+441
+00:42:14,480 --> 00:42:23,480
+And the thing that I had added was the sum of the halves.
+
+442
+00:42:24,480 --> 00:42:25,480
+Okay?
+
+443
+00:42:25,480 --> 00:42:36,480
+So the way I went from this to here is to add a little bit of a half plus M to the power of plus 1 so that this can look M plus 1.
+
+444
+00:42:36,480 --> 00:42:39,480
+And then subtract it so that I don't have any S.
+
+445
+00:42:39,480 --> 00:42:45,480
+And now the key thing is that the first term, this just looks like S.
+
+446
+00:42:45,480 --> 00:42:51,480
+Well, it's slightly different in the sense that S started from M equal to 1 and M.
+
+447
+00:42:51,480 --> 00:42:55,480
+This is starting from M equal to 0 but does M plus 1.
+
+448
+00:42:55,480 --> 00:42:58,480
+So this is literally in fact S.
+
+449
+00:42:58,480 --> 00:43:14,480
+Let me now use a different thing that says this is equivalent for me going from 1 to infinity and just adjusting the M plus 1 to be M and half to the power of M.
+
+450
+00:43:14,480 --> 00:43:20,480
+So this is exactly S, okay?
+
+451
+00:43:20,480 --> 00:43:26,480
+Before I was starting my sum from 0 and then adding a plus 1 to my M.
+
+452
+00:43:26,480 --> 00:43:28,480
+Now I'm just saying, why do that?
+
+453
+00:43:28,480 --> 00:43:31,480
+I'll just start my sum from 1 and not add the plus 1.
+
+454
+00:43:31,480 --> 00:43:37,480
+That's exactly what's happening in this blue to green sum.
+
+455
+00:43:37,480 --> 00:43:44,480
+This thing is also pretty easy to think about.
+
+456
+00:43:44,480 --> 00:43:50,480
+At M equal to 0, I'm saying my term in the sum is half to the power of 0 plus 1.
+
+457
+00:43:50,480 --> 00:43:52,480
+So it's just a half.
+
+458
+00:43:52,480 --> 00:43:54,480
+The next time around is a quarter.
+
+459
+00:43:54,480 --> 00:43:57,480
+The next time around is an A, dah, dah, dah, dah, dah.
+
+460
+00:43:57,480 --> 00:44:00,480
+So this is truly a geometric series.
+
+461
+00:44:00,480 --> 00:44:07,480
+And I know that a half plus a quarter plus an eighth, dah, dah, dah, dah, dah, is at most 1.
+
+462
+00:44:07,480 --> 00:44:10,480
+Actually, it's that.
+
+463
+00:44:10,480 --> 00:44:18,480
+So what I just did is to say the following thing.
+
+464
+00:44:18,480 --> 00:44:25,480
+That S over 2 is equal to S minus 1.
+
+465
+00:44:25,480 --> 00:44:32,480
+And if I solve that, S has to be true.
+
+466
+00:44:32,480 --> 00:44:34,480
+Okay.
+
+467
+00:44:34,480 --> 00:44:40,480
+So we now see the claim I made intuitively before.
+
+468
+00:44:40,480 --> 00:44:49,480
+That if I have a half a chance, like half probability, like 50% chance of getting a good pivot.
+
+469
+00:44:49,480 --> 00:44:54,480
+Then in some way, when I take two pivots, one of them is good enough.
+
+470
+00:44:54,480 --> 00:44:57,480
+So the length of my runtime is going to be double.
+
+471
+00:44:57,480 --> 00:45:02,480
+Just because every time before I had a great pivot, which was a probability one.
+
+472
+00:45:02,480 --> 00:45:04,480
+Now I'm getting it with two times.
+
+473
+00:45:04,480 --> 00:45:07,480
+This is literally giving us that.
+
+474
+00:45:07,480 --> 00:45:12,480
+By saying that the length of the phase and expectation is going to be two.
+
+475
+00:45:12,480 --> 00:45:17,480
+If somebody guaranteed you a good pivot, the length would have been one.
+
+476
+00:45:17,480 --> 00:45:24,480
+And that all together, we are going to put this length of the phase into the tree method that we had.
+
+477
+00:45:24,480 --> 00:45:29,480
+Everything is just doubling and nothing else changes.
+
+478
+00:45:29,480 --> 00:45:32,480
+This is exactly the tree method we did a couple of slides ago.
+
+479
+00:45:32,480 --> 00:45:34,480
+The end comes out.
+
+480
+00:45:34,480 --> 00:45:37,480
+Length of the phase also comes out.
+
+481
+00:45:37,480 --> 00:45:43,480
+You're just summing over a geometric series that has a ratio that is less than one.
+
+482
+00:45:43,480 --> 00:45:46,480
+So that whole sum is just going to be a constant.
+
+483
+00:45:46,480 --> 00:45:48,480
+And you had an end from before.
+
+484
+00:45:48,480 --> 00:45:52,480
+And that's the proof that the expected runtime here is.
+
+485
+00:45:55,480 --> 00:45:58,480
+Well, let's take a second to appreciate what we achieved.
+
+486
+00:45:58,480 --> 00:46:07,480
+We gave the randomized algorithm that it's expected runtime is off n and works for selection problems.
+
+487
+00:46:07,480 --> 00:46:08,480
+This is called.
+
+488
+00:46:08,480 --> 00:46:10,480
+Questions here.
+
+489
+00:46:10,480 --> 00:46:15,480
+Let me end this part of the lecture by saying a little bit more.
+
+490
+00:46:15,480 --> 00:46:16,480
+I gave you a randomized algorithm.
+
+491
+00:46:16,480 --> 00:46:20,480
+There's also a cool deterministic algorithm whose runtime is always off n.
+
+492
+00:46:20,480 --> 00:46:25,480
+It's actually looks very similar except rather than randomly picking pivots.
+
+493
+00:46:25,480 --> 00:46:28,480
+It picks pivots in a slightly smarter way.
+
+494
+00:46:28,480 --> 00:46:30,480
+It's a longer proof.
+
+495
+00:46:30,480 --> 00:46:32,480
+We won't talk about it in the class.
+
+496
+00:46:32,480 --> 00:46:33,480
+I believe that both have it.
+
+497
+00:46:33,480 --> 00:46:35,480
+And David, do we still do that in the discussion?
+
+498
+00:46:35,480 --> 00:46:36,480
+Yeah.
+
+499
+00:46:36,480 --> 00:46:37,480
+The deterministic case.
+
+500
+00:46:37,480 --> 00:46:38,480
+No.
+
+501
+00:46:38,480 --> 00:46:39,480
+Keep mine.
+
+502
+00:46:39,480 --> 00:46:40,480
+I'm not sure.
+
+503
+00:46:40,480 --> 00:46:41,480
+Well, sometimes included in the discussion.
+
+504
+00:46:41,480 --> 00:46:42,480
+It's just for additional enrichment sort of opportunity.
+
+505
+00:46:42,480 --> 00:46:43,480
+Okay.
+
+506
+00:46:43,480 --> 00:46:44,480
+With that in mind, let's take a quick break.
+
+507
+00:46:44,480 --> 00:46:45,480
+I'm going to activate the class.
+
+508
+00:46:45,480 --> 00:46:50,480
+And for those of you who have problems, check in.
+
+509
+00:46:50,480 --> 00:46:51,480
+We have our TA David here.
+
+510
+00:46:51,480 --> 00:46:53,480
+Actually, I'll get him to come introduce himself.
+
+511
+00:46:53,480 --> 00:46:57,480
+He is here to help debug your issues.
+
+512
+00:46:57,480 --> 00:46:58,480
+Give me a second.
+
+513
+00:46:58,480 --> 00:46:59,480
+Give me a second to get the class.
+
+514
+00:46:59,480 --> 00:47:00,480
+Okay.
+
+515
+00:47:00,480 --> 00:47:04,480
+The class should be open for check-in.
+
+516
+00:47:04,480 --> 00:47:06,480
+If you have any issues, David, go ahead.
+
+517
+00:47:06,480 --> 00:47:07,480
+Okay.
+
+518
+00:47:07,480 --> 00:47:08,480
+Okay.
+
+519
+00:47:08,480 --> 00:47:09,480
+Okay.
+
+520
+00:47:09,480 --> 00:47:10,480
+Okay.
+
+521
+00:47:10,480 --> 00:47:11,480
+Okay.
+
+522
+00:47:11,480 --> 00:47:12,480
+Okay.
+
+523
+00:47:12,480 --> 00:47:13,480
+Okay.
+
+524
+00:47:13,480 --> 00:47:14,480
+Okay.
+
+525
+00:47:14,480 --> 00:47:15,480
+Okay.
+
+526
+00:47:15,480 --> 00:47:16,480
+Okay.
+
+527
+00:47:16,480 --> 00:47:17,480
+Okay.
+
+528
+00:47:17,480 --> 00:47:18,480
+Okay.
+
+529
+00:47:18,480 --> 00:47:19,480
+Okay.
+
+530
+00:47:19,480 --> 00:47:20,480
+Okay.
+
+531
+00:47:20,480 --> 00:47:21,480
+Okay.
+
+532
+00:47:21,480 --> 00:47:22,480
+Okay.
+
+533
+00:47:22,480 --> 00:47:23,480
+Okay.
+
+534
+00:47:23,480 --> 00:47:24,480
+Okay.
+
+535
+00:47:24,480 --> 00:47:25,480
+Okay.
+
+536
+00:47:25,480 --> 00:47:29,480
+So, if you have any issues, David is here and it's 10 28.
+
+537
+00:47:29,480 --> 00:47:32,480
+We'll start at 10 31.
+
+538
+00:47:32,480 --> 00:48:02,460
+Thank you.
+
+539
+00:48:02,480 --> 00:48:09,240
+Yeah, if you have issues with iClicker in the front, they will sit in here.
+
+540
+00:48:09,760 --> 00:48:15,320
+Please do talk with him right now, because once I close the class and the class ends,
+
+541
+00:48:15,400 --> 00:48:19,000
+we're not going to do any more debugging issues.
+
+542
+00:48:26,500 --> 00:48:27,180
+Watch it.
+
+543
+00:48:32,480 --> 00:49:02,460
+I'll see you next time.
+
+544
+00:49:02,480 --> 00:49:32,460
+I'll see you next time.
+
+545
+00:49:32,460 --> 00:50:02,440
+I'll see you next time.
+
+546
+00:50:02,440 --> 00:50:32,420
+I'll see you next time.
+
+547
+00:50:32,440 --> 00:50:34,440
+I'll see you next time.
+
+548
+00:50:34,440 --> 00:51:02,420
+I'll see you next time.
+
+549
+00:51:02,420 --> 00:51:04,420
+I'll see you next time.
+
+550
+00:51:04,420 --> 00:51:06,420
+I'll see you next time.
+
+551
+00:51:06,420 --> 00:51:08,420
+Okay.
+
+552
+00:51:08,420 --> 00:51:10,420
+I'll see you next time.
+
+553
+00:51:10,420 --> 00:51:12,420
+Okay.
+
+554
+00:51:12,420 --> 00:51:14,420
+Okay.
+
+555
+00:51:14,420 --> 00:51:16,420
+I'll see you next time.
+
+556
+00:51:16,420 --> 00:51:18,420
+Okay.
+
+557
+00:51:18,420 --> 00:51:20,420
+Okay.
+
+558
+00:51:20,420 --> 00:51:22,420
+I'll see you next time.
+
+559
+00:51:22,420 --> 00:51:24,420
+Okay.
+
+560
+00:51:24,420 --> 00:51:26,420
+Okay.
+
+561
+00:51:26,420 --> 00:51:28,420
+Okay.
+
+562
+00:51:28,420 --> 00:51:29,420
+Okay.
+
+563
+00:51:29,420 --> 00:51:31,420
+I'll see you next time.
+
+564
+00:51:31,420 --> 00:51:32,420
+Okay.
+
+565
+00:51:32,420 --> 00:51:34,420
+I'll see you next time.
+
+566
+00:51:34,420 --> 00:51:35,420
+Okay.
+
+567
+00:51:35,420 --> 00:51:36,420
+Okay.
+
+568
+00:51:36,420 --> 00:51:38,420
+I'll see you next time.
+
+569
+00:51:38,420 --> 00:51:40,420
+I'll see you next time.
+
+570
+00:51:40,420 --> 00:51:41,420
+Okay.
+
+571
+00:51:41,420 --> 00:51:42,420
+Okay.
+
+572
+00:51:42,420 --> 00:51:43,420
+I'll see you next time.
+
+573
+00:51:43,420 --> 00:51:44,420
+I'll see you next time.
+
+574
+00:51:44,420 --> 00:51:45,420
+I'll see you next time.
+
+575
+00:51:45,420 --> 00:51:47,420
+I'll see you next time.
+
+576
+00:51:47,420 --> 00:51:48,420
+Okay.
+
+577
+00:51:48,420 --> 00:51:49,420
+I'll see you next time.
+
+578
+00:51:49,420 --> 00:51:50,420
+I'll see you next time.
+
+579
+00:51:50,420 --> 00:51:51,420
+Okay.
+
+580
+00:51:51,420 --> 00:51:52,420
+I'll see you next time.
+
+581
+00:51:52,420 --> 00:51:53,420
+Okay.
+
+582
+00:51:53,420 --> 00:51:54,420
+Okay.
+
+583
+00:51:54,420 --> 00:51:55,420
+Okay.
+
+584
+00:51:55,420 --> 00:52:00,420
+We're entering the last bit of the lecture, which is about one last problem in divide and proper.
+
+585
+00:52:00,420 --> 00:52:07,380
+And this problem fundamentally looks different in the sense that up to now, we worked with
+
+586
+00:52:07,380 --> 00:52:13,420
+Divide and Proper where the non-trivial part of the problem was how to divide the problem.
+
+587
+00:52:13,420 --> 00:52:21,980
+problem um in the sense that uh we talked about quick select strassen karatsuba it was all about
+
+588
+00:52:21,980 --> 00:52:27,580
+what's the right way of dividing a problem it's the combination of the once you had the solution
+
+589
+00:52:27,580 --> 00:52:33,420
+combining them back was immediate you know with uh matrix multiplication we wrote it down it was
+
+590
+00:52:33,420 --> 00:52:40,620
+pretty easy with um with quick select it was literally you know gluey needed you were just
+
+591
+00:52:40,620 --> 00:52:47,020
+recursing down one branch so what you're going to see this time around is a problem where the
+
+592
+00:52:47,020 --> 00:52:55,020
+division is not hard but sort of the problem that is non-trivial is once you have solved the sub
+
+593
+00:52:55,020 --> 00:53:00,540
+problems how do you glue them back together because in divide and conquer both of these are important
+
+594
+00:53:00,540 --> 00:53:07,580
+steps and we want to practice both so this problem is called the closest pair problem the input to this
+
+595
+00:53:07,580 --> 00:53:14,860
+problem is is a set of end points in two-dimensional euclidean space in a plane so each of them has an
+
+596
+00:53:14,860 --> 00:53:26,380
+x-coordinate and a y-coordinate and the goal is for us to return the closest pair points pi and pj okay
+
+597
+00:53:27,420 --> 00:53:33,100
+um this is actually a very common thing you need to do for a lot of ml algorithms when you're trying to
+
+598
+00:53:33,100 --> 00:53:41,740
+find uh the nearest neighbors or like the closest clusters of something so the name algorithm for
+
+599
+00:53:41,740 --> 00:53:48,460
+this is pretty simple you have n points each of them can be the closest neighbor to another one of
+
+600
+00:53:48,460 --> 00:53:55,740
+the n points so look at all of these pairs it's n squared and because i'm only in two dimensions knowing
+
+601
+00:53:55,740 --> 00:54:04,140
+the distance between two points is just constant time so of n squared turns of n squared runtime what
+
+602
+00:54:04,140 --> 00:54:11,100
+we want to do is to do better than this in particular we're aiming for an n log n uh runtime
+
+603
+00:54:13,900 --> 00:54:18,220
+questions about the goal the problem okay
+
+604
+00:54:18,220 --> 00:54:30,060
+so the divide step is not that unusual the way we would divide this problem is that we know that
+
+605
+00:54:30,060 --> 00:54:38,940
+since we are aiming for an n log n n log n affords us a lot of flexibility for example sorted is on fits
+
+606
+00:54:38,940 --> 00:54:47,500
+under n log n so one thing i can do is to just sort the points on x-axis or y-axis that would be very
+
+607
+00:54:47,500 --> 00:54:52,940
+useful for me and that means that in fact finding the median point is immediately obvious because
+
+608
+00:54:52,940 --> 00:55:01,580
+i'm willing to give the n log n here so how do i divide it i sort on the x-axis and i take the median
+
+609
+00:55:02,140 --> 00:55:07,660
+you might tell me that oh i know it was an algorithm for this and i'll say great keep it in mind i don't
+
+610
+00:55:07,660 --> 00:55:16,140
+mind spending the time to sort into this okay now i have two stop problems the stop problem on left and
+
+611
+00:55:16,140 --> 00:55:21,020
+right on the left i have the points that fall on their left on the right i have the points that fall
+
+612
+00:55:21,020 --> 00:55:26,620
+under the right and obviously this the thing i'm asking for each stop problem is just what's the
+
+613
+00:55:26,620 --> 00:55:32,140
+closest pair in each one of them so i'm going to solve recursively each of these two stop problems
+
+614
+00:55:33,020 --> 00:55:39,180
+and each of those two stop problems are going to come up with a close pair so if i was only paying
+
+615
+00:55:39,180 --> 00:55:45,980
+attention to the left it means that both points have to come from left this is the scheme if both
+
+616
+00:55:45,980 --> 00:55:52,300
+points needed to come from right this is the smallest now note that the unfortunate part of this
+
+617
+00:55:53,020 --> 00:56:03,180
+and why the gluing is non-trivial is that this pair in the grand scheme of things is actually the pair
+
+618
+00:56:03,180 --> 00:56:10,460
+that is the smallest the closest pair overall but because one of each of the sides of this pair fill
+
+619
+00:56:10,460 --> 00:56:18,620
+in the two different halves now i don't really know how to capture their distance again so the stop
+
+620
+00:56:18,620 --> 00:56:23,660
+problems don't capture the closest pairs that are crossing them out
+
+621
+00:56:23,660 --> 00:56:35,980
+so what that means is that somehow i need to account for pairs that can cross the boundary
+
+622
+00:56:37,500 --> 00:56:44,300
+there is a trivial way of doing this which is too slow in particular one can say well i'll take
+
+623
+00:56:45,100 --> 00:56:53,180
+all pairs where one end is on the left and the other end is on the right that will take i have n over 2
+
+624
+00:56:54,220 --> 00:57:00,380
+uh points on the left and over two points on the right and the number of pairs is n squared
+
+625
+00:57:01,340 --> 00:57:07,420
+so the runtime of that sort of a trivially going through all possible pairs that have one end on each
+
+626
+00:57:07,420 --> 00:57:16,140
+side is two so what you have to do is something a little bit smart let's have a lot of time let's see
+
+627
+00:57:16,140 --> 00:57:23,100
+do you guys have any thoughts any recommendations for what to try that is not often squared there's
+
+628
+00:57:23,100 --> 00:57:37,420
+still allows me to localize it let's go with you um so the question what's your name
+
+629
+00:57:37,420 --> 00:57:47,180
+um says that well if it is sorted um what i could do is to see what are the closest points to the median
+
+630
+00:57:47,900 --> 00:57:53,980
+and in that sense you're right you are localizing uh to the median let me draw a little bit here i do
+
+631
+00:57:53,980 --> 00:57:59,660
+a little bit here i do have a i have a figure you are localizing to the median on one side
+
+632
+00:58:02,540 --> 00:58:07,900
+so this is median on x and it's possible that you're localizing
+
+633
+00:58:07,900 --> 00:58:16,620
+to this and saying that well let me look close to the median if i'm looking close to the median it's
+
+634
+00:58:16,620 --> 00:58:22,620
+like a strip that doesn't have necessarily a lot of points in it and maybe i can just focus there
+
+635
+00:58:23,260 --> 00:58:29,340
+you there's a great idea with one exception that what crime you were saying was maybe the thing that's
+
+636
+00:58:29,340 --> 00:58:37,420
+closest to the median itself might be part of the pen note that that might not be the case because
+
+637
+00:58:37,420 --> 00:58:44,860
+perhaps the closest thing across the median is only like kind of close to some other points that are
+
+638
+00:58:44,860 --> 00:58:52,300
+really far on the y-axis if you go deep enough here uh this is not too scarce let me do it a little bit
+
+639
+00:58:52,300 --> 00:59:01,740
+more to scan um because you might have something that's slightly farther from median on both sides
+
+640
+00:59:01,740 --> 00:59:08,940
+and that's the closest so the first intuition is right we should localize around the median but how
+
+641
+00:59:08,940 --> 00:59:15,580
+you actually localize does matter so this is uh the first idea we're going to do which is to restrict
+
+642
+00:59:15,580 --> 00:59:21,980
+attention to the strip on width d d is the minimum solution we found on either side
+
+643
+00:59:22,300 --> 00:59:28,540
+right because we're saying that either one of these two pairs is the closest pair or i only need
+
+644
+00:59:28,540 --> 00:59:39,660
+to look and localize to be away from my meter so as i said it's still this is a good idea but by itself
+
+645
+00:59:39,660 --> 00:59:45,660
+doesn't solve the problem for a number of reasons it seems like we might have to do a naive search here
+
+646
+00:59:46,220 --> 00:59:52,220
+because the naive search uh like because we don't have a better idea yet um and in particular
+
+647
+00:59:52,540 --> 00:59:58,940
+maybe that area is really dense and if all my points effectively fall there there's still n squared
+
+648
+00:59:58,940 --> 01:00:03,740
+go up n squared number of points paid up or 10 squared number of points but i need to change
+
+649
+01:00:04,540 --> 01:00:15,420
+so great idea i need one more idea on top of it any other thoughts about once you localize in this strip
+
+650
+01:00:16,060 --> 01:00:23,260
+but you might be able to even localize further and and shrink the number of pairs you have to
+
+651
+01:00:23,820 --> 01:00:26,940
+search from n squared to something that's that's smaller
+
+652
+01:00:26,940 --> 01:00:43,580
+what's your name i would say can you divide it again by the median on the y-axis you're onto something
+
+653
+01:00:43,580 --> 01:00:49,580
+right which is saying that so far you haven't really done anything with the y-axis there are algorithms that
+
+654
+01:00:49,580 --> 01:00:56,780
+recursively divide x on the x-axis and on the y-axis um i'm not going to divide on the y-axis but i'm
+
+655
+01:00:56,780 --> 01:01:05,580
+going to use the y-axis in uh in a very useful way uh that shrinks the number of pairs we're going to
+
+656
+01:01:05,580 --> 01:01:10,300
+search over any last recommendation of what to do
+
+657
+01:01:10,300 --> 01:01:20,460
+okay so i'm going to go with what alan was saying which is that let's use the y-axis a little bit
+
+658
+01:01:21,020 --> 01:01:29,100
+and how am i going to use it note that my entire goal right now is to shrink the number of viable
+
+659
+01:01:29,100 --> 01:01:35,500
+pairs that cross the boundary we know that there is at most n squared but that's too many and we're going
+
+660
+01:01:35,500 --> 01:01:45,740
+to shrink it and i'm going to actually make a point now which is that any point p that is falling in
+
+661
+01:01:45,740 --> 01:01:54,780
+this drift needs to be measured only against points that fall on the region r and what is region r
+
+662
+01:01:54,780 --> 01:02:04,540
+region r um let me region r is a 2d by d rectangle
+
+663
+01:02:06,700 --> 01:02:16,140
+where i go d up from p and d down from p let me actually explain what the purple i feel like i should
+
+664
+01:02:16,140 --> 01:02:30,140
+be color i don't know purple region r it's described as a 2d by d on the other side of
+
+665
+01:02:33,660 --> 01:02:34,380
+the median
+
+666
+01:02:37,180 --> 01:02:41,820
+from where p is so this is the median
+
+667
+01:02:41,820 --> 01:02:51,020
+region p is on the left side the region that i'm referring to is on the opposite side so it's on
+
+668
+01:02:51,020 --> 01:03:02,620
+the r and it's to the above it's like from d higher and p to d lower and p
+
+669
+01:03:02,620 --> 01:03:15,980
+and the claim is that there is no way that p could be part of the closest pair and be matched with
+
+670
+01:03:15,980 --> 01:03:26,380
+something that's outside of the purple and the reason for this is should be clear anything outside of
+
+671
+01:03:26,380 --> 01:03:27,260
+the purple region
+
+672
+01:03:37,260 --> 01:03:39,660
+falls in one of two cases it's either
+
+673
+01:03:43,340 --> 01:03:47,900
+distance greater than d from p
+
+674
+01:03:50,140 --> 01:03:55,100
+that includes all of this area
+
+675
+01:03:56,380 --> 01:04:01,900
+or it's
+
+676
+01:04:05,580 --> 01:04:10,860
+at the same size of the median
+
+677
+01:04:13,980 --> 01:04:14,620
+as p
+
+678
+01:04:19,100 --> 01:04:20,060
+which could include
+
+679
+01:04:20,060 --> 01:04:27,260
+all of this
+
+680
+01:04:27,260 --> 01:04:31,420
+it's true you could have another closest pair here
+
+681
+01:04:32,300 --> 01:04:37,820
+but i'm looking at pairs across the boundary if you actually fall in case two
+
+682
+01:04:37,820 --> 01:04:42,380
+this is the case that's already caught
+
+683
+01:04:45,180 --> 01:04:45,820
+i suffer
+
+684
+01:04:49,260 --> 01:04:55,180
+so if i'm really limiting my uh perspective to points that those pairs across the boundary
+
+685
+01:04:56,060 --> 01:05:07,260
+it's only the purple region that's gonna match okay so claim is that if i want to find a quote if p is
+
+686
+01:05:07,260 --> 01:05:12,780
+part of the closest pair that crosses the boundary that pair has to be
+
+687
+01:05:12,780 --> 01:05:13,420
+in the
+
+688
+01:05:23,980 --> 01:05:29,660
+i can i can be a little bit more stingy and say that well p wasn't exactly on the median it was a little
+
+689
+01:05:29,660 --> 01:05:37,260
+bit further so let me shave off the purple region i can but sometimes simplicity is much better and we're
+
+690
+01:05:37,260 --> 01:05:42,220
+we're going to see that with simplicity we can analyze this purple rectangle
+
+691
+01:05:42,220 --> 01:05:44,860
+essentially further trimming doesn't have help
+
+692
+01:05:47,180 --> 01:05:50,460
+the next claim oh sorry i made this a little bit nasty
+
+693
+01:05:50,460 --> 01:05:56,940
+the next claim that i'm gonna have is to say that the number of points that can fall in this rectangle
+
+694
+01:05:56,940 --> 01:06:07,260
+this purple rectangle is at most eight no more than eight points that can fall in this uh purple region
+
+695
+01:06:09,020 --> 01:06:14,220
+i will prove that for you um and i think some people already see how to prove it
+
+696
+01:06:15,100 --> 01:06:22,780
+but let's see why it matters i'm gonna do this kind of a like jump ahead and imagine
+
+697
+01:06:23,340 --> 01:06:31,100
+that indeed it's the case that every point in this strip only needs to be checked against eight other
+
+698
+01:06:31,100 --> 01:06:37,900
+points or all of one other points and then say that if that hasn't been true why does the runtime of my
+
+699
+01:06:37,900 --> 01:06:46,780
+algorithm uh end and off and off again so the reason for that is this i'm saying that well the closest pair
+
+700
+01:06:47,340 --> 01:06:54,460
+now is going to have two sub problems each of them of size n over two and then
+
+701
+01:06:55,340 --> 01:07:00,060
+the next step of the algorithm i have to do is to figure out which of these was the smallest of the
+
+702
+01:07:00,060 --> 01:07:09,820
+two so that's my d and then next thing i have to do is going to compute all the points in the strip
+
+703
+01:07:09,820 --> 01:07:14,220
+that's actually not that hard because you've already sorted them by x-axis and you know where
+
+704
+01:07:14,220 --> 01:07:20,060
+the medium falls so you can recover all of them pretty quickly there is another step that's kind
+
+705
+01:07:20,060 --> 01:07:25,660
+of annoying to do once you start coding this problem i highly recommend you coded it it took
+
+706
+01:07:25,660 --> 01:07:34,060
+me a while to make this like error free when i was voting it um and that step is to compare to all the
+
+707
+01:07:34,060 --> 01:07:40,060
+points that fall in the purple region so essentially you need to retrieve for each point p retrieve the
+
+708
+01:07:40,060 --> 01:07:46,620
+purple region and the points that fall under it it's technically speaking very fast because you
+
+709
+01:07:46,620 --> 01:07:54,140
+actually know the address of the purple points like you know that that's p plus a d minus a d so
+
+710
+01:07:54,140 --> 01:08:00,620
+you have the region but writing the code takes some effort and once you do that you are done so what's
+
+711
+01:08:00,620 --> 01:08:06,700
+the runtime of this algorithm when i start with one problem of size n i create two problems of size
+
+712
+01:08:06,700 --> 01:08:13,420
+conversion those are my two starters now i have to glue it back together and gluing it back together
+
+713
+01:08:13,420 --> 01:08:19,260
+is going to take off n at most because all i'm saying is that for each of the points that fall in the
+
+714
+01:08:19,260 --> 01:08:26,380
+strip and maybe n points can fall in the strip each of them gets off one other point to check so the total
+
+715
+01:08:26,380 --> 01:08:35,980
+number of additional pairs i'm checking is off that gives me a recurrence relationship of two team and
+
+716
+01:08:35,980 --> 01:08:43,900
+over two plus co of n which we do know is not large no larger than uh the n log n that we already spent
+
+717
+01:08:46,300 --> 01:08:52,540
+so highly recommend to do this at home it's non-trivial and it's a very good exercise
+
+718
+01:08:53,980 --> 01:09:02,700
+now what i'm going to do for the next bit is to actually prove for you that indeed there is at most
+
+719
+01:09:02,700 --> 01:09:15,740
+a yes yes but i'm not assuming yet since the runtime allows me an n log n i will start sorting
+
+720
+01:09:20,380 --> 01:09:24,940
+yeah so essentially the clarification that was asked was uh you're assuming that already
+
+721
+01:09:24,940 --> 01:09:31,100
+scored by x and i said no i don't assume it i do it because sorting takes n log n f
+
+722
+01:09:33,100 --> 01:09:39,580
+okay so now let's get to the non-trivial part of this proof which is to say that there's at most
+
+723
+01:09:39,580 --> 01:09:47,420
+eight points in my perform region this is my perform region claim is at most eight points
+
+724
+01:09:48,540 --> 01:09:50,300
+anyone wants to tell me how to prove this
+
+725
+01:09:52,540 --> 01:09:53,580
+yes
+
+726
+01:09:53,580 --> 01:10:03,580
+this is
+
+727
+01:10:03,580 --> 01:10:23,580
+that you're giving me a 2d by d rectangle i'm going to give a really good explanation for those of
+
+728
+01:10:23,580 --> 01:10:33,020
+you who didn't i didn't have the mic on i'll read it he said that you're giving me a 2d by d rectangle
+
+729
+01:10:33,020 --> 01:10:40,860
+i'm going to divide it to eight pieces these are eight squares all equivalent to each other in length
+
+730
+01:10:40,860 --> 01:10:50,460
+and that length is d over two on each side okay now note that my pigeonhole principle
+
+731
+01:10:50,460 --> 01:10:58,380
+i have eight you know nests for the pigeons if i have nine pigeons two of them have to be in the same
+
+732
+01:10:59,260 --> 01:11:07,580
+so if i have nine points two of them have to fall in the same square of these purple squares
+
+733
+01:11:08,540 --> 01:11:18,220
+but the thing is that if i have two in them the diameter of each of these squares is actually quite small
+
+734
+01:11:19,020 --> 01:11:26,860
+because this is a d over two by d over two so the diameter
+
+735
+01:11:31,980 --> 01:11:42,700
+is going to be smaller than d now note that the purple region was on one side of the media so all
+
+736
+01:11:42,700 --> 01:11:48,060
+the points that are falling into the purple region were part of one stop problem already so if they
+
+737
+01:11:48,060 --> 01:11:54,140
+were already two points and had a distance that was less than d then they should have been caught by my
+
+738
+01:11:54,140 --> 01:12:01,740
+stop problem and in fact they contradict the fact that d is the smallest of the two solutions i came up
+
+739
+01:12:03,100 --> 01:12:10,380
+so that's it a very simple pigeonhole principle telling you that once you localize the problem enough
+
+740
+01:12:11,100 --> 01:12:17,180
+the number of solutions also drops and it's important to localize both on the x-axis and
+
+741
+01:12:17,180 --> 01:12:21,980
+only y-axis if you only localize on the x-axis you didn't have this care
+
+742
+01:12:23,900 --> 01:12:25,260
+any questions about what we did
+
+743
+01:12:28,780 --> 01:12:32,060
+cool so this was an example where um
+
+744
+01:12:32,060 --> 01:12:39,660
+this was an example where gluing back was non-trivial and definitely there were divide and
+
+745
+01:12:39,660 --> 01:12:44,780
+compare problems that fall under this so you're going to see in the discussions examples were
+
+746
+01:12:44,780 --> 01:12:50,700
+dividing as non-trivial and then examples were uh conquering with the gluing it back as
+
+747
+01:12:50,700 --> 01:12:58,700
+i would say a little bit more about the closest pair because um some of you might have noticed that i
+
+748
+01:12:58,700 --> 01:13:05,420
+was being quite frivolous with uh throwing a sorting algorithm at my problem and saying oh well i'm happy
+
+749
+01:13:05,420 --> 01:13:12,220
+with n log n why won't i throw a sorting problem at it and also the other thing that you might have
+
+750
+01:13:12,220 --> 01:13:20,380
+noticed was that um well it's possible that even if i just looked at all possible um kind of like
+
+751
+01:13:20,380 --> 01:13:26,540
+crossings in the worst case it's n squared but maybe if i did something randomly it wouldn't have been
+
+752
+01:13:26,540 --> 01:13:33,500
+n squared maybe i would have picked a um a partition that wouldn't have had a lot of density but what
+
+753
+01:13:33,500 --> 01:13:39,580
+this is all saying is that i gave you a deterministic n log and algorithm but there's actually a very
+
+754
+01:13:39,580 --> 01:13:46,780
+cool randomized algorithm that runs it off n and it uses some of this idea that i just talked about
+
+755
+01:13:47,420 --> 01:13:54,300
+um it is definitely a more involved divide and conquer analysis and we won't talk about it in class
+
+756
+01:13:54,300 --> 01:13:59,900
+it's usually not even covered in books i don't know if our book covers it i don't remember seeing
+
+757
+01:13:59,900 --> 01:14:07,020
+it being covered but uh of course um there are good video pages about this other write-ups if you're
+
+758
+01:14:07,020 --> 01:14:14,860
+interested in learning another so to wrap up this is not just the end of the lecture of course it's the
+
+759
+01:14:14,860 --> 01:14:21,580
+end of the discussion of one important paradigm of divide unconform and it's the first one because it's
+
+760
+01:14:21,580 --> 01:14:27,820
+one of the most fundamental ways of attacking and tackling problems by taking a big problem that
+
+761
+01:14:27,820 --> 01:14:33,740
+looks scary and just dividing it to problems that look a little bit less scary and then gluing back
+
+762
+01:14:33,740 --> 01:14:41,180
+your solution but we have seen in the first four lectures is examples many examples of dividing
+
+763
+01:14:41,180 --> 01:14:48,060
+conquer integer and matrix multiplication median selection process there and you will not only solve
+
+764
+01:14:48,060 --> 01:14:56,380
+these problems you'll learn two really important schools first one is how to solve recurrence algorithm
+
+765
+01:14:56,380 --> 01:15:03,020
+recurrence relations with the tree method and that's something that you absolutely need to make sure you
+
+766
+01:15:03,020 --> 01:15:11,100
+have learned well before you move on from this chapter of the class of semester the second thing you
+
+767
+01:15:11,100 --> 01:15:18,140
+learned was more of a trick or simplification which was the master theorem again you need to absolutely
+
+768
+01:15:18,140 --> 01:15:22,700
+make sure you're comfortable with it the only thing is that they don't replace each other or at least
+
+769
+01:15:22,700 --> 01:15:28,060
+master theorem doesn't replace solving recurrences because it doesn't always apply and those of you
+
+770
+01:15:28,060 --> 01:15:33,260
+who went to the discussion last week saw examples that it didn't apply and you need us to do the treatment
+
+771
+01:15:33,260 --> 01:15:42,540
+overall divide and copper is a very powerful method and it could be really versatile because both the
+
+772
+01:15:42,540 --> 01:15:48,620
+divide and the glowing back would be very interesting as we end this topic another topic is going to start
+
+773
+01:15:48,620 --> 01:15:55,260
+and john wright is going to come next uh on thursday and teach you about graph algorithms i'll be back
+
+774
+01:15:55,260 --> 01:16:11,580
+after graphs to teach you about freedom so i'll see you in like two weeks thank you guys
+
