@@ -29,6 +29,26 @@ struct NewsroomAndSignalAPIContractTests {
         #expect(!NewsroomDigestMockData.empty.hasNoRelevantNews)
     }
 
+    @Test("뉴스룸 503 응답에 포함된 재시도 상태를 보존한다")
+    func preservesNewsroomUnavailableState() async throws {
+        let repository = LiveNewsroomDigestRepository(apiClient: NewsroomContractAPIClient(data: Data(#"{"isSuccess":false,"code":"NEWSROOM_UNAVAILABLE","message":"뉴스 소스 조회 중 오류가 발생했습니다.","result":{"header":{"title":"뉴스룸","subtitle":""},"holdings":[],"errorState":{"title":"뉴스를 불러오지 못했어요","summary":"잠시 후 다시 시도해 주세요.","buttonLabel":"다시 시도"}}}"#.utf8)))
+
+        let briefing = try await repository.fetchBriefing()
+
+        #expect(briefing.errorState?.title == "뉴스를 불러오지 못했어요")
+        #expect(briefing.errorState?.buttonLabel == "다시 시도")
+    }
+
+    @Test("뉴스룸만 서버 처리 시간을 고려한 요청 제한을 사용한다")
+    func usesLongerTimeoutOnlyForNewsroom() {
+        var newsroomRequest = URLRequest(url: URL(string: "https://holdings-lab.me/api/newsroom")!)
+        newsroomRequest.timeoutInterval = 15
+        let otherRequest = URLRequest(url: URL(string: "https://holdings-lab.me/api/portfolio")!)
+
+        #expect(APIRequestTimeoutPolicy.timeout(for: newsroomRequest) == 30)
+        #expect(APIRequestTimeoutPolicy.timeout(for: otherRequest) == nil)
+    }
+
     @Test("시그널 이벤트가 인증된 현재 경로를 사용한다")
     func fetchesEventsFromCurrentEndpoint() async throws {
         let queue = SignalContractRequestQueue(responses: [
@@ -94,5 +114,13 @@ private struct SignalContractAPIClient: APIClient {
     nonisolated func request<T: Decodable>(_ endpoint: Endpoint, as type: T.Type) async throws -> T {
         let data = try await queue.nextResponse(for: endpoint)
         return try NetworkJSONCoding.makeDecoder().decode(type, from: data)
+    }
+}
+
+private struct NewsroomContractAPIClient: APIClient {
+    let data: Data
+
+    nonisolated func request<T: Decodable>(_: Endpoint, as type: T.Type) async throws -> T {
+        try NetworkJSONCoding.makeDecoder().decode(type, from: data)
     }
 }

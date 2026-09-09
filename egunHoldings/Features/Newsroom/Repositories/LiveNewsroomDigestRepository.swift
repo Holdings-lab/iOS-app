@@ -11,11 +11,23 @@ nonisolated struct LiveNewsroomDigestRepository: NewsroomDigestRepositoryProtoco
     }
 
     func fetchBriefing(briefingDate: String? = nil) async throws -> NewsroomBriefing {
-        let response = try await apiClient.requestResult(
+        let response = try await apiClient.requestEnvelope(
             BackendEndpoint.newsroom(briefingDate: briefingDate),
             as: NewsroomBriefingResponseDTO.self
         )
-        return response.toDomain()
+
+        // 서버는 ML 피드 장애 시에도 errorState를 result에 담아 503으로 응답한다.
+        // requestResult를 쓰면 isSuccess=false를 먼저 던져 이 상태를 잃으므로, 화면에서
+        // 재시도 안내를 보여줄 수 있도록 result가 있으면 보존한다.
+        if let result = response.result {
+            return result.toDomain()
+        }
+
+        throw NetworkError.apiFailure(
+            statusCode: nil,
+            code: response.code,
+            message: response.message
+        )
     }
 
     func fetchDetail(ticker: String, briefingDate: String? = nil) async throws -> NewsroomTickerDetail {

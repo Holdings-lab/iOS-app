@@ -10,6 +10,7 @@ nonisolated final class MoyaAPIClient: APIClient, @unchecked Sendable {
         plugins: [PluginType] = []
     ) {
         provider = MoyaProvider<EndpointTarget>(
+            requestClosure: Self.requestClosure,
             session: session,
             plugins: plugins
         )
@@ -65,6 +66,31 @@ nonisolated final class MoyaAPIClient: APIClient, @unchecked Sendable {
         default:
             return error
         }
+    }
+
+    /// 뉴스룸은 서버가 ML 피드와 종목 로고를 순서대로 준비할 수 있어 일반 API보다 오래 걸린다.
+    /// 전역 기본값(15초)으로 정상 2xx 응답을 중간에 끊지 않도록 해당 경로에만 제한을 늘린다.
+    private static let requestClosure: MoyaProvider<EndpointTarget>.RequestClosure = { endpoint, completion in
+        do {
+            var request = try endpoint.urlRequest()
+            if let timeout = APIRequestTimeoutPolicy.timeout(for: request) {
+                request.timeoutInterval = timeout
+            }
+            completion(.success(request))
+        } catch {
+            completion(.failure(.underlying(error, nil)))
+        }
+    }
+}
+
+/// 화면별로 서버 처리 시간이 크게 다른 요청만 별도 제한을 둔다.
+/// URLSession의 전역 기본 제한을 바꾸지 않아 다른 화면의 실패 감지는 그대로 빠르게 유지된다.
+nonisolated enum APIRequestTimeoutPolicy {
+    static let newsroom: TimeInterval = 30
+
+    static func timeout(for request: URLRequest) -> TimeInterval? {
+        guard let path = request.url?.path else { return nil }
+        return path == "/api/newsroom" || path.hasPrefix("/api/newsroom/") ? newsroom : nil
     }
 }
 

@@ -32,6 +32,24 @@ struct DashboardLoadingTests {
         #expect(await source.count == 4)
     }
 
+    @Test("강제 새로고침은 이전 뉴스룸 요청을 취소하고 새 요청을 사용한다")
+    func refreshCancelsInFlightBriefing() async throws {
+        let source = BlockingNewsroomRepository()
+        let cache = CachedNewsroomDigestRepository(repository: source)
+        let original = Task { try await cache.fetchBriefing(briefingDate: nil) }
+        await source.waitUntilFirstRequestStarts()
+
+        let refreshed = try await cache.refreshBriefing()
+
+        do {
+            _ = try await original.value
+            Issue.record("이전 요청은 취소되어야 한다")
+        } catch is CancellationError {}
+        #expect(refreshed.title == "두 번째 요청")
+        #expect(await source.firstRequestWasCancelled)
+        #expect(await source.count == 2)
+    }
+
     @Test("실패 응답은 캐시하지 않고 다음 호출에서 재시도한다")
     func retriesFailedRequest() async throws {
         let source = CountingNewsroomRepository(failFirst: true)
@@ -41,6 +59,16 @@ struct DashboardLoadingTests {
             Issue.record("첫 요청은 실패해야 한다")
         } catch {}
         _ = try await cache.fetchBriefing(briefingDate: nil)
+        #expect(await source.count == 2)
+    }
+
+    @Test("서버 장애 안내는 캐시하지 않아 다시 시도가 새 요청을 만든다")
+    func doesNotCacheServerErrorState() async throws {
+        let source = CountingNewsroomRepository(errorStateFirst: true)
+        let cache = CachedNewsroomDigestRepository(repository: source)
+
+        #expect(try await cache.fetchBriefing(briefingDate: nil).errorState != nil)
+        #expect(try await cache.fetchBriefing(briefingDate: nil).errorState == nil)
         #expect(await source.count == 2)
     }
 
@@ -174,15 +202,67 @@ private final class SupersededTodayRepository: TodayRepositoryProtocol {
 private actor CountingNewsroomRepository: NewsroomDigestRepositoryProtocol {
     private(set) var count = 0
     let failFirst: Bool
-    init(failFirst: Bool = false) { self.failFirst = failFirst }
+    let errorStateFirst: Bool
+    init(failFirst: Bool = false, errorStateFirst: Bool = false) {
+        self.failFirst = failFirst
+        self.errorStateFirst = errorStateFirst
+    }
     func fetchBriefing(briefingDate: String?) async throws -> NewsroomBriefing {
         count += 1
         if failFirst && count == 1 { throw URLError(.timedOut) }
-        return NewsroomBriefing(title: "뉴스룸", asOfAt: nil, subtitle: "", holdings: [],
-                                footerMessage: nil, emptyState: nil, errorState: nil)
+        return NewsroomBriefing(
+            title: "뉴스룸",
+            asOfAt: nil,
+            subtitle: "",
+            holdings: [],
+            footerMessage: nil,
+            emptyState: nil,
+            errorState: errorStateFirst && count == 1
+                ? NewsroomErrorState(title: "일시 장애", summary: "다시 시도", buttonLabel: "재시도")
+                : nil
+        )
     }
     func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail {
         throw URLError(.unsupportedURL)
+    }
+}
+
+private actor BlockingNewsroomRepository: NewsroomDigestRepositoryProtocol {
+    private(set) var count = 0
+    private(set) var firstRequestWasCancelled = false
+    private var firstRequestStarted: CheckedContinuation<Void, Never>?
+
+    func fetchBriefing(briefingDate: String?) async throws -> NewsroomBriefing {
+        count += 1
+        if count == 1 {
+            firstRequestStarted?.resume()
+            firstRequestStarted = nil
+            do {
+                try await Task.sleep(for: .seconds(30))
+            } catch {
+                firstRequestWasCancelled = true
+                throw error
+            }
+        }
+
+        return NewsroomBriefing(
+            title: count == 1 ? "첫 번째 요청" : "두 번째 요청",
+            asOfAt: nil,
+            subtitle: "",
+            holdings: [],
+            footerMessage: nil,
+            emptyState: nil,
+            errorState: nil
+        )
+    }
+
+    func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail {
+        throw URLError(.unsupportedURL)
+    }
+
+    func waitUntilFirstRequestStarts() async {
+        guard count == 0 else { return }
+        await withCheckedContinuation { firstRequestStarted = $0 }
     }
 }
 

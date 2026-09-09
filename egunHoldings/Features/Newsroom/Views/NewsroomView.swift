@@ -32,18 +32,14 @@ struct NewsroomView: View {
             ) {
                 header
 
-                if let briefing = viewModel.briefing, briefing.holdings.isEmpty {
-                    NewsroomNoHoldingsCard(onRegister: onAssetTabRequested)
-                } else if let briefing = viewModel.briefing, briefing.hasNoRelevantNews {
-                    NewsroomNoRelatedNewsCard()
-                } else if viewModel.isLoading && viewModel.briefing == nil {
+                if viewModel.isLoading && viewModel.briefing == nil {
                     NewsroomDigestSkeleton()
                 } else if let errorMessage = viewModel.errorMessage, viewModel.briefing == nil {
                     NewsroomErrorCard(message: errorMessage) {
                         viewModel.load()
                     }
                 } else if let briefing = viewModel.briefing {
-                    briefingContent(briefing)
+                    briefingState(briefing)
                 }
             }
             .refreshable {
@@ -93,6 +89,33 @@ struct NewsroomView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private func briefingState(_ briefing: NewsroomBriefing) -> some View {
+        if let errorState = briefing.errorState {
+            NewsroomErrorCard(
+                message: errorState.summary,
+                title: errorState.title,
+                actionTitle: errorState.buttonLabel
+            ) {
+                viewModel.load()
+            }
+        } else if let emptyState = briefing.emptyState {
+            NewsroomNoHoldingsCard(
+                title: emptyState.title,
+                message: emptyState.description,
+                actionTitle: emptyState.buttonLabel,
+                onRegister: onAssetTabRequested
+            )
+        } else if briefing.holdings.isEmpty {
+            // 구 서버가 emptyState 없이 빈 목록만 주는 경우의 호환 폴백.
+            NewsroomNoHoldingsCard(onRegister: onAssetTabRequested)
+        } else if briefing.hasNoRelevantNews {
+            NewsroomNoRelatedNewsCard()
+        } else {
+            briefingContent(briefing)
+        }
     }
 
     @ViewBuilder

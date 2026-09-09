@@ -24,16 +24,35 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
         guard briefingDate == nil else {
             return try await repository.fetchBriefing(briefingDate: briefingDate)
         }
-        if let inFlight { return try await inFlight.task.value }
         if let cached, now() < cached.expiresAt { return cached.briefing }
+        if let inFlight { return try await inFlight.task.value }
 
+        return try await startBriefingFetch()
+    }
+
+    func refreshBriefing() async throws -> NewsroomBriefing {
+        cached = nil
+        cancelInFlightBriefing()
+        return try await startBriefingFetch()
+    }
+
+    func invalidateBriefing() async {
+        cached = nil
+        cancelInFlightBriefing()
+    }
+
+    private func startBriefingFetch() async throws -> NewsroomBriefing {
         let id = UUID()
         let task = Task { try await repository.fetchBriefing(briefingDate: nil) }
         inFlight = (id, task)
         do {
             let briefing = try await task.value
             if inFlight?.id == id {
-                cached = (briefing, now().addingTimeInterval(lifetime))
+                // 서버가 result에 담아 준 장애 안내는 성공 데이터가 아니다. 캐시하면
+                // "다시 시도"가 60초 동안 같은 안내만 다시 보여주게 된다.
+                if briefing.errorState == nil {
+                    cached = (briefing, now().addingTimeInterval(lifetime))
+                }
                 inFlight = nil
             }
             return briefing
@@ -43,14 +62,9 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
         }
     }
 
-    func refreshBriefing() async throws -> NewsroomBriefing {
-        cached = nil
-        return try await fetchBriefing(briefingDate: nil)
-    }
-
-    func invalidateBriefing() async {
-        cached = nil
-        // 자산 변경 이전 응답은 기존 호출자에게만 반환하고 캐시에 다시 넣지 않는다.
+    private func cancelInFlightBriefing() {
+        // 새로고침/자산 변경 전의 응답은 새 캐시에 들어갈 수 없고, 서버 부하도 남길 이유가 없다.
+        inFlight?.task.cancel()
         inFlight = nil
     }
 
