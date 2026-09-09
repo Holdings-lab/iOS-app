@@ -4,8 +4,8 @@ import Foundation
 //
 // 서버 계약: `com.project.server.dto.NewsroomDto` (api-server, 2026-07 뉴스룸 API 신설).
 // 목록/상세가 별도 엔드포인트다 — 예전의 "한 번에 다 담긴 다이제스트 + 폴링" 계약은 폐기됐다.
-//   GET /api/users/{userId}/newsroom          → NewsroomBriefingResponseDTO
-//   GET /api/users/{userId}/newsroom/{ticker} → NewsroomTickerDetailResponseDTO
+//   GET /api/newsroom          → NewsroomBriefingResponseDTO
+//   GET /api/newsroom/{ticker} → NewsroomTickerDetailResponseDTO
 // 공통 엔벨로프 `APIResponse<T>`의 `result`에 담겨 온다.
 
 nonisolated enum NewsroomBriefingTypeDTO: String, Decodable, Sendable {

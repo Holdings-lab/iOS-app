@@ -4,7 +4,8 @@ nonisolated struct MockTodayRepository: TodayRepositoryProtocol {
     func fetchDashboard(
         userId: Int64?,
         userAssetProfile: UserAssetProfile,
-        portfolioSnapshot: PortfolioSnapshot
+        portfolioSnapshot: PortfolioSnapshot,
+        onSection: (@MainActor @Sendable (TodaySectionUpdate) -> Void)? = nil
     ) async throws -> TodayDashboard {
         Self.makeDashboard(
             userId: userId,

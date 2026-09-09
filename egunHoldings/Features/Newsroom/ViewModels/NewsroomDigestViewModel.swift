@@ -35,14 +35,19 @@ final class NewsroomDigestViewModel: ObservableObject {
     }
 
     func loadIfNeeded() {
-        guard briefing == nil, !isLoading else { return }
+        // 탭 재진입 때 공유 캐시의 최신 결과/만료 여부를 확인한다.
+        // 기존 내용은 유지하므로 이미 본 화면을 다시 스켈레톤으로 바꾸지 않는다.
+        guard !isLoading else { return }
         load()
     }
 
     @discardableResult
     func refresh() async -> Bool {
+        guard !isLoading else { return false }
+        isLoading = true
+        defer { isLoading = false }
         do {
-            let fetched = try await repository.fetchBriefing(briefingDate: nil)
+            let fetched = try await repository.refreshBriefing()
             if fetched == briefing {
                 await showRefreshStatus("이미 최신이에요")
                 return false

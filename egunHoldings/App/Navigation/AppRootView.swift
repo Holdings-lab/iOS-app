@@ -32,6 +32,7 @@ struct AppRootView: View {
                     brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot,
                     onBrokerBalanceUpdated: router.updateBrokerBalance
                 )
+                .id(router.session?.userId)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: router.route)

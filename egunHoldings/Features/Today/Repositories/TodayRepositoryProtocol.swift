@@ -4,6 +4,30 @@ protocol TodayRepositoryProtocol {
     func fetchDashboard(
         userId: Int64?,
         userAssetProfile: UserAssetProfile,
-        portfolioSnapshot: PortfolioSnapshot
+        portfolioSnapshot: PortfolioSnapshot,
+        onSection: (@MainActor @Sendable (TodaySectionUpdate) -> Void)?
     ) async throws -> TodayDashboard
+    func invalidateNews() async
+}
+
+extension TodayRepositoryProtocol {
+    func fetchDashboard(
+        userId: Int64?, userAssetProfile: UserAssetProfile, portfolioSnapshot: PortfolioSnapshot
+    ) async throws -> TodayDashboard {
+        try await fetchDashboard(userId: userId, userAssetProfile: userAssetProfile,
+                                 portfolioSnapshot: portfolioSnapshot, onSection: nil)
+    }
+
+    func invalidateNews() async {}
+}
+
+enum TodaySection: CaseIterable, Hashable, Sendable {
+    case briefing, holdings, goal, news
+}
+
+enum TodaySectionUpdate: Sendable {
+    case briefing(isAccountLinked: Bool?, TodayBriefing)
+    case holdings(isAccountLinked: Bool?, [TodayHolding])
+    case goal(isAccountLinked: Bool?, TodayGoalProgress?)
+    case news([TodayNewsItem])
 }

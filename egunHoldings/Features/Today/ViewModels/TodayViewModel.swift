@@ -11,12 +11,15 @@ final class TodayViewModel: ObservableObject {
     @Published private(set) var holdings: [TodayHolding]
     @Published private(set) var goalProgress: TodayGoalProgress?
     @Published private(set) var newsItems: [TodayNewsItem]
+    @Published private(set) var loadingSections: Set<TodaySection> = []
 
     private let userId: Int64?
     private let repository: TodayRepositoryProtocol
     private var brokerBalanceSnapshot: BrokerBalanceSnapshot?
     private var didLoad = false
     private var refreshGeneration = 0
+    private var hasLoadedDashboard = false
+    private var refreshTask: Task<Void, Never>?
 
     init(
         userId: Int64? = nil,
@@ -42,7 +45,8 @@ final class TodayViewModel: ObservableObject {
         self.briefing = dashboard.briefing
         self.holdings = brokerBalanceSnapshot?.todayHoldings ?? dashboard.holdings
         self.goalProgress = dashboard.goalProgress
-        self.newsItems = dashboard.newsItems
+        self.newsItems = userId == nil ? dashboard.newsItems : []
+        self.loadingSections = userId == nil ? [] : Set(TodaySection.allCases)
     }
 
     /// Preview/test-only constructor that bypasses the mock-first init and injects a full dashboard directly.
@@ -58,7 +62,9 @@ final class TodayViewModel: ObservableObject {
         self.goalProgress = dashboard.goalProgress
         self.newsItems = dashboard.newsItems
         self.loadState = loadState
+        self.loadingSections = loadState == .loading ? Set(TodaySection.allCases) : []
         self.didLoad = true
+        self.hasLoadedDashboard = true
     }
 
     var connectedBrokerStatusText: String {
@@ -85,7 +91,7 @@ final class TodayViewModel: ObservableObject {
     func load() async {
         guard !didLoad else { return }
         didLoad = true
-        await refresh()
+        await refresh(showsLoading: true)
     }
 
     /// 잔고 조회 응답 등으로 상위(AppRouter) 세션 데이터가 갱신됐을 때 호출한다.
@@ -106,20 +112,27 @@ final class TodayViewModel: ObservableObject {
 
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
 
-        apply(
-            MockTodayRepository.makeDashboard(
-                userId: userId,
-                userAssetProfile: userAssetProfile,
-                portfolioSnapshot: portfolioSnapshot,
-                holdings: brokerBalanceSnapshot?.todayHoldings ?? holdings
-            )
-        )
+        self.userAssetProfile = userAssetProfile
+        self.portfolioSnapshot = portfolioSnapshot
+        if let brokerBalanceSnapshot {
+            holdings = brokerBalanceSnapshot.todayHoldings
+        }
 
         guard didLoad else { return }
-        Task { await refresh(showsLoading: false) }
+        // 다음 refresh의 세대 번호를 즉시 올려 이전 응답의 반영을 막는다.
+        refreshGeneration += 1
+        let generation = refreshGeneration
+        refreshTask?.cancel()
+        Task {
+            guard generation == refreshGeneration else { return }
+            await repository.invalidateNews()
+            guard generation == refreshGeneration else { return }
+            await refresh(showsLoading: false)
+        }
     }
 
     func refresh() async {
+        await repository.invalidateNews()
         await refresh(showsLoading: true)
     }
 
@@ -134,22 +147,53 @@ final class TodayViewModel: ObservableObject {
         // 그렇지 않으면 늦게 도착한 이전 응답이 이미 반영된 최신 데이터를 덮어쓸 수 있다.
         refreshGeneration += 1
         let generation = refreshGeneration
+        refreshTask?.cancel()
+        let task = Task { [weak self] in
+            guard let self else { return }
+            await performRefresh(showsLoading: showsLoading, generation: generation)
+        }
+        refreshTask = task
+        await withTaskCancellationHandler {
+            await task.value
+        } onCancel: {
+            task.cancel()
+        }
+        if generation == refreshGeneration { refreshTask = nil }
+    }
 
+    private func performRefresh(showsLoading: Bool, generation: Int) async {
         if showsLoading {
             loadState = .loading
+        }
+        if !hasLoadedDashboard {
+            loadingSections = Set(TodaySection.allCases)
         }
 
         do {
             let dashboard = try await repository.fetchDashboard(
                 userId: userId,
                 userAssetProfile: userAssetProfile,
-                portfolioSnapshot: portfolioSnapshot
+                portfolioSnapshot: portfolioSnapshot,
+                onSection: { [weak self] section in
+                    guard let self, generation == self.refreshGeneration,
+                          !Task<Never, Never>.isCancelled else { return }
+                    self.apply(section)
+                }
             )
+            try Task<Never, Never>.checkCancellation()
             guard generation == refreshGeneration else { return }
             apply(dashboard)
+            hasLoadedDashboard = true
+            loadingSections = []
             loadState = .loaded
         } catch {
             guard generation == refreshGeneration else { return }
+            loadingSections = []
+            if error is CancellationError {
+                didLoad = false
+                loadState = .idle
+                return
+            }
             loadState = .usingFallback(message: Self.errorMessage(for: error))
         }
     }
@@ -162,6 +206,26 @@ final class TodayViewModel: ObservableObject {
         holdings = brokerBalanceSnapshot?.todayHoldings ?? dashboard.holdings
         goalProgress = dashboard.goalProgress
         newsItems = dashboard.newsItems
+    }
+
+    private func apply(_ section: TodaySectionUpdate) {
+        switch section {
+        case let .briefing(linked, value):
+            briefing = value
+            if let linked { isAccountLinked = linked }
+            loadingSections.remove(.briefing)
+        case let .holdings(linked, value):
+            holdings = brokerBalanceSnapshot?.todayHoldings ?? value
+            if let linked { isAccountLinked = linked }
+            loadingSections.remove(.holdings)
+        case let .goal(linked, value):
+            goalProgress = value
+            if let linked { isAccountLinked = linked }
+            loadingSections.remove(.goal)
+        case let .news(value):
+            newsItems = value
+            loadingSections.remove(.news)
+        }
     }
 
     private static func errorMessage(for error: Error) -> String {

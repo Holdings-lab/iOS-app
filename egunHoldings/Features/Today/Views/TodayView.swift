@@ -37,6 +37,7 @@ struct TodayView: View {
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
+        repository: TodayRepositoryProtocol? = nil,
         viewModel: TodayViewModel? = nil,
         externalSignalRoute: Binding<PolSignalRoute?> = .constant(nil),
         onAssetTabRequested: @escaping () -> Void = {},
@@ -57,7 +58,8 @@ struct TodayView: View {
                 userId: userId,
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
-                brokerBalanceSnapshot: brokerBalanceSnapshot
+                brokerBalanceSnapshot: brokerBalanceSnapshot,
+                repository: repository
             )
         )
         _policyNewsViewModel = StateObject(wrappedValue: PolicyNewsViewModel(userId: userId))
@@ -91,28 +93,34 @@ struct TodayView: View {
                             )
                         }
 
-                        if viewModel.loadState == .loading {
+                        if viewModel.loadingSections.contains(.briefing) {
                             TodayBriefingSkeleton()
-                            TodayHoldingsSkeleton()
-                            TodayGoalProgressSkeleton()
-                            TodayNewsSkeleton()
                         } else {
                             TodayBriefingCard(
                                 briefing: viewModel.briefing,
                                 isAccountLinked: viewModel.isAccountLinked
                             )
-
+                        }
+                        if viewModel.loadingSections.contains(.holdings) {
+                            TodayHoldingsSkeleton()
+                        } else {
                             TodayHoldingsTop3Card(
                                 holdings: viewModel.topHoldings,
                                 isAccountLinked: viewModel.isAccountLinked,
                                 onConnectAccount: onAssetTabRequested
                             )
-
+                        }
+                        if viewModel.loadingSections.contains(.goal) {
+                            TodayGoalProgressSkeleton()
+                        } else {
                             TodayGoalProgressCard(
                                 goalProgress: viewModel.goalProgress,
                                 onSetGoal: onAssetTabRequested
                             )
-
+                        }
+                        if viewModel.loadingSections.contains(.news) {
+                            TodayNewsSkeleton()
+                        } else {
                             TodayNewsSection(
                                 newsItems: viewModel.newsItems,
                                 isAccountLinked: viewModel.isAccountLinked,

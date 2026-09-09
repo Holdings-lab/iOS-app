@@ -3,19 +3,23 @@ import Foundation
 nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
     private let apiClient: APIClient
     private let fallbackRepository: MockTodayRepository
+    private let newsroomRepository: NewsroomDigestRepositoryProtocol
 
     init(
         apiClient: APIClient = APIClientFactory.makeDefault(),
-        fallbackRepository: MockTodayRepository = MockTodayRepository()
+        fallbackRepository: MockTodayRepository = MockTodayRepository(),
+        newsroomRepository: NewsroomDigestRepositoryProtocol? = nil
     ) {
         self.apiClient = apiClient
         self.fallbackRepository = fallbackRepository
+        self.newsroomRepository = newsroomRepository ?? LiveNewsroomDigestRepository(apiClient: apiClient)
     }
 
     func fetchDashboard(
         userId: Int64?,
         userAssetProfile: UserAssetProfile,
-        portfolioSnapshot: PortfolioSnapshot
+        portfolioSnapshot: PortfolioSnapshot,
+        onSection: (@MainActor @Sendable (TodaySectionUpdate) -> Void)? = nil
     ) async throws -> TodayDashboard {
         let fallback = try await fallbackRepository.fetchDashboard(
             userId: userId,
@@ -27,13 +31,39 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
             return fallback
         }
 
-        // 4개 섹션은 서로 독립적인 GET이라 병렬로 조회하고, 한 섹션이 실패해도 나머지는 그대로 반영한다.
-        async let briefingResult = fetchBriefing(userId: userId, fallback: fallback.briefing)
-        async let holdingsResult = fetchHoldings(userId: userId, fallback: fallback.holdings)
-        async let goalResult = fetchGoal(userId: userId, fallback: fallback.goalProgress)
-        async let newsResult = fetchNews(fallback: fallback.newsItems)
+        var briefing: (isAccountLinked: Bool?, value: TodayBriefing) = (nil, fallback.briefing)
+        var holdings: (isAccountLinked: Bool?, value: [TodayHolding]) = (nil, fallback.holdings)
+        var goal: (isAccountLinked: Bool?, value: TodayGoalProgress?) = (nil, fallback.goalProgress)
+        var news: [TodayNewsItem] = []
 
-        let (briefing, holdings, goal, news) = await (briefingResult, holdingsResult, goalResult, newsResult)
+        // 가장 느린 API를 기다리지 않고 완료된 섹션부터 화면에 전달한다.
+        await withTaskGroup(of: TodaySectionUpdate.self) { group in
+            group.addTask {
+                let result = await fetchBriefing(userId: userId, fallback: fallback.briefing)
+                return .briefing(isAccountLinked: result.isAccountLinked, result.value)
+            }
+            group.addTask {
+                let result = await fetchHoldings(userId: userId, fallback: fallback.holdings)
+                return .holdings(isAccountLinked: result.isAccountLinked, result.value)
+            }
+            group.addTask {
+                let result = await fetchGoal(userId: userId, fallback: fallback.goalProgress)
+                return .goal(isAccountLinked: result.isAccountLinked, result.value)
+            }
+            group.addTask { .news(await fetchNews()) }
+
+            for await section in group {
+                guard !Task<Never, Never>.isCancelled else { continue }
+                switch section {
+                case let .briefing(linked, value): briefing = (linked, value)
+                case let .holdings(linked, value): holdings = (linked, value)
+                case let .goal(linked, value): goal = (linked, value)
+                case let .news(value): news = value
+                }
+                onSection?(section)
+            }
+        }
+        try Task<Never, Never>.checkCancellation()
 
         return TodayDashboard(
             userAssetProfile: userAssetProfile,
@@ -57,7 +87,7 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
             )
             return (response.isAccountLinked, response.toDomain(fallback: fallback))
         } catch {
-            APIFallbackLog.log("GET /api/users/\(userId)/daily-briefing", error: error)
+            APIFallbackLog.log("GET /api/daily-briefing", error: error)
             return (nil, fallback)
         }
     }
@@ -73,7 +103,7 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
             )
             return (response.isAccountLinked, response.toDomain(fallback: fallback))
         } catch {
-            APIFallbackLog.log("GET /api/users/\(userId)/holdings", error: error)
+            APIFallbackLog.log("GET /api/holdings", error: error)
             return (nil, fallback)
         }
     }
@@ -89,18 +119,19 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
             )
             return (response.isAccountLinked, response.toDomain(fallback: fallback))
         } catch {
-            APIFallbackLog.log("GET /api/users/\(userId)/goal", error: error)
+            APIFallbackLog.log("GET /api/goal-progress", error: error)
             return (nil, fallback)
         }
     }
 
-    private func fetchNews(fallback: [TodayNewsItem]) async -> [TodayNewsItem] {
+    func invalidateNews() async {
+        await newsroomRepository.invalidateBriefing()
+    }
+
+    private func fetchNews() async -> [TodayNewsItem] {
         do {
-            let response = try await apiClient.requestResult(
-                BackendEndpoint.newsroom(),
-                as: NewsroomBriefingResponseDTO.self
-            )
-            let items = response.toDomain().holdings.prefix(3).map { holding in
+            let response = try await newsroomRepository.fetchBriefing(briefingDate: nil)
+            return response.holdings.filter { $0.briefingType != .quiet }.prefix(3).map { holding in
                 TodayNewsItem(
                     id: holding.ticker,
                     title: holding.headline ?? holding.name,
@@ -108,10 +139,9 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
                     ticker: holding.ticker
                 )
             }
-            return items.isEmpty ? fallback : items
         } catch {
             APIFallbackLog.log("GET /api/newsroom", error: error)
-            return fallback
+            return []
         }
     }
 }

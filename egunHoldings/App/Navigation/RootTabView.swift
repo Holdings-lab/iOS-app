@@ -13,6 +13,7 @@ struct RootTabView: View {
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     let onBrokerBalanceUpdated: (BrokerBalanceSnapshot) -> Void
     @State private var selectedTab: RootTab
+    @State private var newsroomRepository: CachedNewsroomDigestRepository
     @State private var todaySignalRoute: PolSignalRoute?
     @State private var presentedSignalRoute: PolSignalRoute?
     @ObservedObject private var notificationCenter = AppNotificationCenter.shared
@@ -26,6 +27,9 @@ struct RootTabView: View {
         onBrokerBalanceUpdated: @escaping (BrokerBalanceSnapshot) -> Void = { _ in }
     ) {
         _selectedTab = State(initialValue: initialTab)
+        _newsroomRepository = State(initialValue: CachedNewsroomDigestRepository(
+            repository: NewsroomDigestRepositoryFactory.makeDefault(userId: userId)
+        ))
         self.userId = userId
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
@@ -41,6 +45,7 @@ struct RootTabView: View {
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
                 brokerBalanceSnapshot: brokerBalanceSnapshot,
+                repository: LiveTodayRepository(newsroomRepository: newsroomRepository),
                 externalSignalRoute: $todaySignalRoute,
                 onAssetTabRequested: {
                     selectedTab = .asset
@@ -66,7 +71,8 @@ struct RootTabView: View {
                     userAssetProfile: userAssetProfile,
                     onAssetTabRequested: {
                         selectedTab = .asset
-                    }
+                    },
+                    viewModel: NewsroomDigestViewModel(repository: newsroomRepository)
                 )
             }
             .tag(RootTab.newsroom)
