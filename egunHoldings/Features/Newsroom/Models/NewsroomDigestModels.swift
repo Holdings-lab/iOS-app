@@ -2,9 +2,7 @@ import Foundation
 
 // MARK: - 뉴스룸 목록
 
-/// `GET /newsroom` 1회 응답을 그대로 옮긴 도메인 모델.
-/// 서버가 이미 briefingType(Hero/Compact/Quiet)과 정렬 순서를 결정해서 주므로,
-/// 예전처럼 클라이언트가 hasNews/비중으로 재정렬하거나 히어로를 골라내지 않는다.
+/// 카드 종류는 서버 계약을 유지하고, 표시 순서는 뉴스 유무와 보유 비중으로 결정한다.
 nonisolated struct NewsroomBriefing: Equatable, Sendable {
     let title: String
     let asOfAt: Date?
@@ -13,6 +11,21 @@ nonisolated struct NewsroomBriefing: Equatable, Sendable {
     let footerMessage: String?
     let emptyState: NewsroomEmptyState?
     let errorState: NewsroomErrorState?
+
+    var sortedHoldings: [NewsroomHoldingBriefing] {
+        holdings.sorted {
+            if ($0.briefingType == .quiet) != ($1.briefingType == .quiet) {
+                return $0.briefingType != .quiet
+            }
+            if $0.weightPercent != $1.weightPercent { return $0.weightPercent > $1.weightPercent }
+            return $0.ticker < $1.ticker
+        }
+    }
+
+    func replacingHoldings(_ holdings: [NewsroomHoldingBriefing]) -> Self {
+        Self(title: title, asOfAt: asOfAt, subtitle: subtitle, holdings: holdings,
+             footerMessage: footerMessage, emptyState: emptyState, errorState: errorState)
+    }
 
     var asOfAtText: String? {
         asOfAt.map { NewsroomDigestDateFormat.asOfAtText(for: $0) }
@@ -38,12 +51,18 @@ nonisolated struct NewsroomHoldingBriefing: Identifiable, Equatable, Hashable, S
     let weightPercent: Double
     let briefingType: NewsroomBriefingType
     let dailyChangePercent: Double?
-    let totalAssetImpactPercent: Double?
     let headline: String?
     let summary: String?
     let detailPath: String?
+    var quoteAsOf: Date? = nil
 
     var id: String { ticker }
+
+    func replacingQuote(_ quote: NewsroomMarketQuote) -> Self {
+        Self(ticker: ticker, name: name, logoURL: logoURL, weightPercent: weightPercent,
+             briefingType: briefingType, dailyChangePercent: quote.changePercent,
+             headline: headline, summary: summary, detailPath: detailPath, quoteAsOf: quote.asOf)
+    }
 }
 
 nonisolated struct NewsroomEmptyState: Equatable, Sendable {
@@ -201,7 +220,6 @@ nonisolated struct NewsroomStockMeta: Equatable, Sendable {
     let logoURL: URL?
     let dailyChangePercent: Double?
     let weightPercent: Double?
-    let totalAssetImpactPercent: Double?
 }
 
 nonisolated struct NewsroomSourceItem: Identifiable, Equatable, Sendable {

@@ -7,6 +7,8 @@ protocol NewsroomDigestRepositoryProtocol: Sendable {
     func refreshBriefing() async throws -> NewsroomBriefing
     func invalidateBriefing() async
     func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail
+    func fetchQuote(ticker: String) async -> NewsroomMarketQuote?
+    func fetchSources(ticker: String) async throws -> [NewsroomSourceItem]
 }
 
 extension NewsroomDigestRepositoryProtocol {
@@ -15,4 +17,6 @@ extension NewsroomDigestRepositoryProtocol {
     }
 
     func invalidateBriefing() async {}
+    func fetchQuote(ticker: String) async -> NewsroomMarketQuote? { nil }
+    func fetchSources(ticker: String) async throws -> [NewsroomSourceItem] { [] }
 }

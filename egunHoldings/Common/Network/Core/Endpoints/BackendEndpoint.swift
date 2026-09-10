@@ -162,6 +162,12 @@ nonisolated enum BackendEndpoint {
         )
     }
 
+    /// 뉴스룸 서버가 사용하는 같은 비필터 피드. 사용자 식별 정보는 전송하지 않는다.
+    static func newsroomSourceFeed() -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/feeds/policy",
+                 queryItems: [URLQueryItem(name: "limit", value: "50")])
+    }
+
     /// `/api/feeds/policy*`는 JWT 보호 대상이 아니고 userId를 여전히 쿼리로 명시해야 한다(서버 미변경).
     static func policyFeed(
         userId: Int64,

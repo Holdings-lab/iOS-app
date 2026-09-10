@@ -8,6 +8,8 @@ struct NewsroomDigestDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var isTitleVisible = false
+    @State private var articleImage: UIImage?
+    @State private var isImageLoading = false
     @State private var presentedArticle: NewsroomSafariDestination?
 
     init(viewModel: NewsroomTickerDetailViewModel) {
@@ -15,13 +17,12 @@ struct NewsroomDigestDetailView: View {
     }
 
     private var stock: NewsroomStockMeta {
-        viewModel.detail?.stock ?? NewsroomStockMeta(
+        NewsroomStockMeta(
             ticker: viewModel.holding.ticker,
             name: viewModel.holding.name,
-            logoURL: viewModel.holding.logoURL,
-            dailyChangePercent: viewModel.holding.dailyChangePercent,
-            weightPercent: viewModel.holding.weightPercent,
-            totalAssetImpactPercent: viewModel.holding.totalAssetImpactPercent
+            logoURL: viewModel.detail?.stock.logoURL ?? viewModel.holding.logoURL,
+            dailyChangePercent: viewModel.quote?.changePercent ?? viewModel.holding.dailyChangePercent,
+            weightPercent: viewModel.holding.weightPercent
         )
     }
 
@@ -55,14 +56,28 @@ struct NewsroomDigestDetailView: View {
 
                         if let detail = viewModel.detail {
                             detailBody(detail)
-                        } else if viewModel.isLoading {
-                            loadingRow
-                                .padding(.top, 24)
-                        } else if let errorMessage = viewModel.errorMessage {
-                            NewsroomErrorCard(message: errorMessage) {
-                                viewModel.load()
+                        } else {
+                            if let summary = viewModel.holding.summary {
+                                Text(summary)
+                                    .font(.pretendard(16, weight: .regular))
+                                    .foregroundStyle(Color.textPrimary)
+                                    .lineSpacing(7)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .padding(.top, 24)
                             }
-                            .padding(.top, 24)
+                            if !viewModel.earlySources.isEmpty {
+                                sourcesSection(viewModel.earlySources)
+                                    .padding(.top, 24)
+                            }
+                            if viewModel.isLoading {
+                                loadingRow.padding(.top, 16)
+                            }
+                            if let errorMessage = viewModel.errorMessage {
+                                NewsroomErrorCard(message: errorMessage) {
+                                    viewModel.load()
+                                }
+                                .padding(.top, 24)
+                            }
                         }
                     }
                     .padding(.horizontal, 16)
@@ -82,6 +97,13 @@ struct NewsroomDigestDetailView: View {
             NewsroomSafariView(url: destination.url)
                 .ignoresSafeArea()
         }
+        .task(id: viewModel.imageCandidates.map(\.absoluteString) + [viewModel.articleURL?.absoluteString ?? ""]) {
+            isImageLoading = true
+            let loaded = await NewsroomImageLoader.shared.image(urls: viewModel.imageCandidates, articleURL: viewModel.articleURL)
+            guard !Task.isCancelled else { return }
+            articleImage = loaded
+            isImageLoading = false
+        }
         .onAppear {
             viewModel.loadIfNeeded()
         }
@@ -100,7 +122,7 @@ struct NewsroomDigestDetailView: View {
         }
 
         if !detail.sources.isEmpty {
-            sourcesSection(detail)
+            sourcesSection(detail.sources)
                 .padding(.top, 28)
         }
 
@@ -152,65 +174,52 @@ struct NewsroomDigestDetailView: View {
                         .monospacedDigit()
                 }
 
-                if let weight = stock.weightPercent, let impact = stock.totalAssetImpactPercent {
-                    Text("내 자산의 \(NewsroomPercentFormat.weight(weight))% · 총자산 기준 \(NewsroomPercentFormat.signedImpact(impact))")
+                if stock.dailyChangePercent == nil {
+                    Text("오늘 —")
+                        .font(.pretendard(22, weight: .bold))
+                        .foregroundStyle(Color.textTertiary)
+                }
+
+                if let weight = stock.weightPercent {
+                    Text("내 자산의 \(NewsroomPercentFormat.weight(weight))%")
                         .font(.pretendard(12.5, weight: .semibold))
                         .foregroundStyle(Color.textSecondary)
                 }
-            }
-        }
-    }
-
-    private var representativeImage: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Group {
-                if let imageURL = viewModel.detail?.imageURL {
-                    AsyncImage(url: imageURL) { phase in
-                        if let image = phase.image {
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        } else if phase.error == nil {
-                            imageLoading
-                        } else {
-                            imageFallback
-                        }
-                    }
-                } else {
-                    imageFallback
+                if let asOf = viewModel.quote?.asOf ?? viewModel.holding.quoteAsOf {
+                    Text("\(NewsroomDigestDateFormat.asOfAtText(for: asOf)) · Yahoo Finance · 시세 지연 가능")
+                        .font(.pretendard(10.5, weight: .medium))
+                        .foregroundStyle(Color.textTertiary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 150)
-            .background(Color.muted)
-            .clipShape(RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
-            .clipped()
         }
     }
 
-    private var imageFallback: some View {
-        VStack(spacing: 10) {
-            NewsroomTickerLogo(ticker: stock.ticker, logoURL: stock.logoURL, size: 72)
-            Text(stock.name)
-                .font(.pretendard(14, weight: .bold))
-                .foregroundStyle(Color.textSecondary)
+    @ViewBuilder
+    private var representativeImage: some View {
+        if let articleImage {
+            Image(uiImage: articleImage)
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity)
+                .frame(height: 150)
+                .clipShape(RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
+                .clipped()
+                .accessibilityLabel("뉴스 대표 이미지")
+        } else if isImageLoading {
+            ProgressView("기사 이미지 불러오는 중")
+                .font(.pretendard(12, weight: .medium))
+                .tint(Color.textTertiary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.brandTintBg.opacity(0.6))
-    }
-
-    private var imageLoading: some View {
-        ProgressView()
-            .tint(Color.brand)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.muted)
-            .accessibilityLabel("뉴스 대표 이미지를 불러오는 중")
     }
 
     private var loadingRow: some View {
         HStack {
             Spacer()
-            ProgressView()
+            ProgressView("추가 분석을 불러오는 중")
+                .font(.pretendard(12, weight: .medium))
                 .tint(Color.textTertiary)
             Spacer()
         }
@@ -251,14 +260,14 @@ struct NewsroomDigestDetailView: View {
         }
     }
 
-    private func sourcesSection(_ detail: NewsroomTickerDetail) -> some View {
+    private func sourcesSection(_ sources: [NewsroomSourceItem]) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("출처")
                 .font(.pretendard(14.5, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
 
             VStack(spacing: 0) {
-                ForEach(Array(detail.sources.enumerated()), id: \.element.id) { index, source in
+                ForEach(Array(sources.enumerated()), id: \.element.id) { index, source in
                     if index > 0 {
                         Divider().overlay(Color.hairline)
                     }
@@ -319,25 +328,17 @@ struct NewsroomDigestDetailView: View {
 
 private struct NewsroomSourceThumbnail: View {
     let url: URL?
+    @State private var image: UIImage?
 
     var body: some View {
         Group {
-            if let url {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } else if phase.error == nil {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(Color.textTertiary)
-                    } else {
-                        fallback
-                    }
-                }
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
             } else {
-                fallback
+                Image(systemName: "newspaper")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(Color.textQuaternary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .frame(width: 52, height: 52)
@@ -345,13 +346,13 @@ private struct NewsroomSourceThumbnail: View {
         .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
         .clipped()
         .accessibilityHidden(true)
-    }
-
-    private var fallback: some View {
-        Image(systemName: "newspaper")
-            .font(.system(size: 17, weight: .medium))
-            .foregroundStyle(Color.textQuaternary)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .task(id: url) {
+            image = nil
+            guard let url else { return }
+            let loaded = await NewsroomImageLoader.shared.image(urls: [url])
+            guard !Task.isCancelled else { return }
+            image = loaded
+        }
     }
 }
 

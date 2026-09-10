@@ -113,6 +113,7 @@ struct NewsroomView: View {
             NewsroomNoHoldingsCard(onRegister: onAssetTabRequested)
         } else if briefing.hasNoRelevantNews {
             NewsroomNoRelatedNewsCard()
+            tickerSection(briefing)
         } else {
             briefingContent(briefing)
         }
@@ -121,6 +122,11 @@ struct NewsroomView: View {
     @ViewBuilder
     private func briefingContent(_ briefing: NewsroomBriefing) -> some View {
         tickerSection(briefing)
+
+        Text("오늘 등락은 최근 정규장 시세의 전일 종가 대비예요. Yahoo Finance 시세는 지연될 수 있어요.")
+            .font(.pretendard(10.5, weight: .medium))
+            .foregroundStyle(Color.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
 
         NewsroomEndMarker(heartbeatText: nil)
     }
@@ -131,10 +137,14 @@ struct NewsroomView: View {
                 .font(.pretendard(16, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
 
-            ForEach(briefing.holdings) { holding in
-                NewsroomTickerDigestRow.make(for: holding) {
+            ForEach(briefing.sortedHoldings) { holding in
+                NewsroomTickerDigestRow.make(
+                    for: holding,
+                    isHighlighted: holding.id == briefing.sortedHoldings.first?.id
+                ) {
                     presentedHolding = holding
                 }
+                .accessibilityIdentifier("newsroom.holding.\(holding.ticker)")
             }
         }
     }

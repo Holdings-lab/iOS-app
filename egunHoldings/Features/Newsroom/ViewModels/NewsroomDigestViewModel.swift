@@ -10,6 +10,8 @@ final class NewsroomDigestViewModel: ObservableObject {
     @Published private(set) var refreshStatusMessage: String?
 
     private var repository: NewsroomDigestRepositoryProtocol
+    private var quoteTask: Task<Void, Never>?
+    private var prefetchTask: Task<Void, Never>?
 
     init(userId: Int64? = nil, repository: NewsroomDigestRepositoryProtocol? = nil) {
         self.repository = repository ?? NewsroomDigestRepositoryFactory.makeDefault(userId: userId)
@@ -25,6 +27,7 @@ final class NewsroomDigestViewModel: ObservableObject {
 
             do {
                 briefing = try await repository.fetchBriefing(briefingDate: nil)
+                loadSupplementaryContent()
             } catch {
                 if briefing == nil {
                     errorMessage = "뉴스룸을 불러오지 못했어요. 잠시 후 다시 시도해주세요."
@@ -48,12 +51,21 @@ final class NewsroomDigestViewModel: ObservableObject {
         defer { isLoading = false }
         do {
             let fetched = try await repository.refreshBriefing()
-            if fetched == briefing {
+            // 별도 시세를 보존해 새로고침 때 숫자가 사라지지 않도록 한다.
+            let previous = briefing
+            let merged = fetched.replacingHoldings(fetched.holdings.map { holding in
+                guard let old = previous?.holdings.first(where: { $0.ticker == holding.ticker }),
+                      let asOf = old.quoteAsOf, let change = old.dailyChangePercent else { return holding }
+                return holding.replacingQuote(NewsroomMarketQuote(changePercent: change, asOf: asOf))
+            })
+            let unchanged = merged == previous
+            briefing = merged
+            errorMessage = nil
+            loadSupplementaryContent()
+            if unchanged {
                 await showRefreshStatus("이미 최신이에요")
                 return false
             } else {
-                briefing = fetched
-                errorMessage = nil
                 return true
             }
         } catch {
@@ -65,6 +77,51 @@ final class NewsroomDigestViewModel: ObservableObject {
     /// 상세 화면은 이제 별도 네트워크 요청이라 자체 뷰모델을 새로 만들어 넘긴다.
     func makeDetailViewModel(for holding: NewsroomHoldingBriefing) -> NewsroomTickerDetailViewModel {
         NewsroomTickerDetailViewModel(holding: holding, repository: repository)
+    }
+
+    private func loadSupplementaryContent() {
+        quoteTask?.cancel()
+        prefetchTask?.cancel()
+        guard let briefing, briefing.errorState == nil, briefing.emptyState == nil else { return }
+        let holdings = briefing.sortedHoldings.filter { $0.briefingType != .quiet }
+        let repository = repository
+        quoteTask = Task { [weak self] in
+            // 작은 묶음으로 요청해 종목이 많아도 시세 서버에 요청을 한꺼번에 쏟지 않는다.
+            for start in stride(from: 0, to: holdings.count, by: 3) {
+                guard !Task.isCancelled else { return }
+                await withTaskGroup(of: (String, NewsroomMarketQuote?).self) { group in
+                    for holding in holdings[start..<min(start + 3, holdings.count)] {
+                        group.addTask { (holding.ticker, await repository.fetchQuote(ticker: holding.ticker)) }
+                    }
+                    for await (ticker, quote) in group {
+                        guard !Task.isCancelled, let quote, let current = self?.briefing else { continue }
+                        self?.briefing = current.replacingHoldings(current.holdings.map {
+                            $0.ticker == ticker ? $0.replacingQuote(quote) : $0
+                        })
+                    }
+                }
+            }
+        }
+        prefetchTask = Task {
+            await withTaskGroup(of: Void.self) { group in
+                for holding in holdings.prefix(2) {
+                    group.addTask {
+                        guard !Task.isCancelled,
+                              let sources = try? await repository.fetchSources(ticker: holding.ticker),
+                              !Task.isCancelled else { return }
+                        _ = await NewsroomImageLoader.shared.image(
+                            urls: [sources.first?.thumbnailURL].compactMap { $0 }, articleURL: sources.first?.url
+                        )
+                    }
+                    group.addTask {
+                        guard !Task.isCancelled,
+                              let detail = try? await repository.fetchDetail(ticker: holding.ticker, briefingDate: nil),
+                              !Task.isCancelled else { return }
+                        _ = await NewsroomImageLoader.shared.image(urls: detail.imageCandidates, articleURL: detail.primaryArticleURL)
+                    }
+                }
+            }
+        }
     }
 
     private func showRefreshStatus(_ message: String) async {

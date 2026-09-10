@@ -29,13 +29,13 @@ nonisolated enum NewsroomDigestMockData {
             subtitle: subtitleReady,
             holdings: [
                 holding(ticker: "AAPL", name: "Apple", weight: 18, type: .hero,
-                        dailyChangePct: -0.6, totalImpactPct: -0.11,
+                        dailyChangePct: -0.6,
                         headline: appleHeadline, summary: appleSubheadline),
                 holding(ticker: "NVDA", name: "NVIDIA", weight: 12, type: .compact,
-                        dailyChangePct: 1.8, totalImpactPct: 0.22,
+                        dailyChangePct: 1.8,
                         headline: nvidiaHeadline, summary: nil),
                 holding(ticker: "MSFT", name: "Microsoft", weight: 9, type: .compact,
-                        dailyChangePct: 0.2, totalImpactPct: 0.02,
+                        dailyChangePct: 0.2,
                         headline: msftSubheadline, summary: nil),
                 quietHolding(ticker: "QQQ", name: "Invesco QQQ Trust", weight: 35, quietDays: 13)
             ],
@@ -83,7 +83,7 @@ nonisolated enum NewsroomDigestMockData {
 
     static var nvidiaDetail: NewsroomTickerDetail {
         NewsroomTickerDetail(
-            stock: NewsroomStockMeta(ticker: "NVDA", name: "NVIDIA", logoURL: nil, dailyChangePercent: 1.8, weightPercent: 12, totalAssetImpactPercent: 0.22),
+            stock: NewsroomStockMeta(ticker: "NVDA", name: "NVIDIA", logoURL: nil, dailyChangePercent: 1.8, weightPercent: 12),
             headline: nvidiaHeadline,
             imageURL: nil,
             aiJudgement: NewsroomAIJudgement(
@@ -111,7 +111,7 @@ nonisolated enum NewsroomDigestMockData {
 
     static var appleDetail: NewsroomTickerDetail {
         NewsroomTickerDetail(
-            stock: NewsroomStockMeta(ticker: "AAPL", name: "Apple", logoURL: nil, dailyChangePercent: -0.6, weightPercent: 18, totalAssetImpactPercent: -0.11),
+            stock: NewsroomStockMeta(ticker: "AAPL", name: "Apple", logoURL: nil, dailyChangePercent: -0.6, weightPercent: 18),
             headline: appleHeadline,
             imageURL: nil,
             aiJudgement: NewsroomAIJudgement(
@@ -135,7 +135,7 @@ nonisolated enum NewsroomDigestMockData {
 
     static var msftDetail: NewsroomTickerDetail {
         NewsroomTickerDetail(
-            stock: NewsroomStockMeta(ticker: "MSFT", name: "Microsoft", logoURL: nil, dailyChangePercent: 0.2, weightPercent: 9, totalAssetImpactPercent: 0.02),
+            stock: NewsroomStockMeta(ticker: "MSFT", name: "Microsoft", logoURL: nil, dailyChangePercent: 0.2, weightPercent: 9),
             headline: "마이크로소프트, 클라우드 인프라 투자 계획 재확인",
             imageURL: nil,
             aiJudgement: NewsroomAIJudgement(
@@ -178,7 +178,7 @@ nonisolated enum NewsroomDigestMockData {
     private static func quietHolding(ticker: String, name: String, weight: Int, quietDays: Int) -> NewsroomHoldingBriefing {
         holding(
             ticker: ticker, name: name, weight: weight, type: .quiet,
-            dailyChangePct: nil, totalImpactPct: nil,
+            dailyChangePct: nil,
             headline: "\(quietDays)일째 특이사항 없음", summary: "계속 지켜보고 있어요"
         )
     }
@@ -189,7 +189,6 @@ nonisolated enum NewsroomDigestMockData {
         weight: Int,
         type: NewsroomBriefingType,
         dailyChangePct: Double?,
-        totalImpactPct: Double?,
         headline: String?,
         summary: String?
     ) -> NewsroomHoldingBriefing {
@@ -200,7 +199,6 @@ nonisolated enum NewsroomDigestMockData {
             weightPercent: Double(weight),
             briefingType: type,
             dailyChangePercent: dailyChangePct,
-            totalAssetImpactPercent: totalImpactPct,
             headline: headline,
             summary: summary,
             detailPath: "/api/users/1/newsroom/\(ticker)"

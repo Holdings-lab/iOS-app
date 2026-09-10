@@ -8,6 +8,9 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
     private let now: @Sendable () -> Date
     private var cached: (briefing: NewsroomBriefing, expiresAt: Date)?
     private var inFlight: (id: UUID, task: Task<NewsroomBriefing, Error>)?
+    private struct DetailKey: Hashable { let ticker: String; let date: String? }
+    private var details: [DetailKey: (detail: NewsroomTickerDetail, expires: Date)] = [:]
+    private var detailRequests: [DetailKey: (id: UUID, task: Task<NewsroomTickerDetail, Error>)] = [:]
 
     init(
         repository: NewsroomDigestRepositoryProtocol,
@@ -31,12 +34,14 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
     }
 
     func refreshBriefing() async throws -> NewsroomBriefing {
+        invalidateDetails()
         cached = nil
         cancelInFlightBriefing()
         return try await startBriefingFetch()
     }
 
     func invalidateBriefing() async {
+        invalidateDetails()
         cached = nil
         cancelInFlightBriefing()
     }
@@ -69,6 +74,40 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
     }
 
     func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail {
-        try await repository.fetchDetail(ticker: ticker, briefingDate: briefingDate)
+        let key = DetailKey(ticker: ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(), date: briefingDate)
+        if let cached = details[key], cached.expires > now() { return cached.detail }
+        if let request = detailRequests[key] { return try await request.task.value }
+        let id = UUID()
+        let task = Task { try await repository.fetchDetail(ticker: key.ticker, briefingDate: key.date) }
+        detailRequests[key] = (id, task)
+        do {
+            let detail = try await task.value
+            if detailRequests[key]?.id == id {
+                details = details.filter { $0.value.expires > now() }
+                if details.count >= 20, let oldest = details.min(by: { $0.value.expires < $1.value.expires }) {
+                    details[oldest.key] = nil
+                }
+                details[key] = (detail, now().addingTimeInterval(300))
+                detailRequests[key] = nil
+            }
+            return detail
+        } catch {
+            if detailRequests[key]?.id == id { detailRequests[key] = nil }
+            throw error
+        }
+    }
+
+    func fetchQuote(ticker: String) async -> NewsroomMarketQuote? {
+        await repository.fetchQuote(ticker: ticker)
+    }
+
+    func fetchSources(ticker: String) async throws -> [NewsroomSourceItem] {
+        try await repository.fetchSources(ticker: ticker)
+    }
+
+    private func invalidateDetails() {
+        details.removeAll()
+        detailRequests.values.forEach { $0.task.cancel() }
+        detailRequests.removeAll()
     }
 }

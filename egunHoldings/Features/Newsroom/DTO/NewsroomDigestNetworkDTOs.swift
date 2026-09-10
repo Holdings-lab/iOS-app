@@ -52,21 +52,19 @@ nonisolated struct NewsroomHoldingBriefingDTO: Decodable, Sendable {
     let logoUrl: String?
     let weightPct: Double
     let briefingType: NewsroomBriefingTypeDTO
-    let dailyChangePct: Double?
-    let totalAssetImpactPct: Double?
     let headline: String?
     let summary: String?
     let detailPath: String?
 
+    // 구 서버 dailyChangePct는 모델 예측값이므로 시세로 사용하지 않는다.
     func toDomain() -> NewsroomHoldingBriefing {
         NewsroomHoldingBriefing(
             ticker: ticker,
             name: name,
-            logoURL: logoUrl.flatMap(URL.init(string:)),
+            logoURL: NewsroomRemoteURL.parse(logoUrl),
             weightPercent: weightPct,
             briefingType: NewsroomBriefingType(dto: briefingType),
-            dailyChangePercent: dailyChangePct,
-            totalAssetImpactPercent: totalAssetImpactPct,
+            dailyChangePercent: nil,
             headline: headline,
             summary: summary,
             detailPath: detailPath
@@ -114,7 +112,7 @@ nonisolated struct NewsroomTickerDetailResponseDTO: Decodable, Sendable {
         NewsroomTickerDetail(
             stock: stock.toDomain(),
             headline: headline,
-            imageURL: imageUrl.flatMap(URL.init(string:)),
+            imageURL: NewsroomRemoteURL.parse(imageUrl),
             aiJudgement: aiJudgement?.toDomain(),
             summaryBody: summary?.body,
             findings: summary?.findings ?? [],
@@ -129,18 +127,15 @@ nonisolated struct NewsroomStockMetaDTO: Decodable, Sendable {
     let ticker: String
     let name: String
     let logoUrl: String?
-    let dailyChangePct: Double?
     let weightPct: Double?
-    let totalAssetImpactPct: Double?
 
     func toDomain() -> NewsroomStockMeta {
         NewsroomStockMeta(
             ticker: ticker,
             name: name,
-            logoURL: logoUrl.flatMap(URL.init(string:)),
-            dailyChangePercent: dailyChangePct,
-            weightPercent: weightPct,
-            totalAssetImpactPercent: totalAssetImpactPct
+            logoURL: NewsroomRemoteURL.parse(logoUrl),
+            dailyChangePercent: nil,
+            weightPercent: weightPct
         )
     }
 }
@@ -228,8 +223,8 @@ nonisolated struct NewsroomSourceItemDTO: Decodable, Sendable {
             title: title,
             publisher: publisher,
             publishedAtRaw: publishedAt,
-            thumbnailURL: thumbnailUrl.flatMap(URL.init(string:)),
-            url: url.flatMap(URL.init(string:))
+            thumbnailURL: NewsroomRemoteURL.parse(thumbnailUrl),
+            url: NewsroomRemoteURL.parse(url)
         )
     }
 }
@@ -237,6 +232,48 @@ nonisolated struct NewsroomSourceItemDTO: Decodable, Sendable {
 nonisolated struct NewsroomDetailFooterDTO: Decodable, Sendable {
     let asOfAt: Date?
     let aiNotice: String?
+}
+
+/// 번역/분석을 기다리지 않고 원문을 먼저 제공하는 공개 피드의 최소 계약.
+/// 관련성은 NewsroomService.cardMatchesTicker와 같은 필드를 사용한다.
+nonisolated struct NewsroomSourceFeedDTO: Decodable, Sendable {
+    let cards: [Card]
+
+    struct Card: Decodable, Sendable {
+        let newsId: String?
+        let id: String?
+        let title: String
+        let bodySummary: String?
+        let source: String?
+        let date: String?
+        let link: String?
+        let thumbnailUrl: String?
+        let sector: String?
+        let assetSignals: [AssetSignal]?
+        let impact: Impact?
+
+        struct AssetSignal: Decodable, Sendable { let ticker: String? }
+        struct Impact: Decodable, Sendable { let targetAssets: [String]? }
+
+        func matches(_ ticker: String) -> Bool {
+            let ticker = ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            guard !ticker.isEmpty else { return false }
+            let tags = [sector].compactMap { $0 } + (assetSignals ?? []).compactMap(\.ticker)
+                + (impact?.targetAssets ?? [])
+            return tags.contains { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == ticker }
+                || (title + " " + (bodySummary ?? "")).uppercased().contains(ticker)
+        }
+
+        var sourceItem: NewsroomSourceItem {
+            NewsroomSourceItem(newsId: newsId ?? id, title: title, publisher: source ?? "원문",
+                               publishedAtRaw: date, thumbnailURL: NewsroomRemoteURL.parse(thumbnailUrl),
+                               url: NewsroomRemoteURL.parse(link))
+        }
+    }
+
+    func sources(for ticker: String) -> [NewsroomSourceItem] {
+        cards.filter { $0.matches(ticker) }.prefix(5).map(\.sourceItem)
+    }
 }
 
 private nonisolated extension NewsroomBriefingType {

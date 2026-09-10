@@ -68,6 +68,30 @@ final class egunHoldingsUITests: XCTestCase {
     }
 
     @MainActor
+    func testNewsroomMetricsAndDetail() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["-ui-testing-main-tabs", "-ui-testing-main-tab", "newsroom"]
+        app.launch()
+        let apple = app.buttons["newsroom.holding.AAPL"]
+        XCTAssertTrue(apple.waitForExistence(timeout: 8))
+        XCTAssertTrue(app.staticTexts["총자산 기준 18%"].exists)
+        let nvidia = app.buttons["newsroom.holding.NVDA"]
+        XCTAssertLessThan(apple.frame.minY, nvidia.frame.minY)
+        attachScreenshot(of: app, named: "Newsroom - sorted holdings and allocation")
+        apple.tap()
+        XCTAssertTrue(app.staticTexts["내 자산의 18%"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["오늘 -0.6%"].exists)
+        XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "총자산 기준")).firstMatch.exists)
+        // iOS 유리 효과의 AdditionalDimmingOverlay는 화면 밖으로 확장되는 시스템 장식이다.
+        // 실제 상세 텍스트의 레이아웃 경계를 검사한다.
+        for text in app.staticTexts.allElementsBoundByIndex where text.isHittable {
+            XCTAssertGreaterThanOrEqual(text.frame.minX, app.frame.minX - 1)
+            XCTAssertLessThanOrEqual(text.frame.maxX, app.frame.maxX + 1)
+        }
+        attachScreenshot(of: app, named: "Newsroom - detail daily change and allocation")
+    }
+
+    @MainActor
     private func assertVisibleElementsStayWithinAppWidth(
         in app: XCUIApplication,
         tabLabel: String,
