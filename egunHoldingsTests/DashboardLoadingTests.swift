@@ -103,6 +103,25 @@ struct DashboardLoadingTests {
         #expect(dashboard.newsItems.map(\.ticker) == ["NVDA"])
     }
 
+    @Test("뉴스룸 지연은 오늘 대시보드를 5초 넘게 막지 않는다")
+    func limitsNewsWaitOnToday() async throws {
+        let source = BlockingNewsroomRepository()
+        let repository = LiveTodayRepository(
+            apiClient: DashboardAPIClient(),
+            newsroomRepository: source,
+            newsTimeout: .milliseconds(20)
+        )
+
+        let dashboard = try await repository.fetchDashboard(
+            userId: 1,
+            userAssetProfile: AppMockData.userAssetProfile,
+            portfolioSnapshot: AppMockData.portfolioSnapshot
+        )
+
+        #expect(dashboard.newsItems.isEmpty)
+        #expect(await source.firstRequestWasCancelled)
+    }
+
     @Test("브리핑이 느려도 나머지 세 섹션은 먼저 도착한다")
     func publishesBeforeSlowestRequest() async throws {
         let gate = RequestGate()

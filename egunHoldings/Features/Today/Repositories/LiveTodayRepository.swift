@@ -4,15 +4,18 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
     private let apiClient: APIClient
     private let fallbackRepository: MockTodayRepository
     private let newsroomRepository: NewsroomDigestRepositoryProtocol
+    private let newsTimeout: Duration
 
     init(
         apiClient: APIClient = APIClientFactory.makeDefault(),
         fallbackRepository: MockTodayRepository = MockTodayRepository(),
-        newsroomRepository: NewsroomDigestRepositoryProtocol? = nil
+        newsroomRepository: NewsroomDigestRepositoryProtocol? = nil,
+        newsTimeout: Duration = .seconds(5)
     ) {
         self.apiClient = apiClient
         self.fallbackRepository = fallbackRepository
         self.newsroomRepository = newsroomRepository ?? LiveNewsroomDigestRepository(apiClient: apiClient)
+        self.newsTimeout = newsTimeout
     }
 
     func fetchDashboard(
@@ -129,6 +132,20 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
     }
 
     private func fetchNews() async -> [TodayNewsItem] {
+        await withTaskGroup(of: [TodayNewsItem].self) { group in
+            group.addTask { await fetchLiveNews() }
+            group.addTask {
+                try? await Task.sleep(for: newsTimeout)
+                return []
+            }
+
+            let first = await group.next() ?? []
+            group.cancelAll()
+            return first
+        }
+    }
+
+    private func fetchLiveNews() async -> [TodayNewsItem] {
         do {
             let response = try await newsroomRepository.fetchBriefing(briefingDate: nil)
             return response.holdings.filter { $0.briefingType != .quiet }.prefix(3).map { holding in
@@ -139,6 +156,8 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
                     ticker: holding.ticker
                 )
             }
+        } catch is CancellationError {
+            return []
         } catch {
             APIFallbackLog.log("GET /api/newsroom", error: error)
             return []
