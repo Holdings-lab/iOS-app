@@ -271,8 +271,10 @@ nonisolated struct NewsroomSourceFeedDTO: Decodable, Sendable {
         }
     }
 
-    func sources(for ticker: String) -> [NewsroomSourceItem] {
-        cards.filter { $0.matches(ticker) }.prefix(5).map(\.sourceItem)
+    func sources(for ticker: String, on date: String) -> [NewsroomSourceItem] {
+        cards.filter { card in
+            card.date?.prefix(10) == date[...] && card.matches(ticker)
+        }.prefix(5).map(\.sourceItem)
     }
 }
 

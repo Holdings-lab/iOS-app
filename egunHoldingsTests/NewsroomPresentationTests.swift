@@ -94,18 +94,20 @@ struct NewsroomPresentationTests {
 
     @Test("선행 출처 피드는 서버와 같은 종목 필터를 쓰고 기사 사진을 섞지 않는다")
     func matchesEarlySources() throws {
-        let json = #"{"cards":[{"newsId":"1","title":"UPS news","link":"https://example.com/ups","thumbnailUrl":"nan","assetSignals":[{"ticker":"QQQ"}]},{"newsId":"2","title":"Apple news","link":"https://example.com/apple","thumbnailUrl":"https://example.com/apple.png","assetSignals":[{"ticker":"QQQ"}]},{"newsId":"3","title":"Daily ETF Flows: XLE","link":"https://example.com/xle"}]}"#
+        let json = #"{"cards":[{"newsId":"1","title":"UPS news","date":"2026-09-10","link":"https://example.com/ups","thumbnailUrl":"nan","assetSignals":[{"ticker":"QQQ"}]},{"newsId":"2","title":"Apple news","date":"2026-09-09","link":"https://example.com/apple","thumbnailUrl":"https://example.com/apple.png","assetSignals":[{"ticker":"QQQ"}]},{"newsId":"3","title":"Daily ETF Flows: XLE","date":"2026-09-10","link":"https://example.com/xle"}]}"#
         let feed = try JSONDecoder().decode(NewsroomSourceFeedDTO.self, from: Data(json.utf8))
-        #expect(feed.sources(for: " qqq ").map(\.newsId) == ["1", "2"])
-        #expect(feed.sources(for: "XLE").map(\.newsId) == ["3"])
-        #expect(feed.sources(for: "XLV").isEmpty)
+        #expect(feed.sources(for: " qqq ", on: "2026-09-10").map(\.newsId) == ["1"])
+        #expect(feed.sources(for: "XLE", on: "2026-09-10").map(\.newsId) == ["3"])
+        #expect(feed.sources(for: "XLV", on: "2026-09-10").isEmpty)
         let model = NewsroomTickerDetail(stock: NewsroomDigestMockData.appleDetail.stock,
             headline: "UPS news", imageURL: nil, aiJudgement: nil, summaryBody: nil, findings: [],
-            sources: feed.sources(for: "QQQ"), asOfAt: nil, aiNotice: nil)
+            sources: feed.sources(for: "QQQ", on: "2026-09-10"), asOfAt: nil, aiNotice: nil)
         #expect(model.imageCandidates.isEmpty)
         #expect(model.primaryArticleURL?.absoluteString == "https://example.com/ups")
-        #expect(BackendEndpoint.newsroomSourceFeed().queryItems.map(\.name) == ["limit"])
-        if case .bearerToken = BackendEndpoint.newsroomSourceFeed().authorizationRequirement {
+        let sourceEndpoint = BackendEndpoint.newsroomSourceFeed(date: "2026-09-10")
+        #expect(sourceEndpoint.queryItems.map(\.name) == ["limit", "dateFrom", "dateTo"])
+        #expect(sourceEndpoint.queryItems.map(\.value) == ["50", "2026-09-10", "2026-09-10"])
+        if case .bearerToken = sourceEndpoint.authorizationRequirement {
             Issue.record("공개 원문 조회에 사용자 토큰이 필요하면 안 된다")
         }
     }

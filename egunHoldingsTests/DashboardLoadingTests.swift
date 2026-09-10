@@ -128,8 +128,8 @@ struct DashboardLoadingTests {
         #expect(dashboard.briefing.drawdownFromPeakPercent == -2)
     }
 
-    @Test("뷰모델은 보유종목 수신 즉시 해당 스켈레톤만 해제한다")
-    func viewModelShowsCompletedSection() async {
+    @Test("뷰모델은 모든 응답이 끝날 때까지 전체 스켈레톤을 유지한다")
+    func viewModelPublishesDashboardAtOnce() async {
         let gate = RequestGate()
         let ready = RequestGate()
         let viewModel = TodayViewModel(
@@ -139,12 +139,13 @@ struct DashboardLoadingTests {
         )
         let loading = Task { await viewModel.load() }
         await ready.wait()
-        #expect(viewModel.holdings.first?.ticker == "LIVE")
-        #expect(!viewModel.loadingSections.contains(.holdings))
+        #expect(viewModel.holdings.first?.ticker != "LIVE")
+        #expect(viewModel.loadingSections.contains(.holdings))
         #expect(viewModel.loadingSections.contains(.news))
         #expect(viewModel.newsItems.isEmpty)
         await gate.release()
         await loading.value
+        #expect(viewModel.holdings.first?.ticker == "LIVE")
         #expect(viewModel.loadingSections.isEmpty)
     }
 

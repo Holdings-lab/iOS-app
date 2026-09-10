@@ -458,8 +458,8 @@ struct TodayNewsSection: View {
                 if newsItems.isEmpty {
                     TodayEmptyStateCard(
                         iconName: "newspaper",
-                        title: "오늘은 내 자산 관련 큰 소식 없어요",
-                        subtitle: "조용한 것도 정보예요"
+                        title: "오늘 뉴스를 수집하고 있어요",
+                        subtitle: "당일 뉴스가 확인되면 바로 알려드릴게요. 잠시 후 새로고침해 주세요"
                     )
                 } else {
                     VStack(spacing: 0) {

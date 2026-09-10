@@ -173,12 +173,7 @@ final class TodayViewModel: ObservableObject {
             let dashboard = try await repository.fetchDashboard(
                 userId: userId,
                 userAssetProfile: userAssetProfile,
-                portfolioSnapshot: portfolioSnapshot,
-                onSection: { [weak self] section in
-                    guard let self, generation == self.refreshGeneration,
-                          !Task<Never, Never>.isCancelled else { return }
-                    self.apply(section)
-                }
+                portfolioSnapshot: portfolioSnapshot
             )
             try Task<Never, Never>.checkCancellation()
             guard generation == refreshGeneration else { return }
@@ -206,26 +201,6 @@ final class TodayViewModel: ObservableObject {
         holdings = brokerBalanceSnapshot?.todayHoldings ?? dashboard.holdings
         goalProgress = dashboard.goalProgress
         newsItems = dashboard.newsItems
-    }
-
-    private func apply(_ section: TodaySectionUpdate) {
-        switch section {
-        case let .briefing(linked, value):
-            briefing = value
-            if let linked { isAccountLinked = linked }
-            loadingSections.remove(.briefing)
-        case let .holdings(linked, value):
-            holdings = brokerBalanceSnapshot?.todayHoldings ?? value
-            if let linked { isAccountLinked = linked }
-            loadingSections.remove(.holdings)
-        case let .goal(linked, value):
-            goalProgress = value
-            if let linked { isAccountLinked = linked }
-            loadingSections.remove(.goal)
-        case let .news(value):
-            newsItems = value
-            loadingSections.remove(.news)
-        }
     }
 
     private static func errorMessage(for error: Error) -> String {
