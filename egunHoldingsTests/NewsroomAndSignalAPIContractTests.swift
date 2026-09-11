@@ -39,14 +39,18 @@ struct NewsroomAndSignalAPIContractTests {
         #expect(briefing.errorState?.buttonLabel == "다시 시도")
     }
 
-    @Test("뉴스룸만 서버 처리 시간을 고려한 요청 제한을 사용한다")
-    func usesLongerTimeoutOnlyForNewsroom() {
+    @Test("뉴스룸과 증권사 동기화 경로만 서버 처리 시간을 고려한 요청 제한을 사용한다")
+    func usesLongerTimeoutOnlyForSlowServerPaths() {
         var newsroomRequest = URLRequest(url: URL(string: "https://holdings-lab.me/api/newsroom")!)
         newsroomRequest.timeoutInterval = 15
-        let otherRequest = URLRequest(url: URL(string: "https://holdings-lab.me/api/portfolio")!)
+        let portfolioRequest = URLRequest(url: URL(string: "https://holdings-lab.me/api/portfolio")!)
+        let holdingsRequest = URLRequest(url: URL(string: "https://holdings-lab.me/api/holdings")!)
+        let briefingRequest = URLRequest(url: URL(string: "https://holdings-lab.me/api/daily-briefing")!)
 
         #expect(APIRequestTimeoutPolicy.timeout(for: newsroomRequest) == 30)
-        #expect(APIRequestTimeoutPolicy.timeout(for: otherRequest) == nil)
+        #expect(APIRequestTimeoutPolicy.timeout(for: portfolioRequest) == 30)
+        #expect(APIRequestTimeoutPolicy.timeout(for: holdingsRequest) == 30)
+        #expect(APIRequestTimeoutPolicy.timeout(for: briefingRequest) == nil)
     }
 
     @Test("시그널 이벤트가 인증된 현재 경로를 사용한다")

@@ -40,30 +40,54 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
         var news: [TodayNewsItem] = []
 
         // 가장 느린 API를 기다리지 않고 완료된 섹션부터 화면에 전달한다.
-        await withTaskGroup(of: TodaySectionUpdate.self) { group in
+        var fallbackMessage: String?
+
+        await withTaskGroup(of: TodayFetchResult.self) { group in
             group.addTask {
                 let result = await fetchBriefing(userId: userId, fallback: fallback.briefing)
-                return .briefing(isAccountLinked: result.isAccountLinked, result.value)
+                return .briefing(
+                    isAccountLinked: result.isAccountLinked,
+                    value: result.value,
+                    fallbackMessage: result.fallbackMessage
+                )
             }
             group.addTask {
                 let result = await fetchHoldings(userId: userId, fallback: fallback.holdings)
-                return .holdings(isAccountLinked: result.isAccountLinked, result.value)
+                return .holdings(
+                    isAccountLinked: result.isAccountLinked,
+                    value: result.value,
+                    fallbackMessage: result.fallbackMessage
+                )
             }
             group.addTask {
                 let result = await fetchGoal(userId: userId, fallback: fallback.goalProgress)
-                return .goal(isAccountLinked: result.isAccountLinked, result.value)
+                return .goal(
+                    isAccountLinked: result.isAccountLinked,
+                    value: result.value,
+                    fallbackMessage: result.fallbackMessage
+                )
             }
-            group.addTask { .news(await fetchNews()) }
+            group.addTask { .news(value: await fetchNews()) }
 
             for await section in group {
                 guard !Task<Never, Never>.isCancelled else { continue }
                 switch section {
-                case let .briefing(linked, value): briefing = (linked, value)
-                case let .holdings(linked, value): holdings = (linked, value)
-                case let .goal(linked, value): goal = (linked, value)
-                case let .news(value): news = value
+                case let .briefing(linked, value, message):
+                    briefing = (linked, value)
+                    fallbackMessage = fallbackMessage ?? message
+                    onSection?(.briefing(isAccountLinked: linked, value))
+                case let .holdings(linked, value, message):
+                    holdings = (linked, value)
+                    fallbackMessage = fallbackMessage ?? message
+                    onSection?(.holdings(isAccountLinked: linked, value))
+                case let .goal(linked, value, message):
+                    goal = (linked, value)
+                    fallbackMessage = fallbackMessage ?? message
+                    onSection?(.goal(isAccountLinked: linked, value))
+                case let .news(value):
+                    news = value
+                    onSection?(.news(value))
                 }
-                onSection?(section)
             }
         }
         try Task<Never, Never>.checkCancellation()
@@ -75,55 +99,56 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
             briefing: briefing.value,
             holdings: holdings.value,
             goalProgress: goal.value,
-            newsItems: news
+            newsItems: news,
+            fallbackMessage: fallbackMessage
         )
     }
 
     private func fetchBriefing(
         userId: Int64,
         fallback: TodayBriefing
-    ) async -> (isAccountLinked: Bool?, value: TodayBriefing) {
+    ) async -> (isAccountLinked: Bool?, value: TodayBriefing, fallbackMessage: String?) {
         do {
             let response = try await apiClient.requestResult(
                 BackendEndpoint.dailyBriefing(),
                 as: TodayDailyBriefingResponseDTO.self
             )
-            return (response.isAccountLinked, response.toDomain(fallback: fallback))
+            return (response.isAccountLinked, response.toDomain(fallback: fallback), nil)
         } catch {
             APIFallbackLog.log("GET /api/daily-briefing", error: error)
-            return (nil, fallback)
+            return (nil, fallback, Self.liveDataUnavailableMessage)
         }
     }
 
     private func fetchHoldings(
         userId: Int64,
         fallback: [TodayHolding]
-    ) async -> (isAccountLinked: Bool?, value: [TodayHolding]) {
+    ) async -> (isAccountLinked: Bool?, value: [TodayHolding], fallbackMessage: String?) {
         do {
             let response = try await apiClient.requestResult(
                 BackendEndpoint.todayHoldings(),
                 as: TodayHoldingsResponseDTO.self
             )
-            return (response.isAccountLinked, response.toDomain(fallback: fallback))
+            return (response.isAccountLinked, response.toDomain(fallback: fallback), nil)
         } catch {
             APIFallbackLog.log("GET /api/holdings", error: error)
-            return (nil, fallback)
+            return (nil, fallback, Self.liveDataUnavailableMessage)
         }
     }
 
     private func fetchGoal(
         userId: Int64,
         fallback: TodayGoalProgress?
-    ) async -> (isAccountLinked: Bool?, value: TodayGoalProgress?) {
+    ) async -> (isAccountLinked: Bool?, value: TodayGoalProgress?, fallbackMessage: String?) {
         do {
             let response = try await apiClient.requestResult(
                 BackendEndpoint.goal(),
                 as: TodayGoalResponseDTO.self
             )
-            return (response.isAccountLinked, response.toDomain(fallback: fallback))
+            return (response.isAccountLinked, response.toDomain(fallback: fallback), nil)
         } catch {
             APIFallbackLog.log("GET /api/goal-progress", error: error)
-            return (nil, fallback)
+            return (nil, fallback, Self.liveDataUnavailableMessage)
         }
     }
 
@@ -163,4 +188,13 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
             return []
         }
     }
+
+    private static let liveDataUnavailableMessage = "실시간 데이터를 불러오지 못했어요. 일부 값은 이전 또는 예시 데이터일 수 있습니다."
+}
+
+private enum TodayFetchResult: Sendable {
+    case briefing(isAccountLinked: Bool?, value: TodayBriefing, fallbackMessage: String?)
+    case holdings(isAccountLinked: Bool?, value: [TodayHolding], fallbackMessage: String?)
+    case goal(isAccountLinked: Bool?, value: TodayGoalProgress?, fallbackMessage: String?)
+    case news(value: [TodayNewsItem])
 }

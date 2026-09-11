@@ -126,4 +126,26 @@ struct TodayDashboard {
     let holdings: [TodayHolding]
     let goalProgress: TodayGoalProgress?
     let newsItems: [TodayNewsItem]
+    /// 일부 실시간 요청이 실패했을 때, 화면이 목/이전 값임을 숨기지 않도록 안내한다.
+    let fallbackMessage: String?
+
+    nonisolated init(
+        userAssetProfile: UserAssetProfile,
+        portfolioSnapshot: PortfolioSnapshot,
+        isAccountLinked: Bool,
+        briefing: TodayBriefing,
+        holdings: [TodayHolding],
+        goalProgress: TodayGoalProgress?,
+        newsItems: [TodayNewsItem],
+        fallbackMessage: String? = nil
+    ) {
+        self.userAssetProfile = userAssetProfile
+        self.portfolioSnapshot = portfolioSnapshot
+        self.isAccountLinked = isAccountLinked
+        self.briefing = briefing
+        self.holdings = holdings
+        self.goalProgress = goalProgress
+        self.newsItems = newsItems
+        self.fallbackMessage = fallbackMessage
+    }
 }

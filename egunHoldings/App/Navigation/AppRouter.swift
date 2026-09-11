@@ -10,7 +10,6 @@ final class AppRouter: ObservableObject {
 
     private let store: AuthSessionStoring
     private let accountStore: AuthAccountStoring
-    private let brokerBalanceRepository: BrokerBalanceRepositoryProtocol
     private let loginRepository: LoginRepositoryProtocol
     private let tokenRefresher: AccessTokenRefreshing
     private(set) var session: AppUserSession?
@@ -20,14 +19,12 @@ final class AppRouter: ObservableObject {
     init(
         store: AuthSessionStoring? = nil,
         accountStore: AuthAccountStoring? = nil,
-        brokerBalanceRepository: BrokerBalanceRepositoryProtocol? = nil,
         loginRepository: LoginRepositoryProtocol? = nil,
         tokenRefresher: AccessTokenRefreshing? = nil
     ) {
         let resolvedStore = store ?? KeychainAuthSessionStore()
         self.store = resolvedStore
         self.accountStore = accountStore ?? AuthAccountStore()
-        self.brokerBalanceRepository = brokerBalanceRepository ?? BackendPortfolioBalanceRepository()
         self.loginRepository = loginRepository ?? LiveLoginRepository()
         self.tokenRefresher = tokenRefresher ?? AlamofireAccessTokenRefresher(
             tokenStore: SessionAuthTokenStore(sessionStore: resolvedStore),
@@ -63,11 +60,6 @@ final class AppRouter: ObservableObject {
 
         route = savedSession.onboardingCompleted ? .main : .onboarding
 
-        if shouldRefreshBrokerBalance(for: savedSession) {
-            Task {
-                await refreshBrokerBalance(forSessionToken: savedSession.token)
-            }
-        }
     }
 
     /// 액세스 토큰은 만료됐지만 리프레시 토큰이 있는 상태로 앱이 (재)실행됐을 때, 로그인 화면을 보여주기 전에
@@ -118,11 +110,6 @@ final class AppRouter: ObservableObject {
         route = isNewUser ? .onboarding : .main
         persistSessionAfterRoute(newSession)
 
-        if shouldRefreshBrokerBalance(for: newSession) {
-            Task {
-                await refreshBrokerBalance(forSessionToken: newSession.token)
-            }
-        }
     }
 
     func completeOnboarding(with result: OnboardingResult) {
@@ -141,11 +128,6 @@ final class AppRouter: ObservableObject {
         route = .main
         persistSessionAfterRoute(currentSession)
 
-        if shouldRefreshBrokerBalance(for: currentSession) {
-            Task {
-                await refreshBrokerBalance(forSessionToken: currentSession.token)
-            }
-        }
     }
 
     func logout() {
@@ -288,11 +270,6 @@ final class AppRouter: ObservableObject {
         accountStore.saveAll(accounts)
     }
 
-    private func shouldRefreshBrokerBalance(for session: AppUserSession) -> Bool {
-        session.onboardingResult?.connectedInstitutionIDs.contains(AccountInstitution.koreaInvestmentID) == true
-            || session.brokerBalanceSnapshot != nil
-    }
-
     private func makeFallbackSession(for result: OnboardingResult) -> AppUserSession? {
         guard let lastAuthenticatedEmail,
               let account = registeredAccount(for: lastAuthenticatedEmail)
@@ -313,33 +290,4 @@ final class AppRouter: ObservableObject {
         )
     }
 
-    private func refreshBrokerBalance(forSessionToken sessionToken: String) async {
-        do {
-            Self.debugLog("로그인/부트스트랩 잔고조회 시작: token=\(Self.redactedToken(sessionToken))")
-            let snapshot = try await brokerBalanceRepository.fetchPortfolioBalance()
-
-            guard var currentSession = session, currentSession.token == sessionToken else {
-                Self.debugLog("잔고조회 응답 무시: 세션 토큰이 이미 변경되었습니다.")
-                return
-            }
-
-            currentSession.brokerBalanceSnapshot = snapshot
-            saveSession(currentSession)
-            Self.debugLog("로그인/부트스트랩 잔고조회 저장 완료: total=\(snapshot.totalEvaluationAmount), cash=\(snapshot.cashAmount)")
-        } catch {
-            Self.debugLog("로그인/부트스트랩 잔고조회 실패: \(String(describing: error))")
-        }
-    }
-
-    private static func debugLog(_ message: String) {
-#if DEBUG
-        print("[BrokerBalance] \(message)")
-#endif
-    }
-
-    /// 액세스 토큰 원문 대신 로그에서 세션을 구분할 수 있는 정도로만 노출한다(비밀번호에 준하는
-    /// 값이라 콘솔/스크린샷/화면 공유로 유출되면 만료 전까지 그 사용자로 API를 호출할 수 있다).
-    private static func redactedToken(_ token: String) -> String {
-        "\(token.prefix(8))…(\(token.count)자)"
-    }
 }

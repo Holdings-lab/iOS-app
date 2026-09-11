@@ -58,7 +58,7 @@ nonisolated final class AuthRefreshInterceptor: RequestInterceptor {
             request.response?.statusCode == 401,
             request.request?.value(forHTTPHeaderField: "Authorization") != nil
         else {
-            completion(.doNotRetryWithError(error))
+            completion(.doNotRetry)
             return
         }
 

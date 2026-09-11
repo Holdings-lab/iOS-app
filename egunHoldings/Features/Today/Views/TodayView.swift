@@ -93,6 +93,20 @@ struct TodayView: View {
                             )
                         }
 
+                        if let dataFallbackMessage {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(Color.trendDown)
+                                Text(dataFallbackMessage)
+                                    .font(.pretendard(12, weight: .medium))
+                                    .foregroundStyle(Color.textSecondary)
+                            }
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.trendDown.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .accessibilityIdentifier("today.liveDataFallbackNotice")
+                        }
+
                         if viewModel.loadingSections.contains(.briefing) {
                             TodayBriefingSkeleton()
                         } else {
@@ -221,6 +235,11 @@ struct TodayView: View {
                 SettingsRootView(notificationCenter: notificationCenter)
             }
         }
+    }
+
+    private var dataFallbackMessage: String? {
+        guard case let .usingFallback(message?) = viewModel.loadState else { return nil }
+        return message
     }
 
     private func syncSessionData() {

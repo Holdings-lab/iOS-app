@@ -87,10 +87,17 @@ nonisolated final class MoyaAPIClient: APIClient, @unchecked Sendable {
 /// URLSession의 전역 기본 제한을 바꾸지 않아 다른 화면의 실패 감지는 그대로 빠르게 유지된다.
 nonisolated enum APIRequestTimeoutPolicy {
     static let newsroom: TimeInterval = 30
+    static let brokerData: TimeInterval = 30
 
     static func timeout(for request: URLRequest) -> TimeInterval? {
         guard let path = request.url?.path else { return nil }
-        return path == "/api/newsroom" || path.hasPrefix("/api/newsroom/") ? newsroom : nil
+        if path == "/api/newsroom" || path.hasPrefix("/api/newsroom/") {
+            return newsroom
+        }
+        if path == "/api/portfolio" || path == "/api/holdings" {
+            return brokerData
+        }
+        return nil
     }
 }
 

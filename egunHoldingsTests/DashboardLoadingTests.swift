@@ -103,6 +103,17 @@ struct DashboardLoadingTests {
         #expect(dashboard.newsItems.map(\.ticker) == ["NVDA"])
     }
 
+    @Test("실시간 Today API 실패는 목 데이터 사용 사실을 표시한다")
+    func marksLiveDataFallback() async throws {
+        let dashboard = try await LiveTodayRepository(apiClient: FailingDashboardAPIClient()).fetchDashboard(
+            userId: 1,
+            userAssetProfile: AppMockData.userAssetProfile,
+            portfolioSnapshot: AppMockData.portfolioSnapshot
+        )
+
+        #expect(dashboard.fallbackMessage?.contains("이전 또는 예시 데이터") == true)
+    }
+
     @Test("뉴스룸 지연은 오늘 대시보드를 5초 넘게 막지 않는다")
     func limitsNewsWaitOnToday() async throws {
         let source = BlockingNewsroomRepository()
@@ -184,6 +195,12 @@ struct DashboardLoadingTests {
         await initial.value
         #expect(viewModel.holdings.first?.ticker == "NEW")
         #expect(viewModel.loadState == .loaded)
+    }
+}
+
+private struct FailingDashboardAPIClient: APIClient {
+    nonisolated func request<T: Decodable>(_: Endpoint, as _: T.Type) async throws -> T {
+        throw URLError(.timedOut)
     }
 }
 

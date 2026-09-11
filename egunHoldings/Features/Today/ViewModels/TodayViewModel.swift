@@ -180,7 +180,7 @@ final class TodayViewModel: ObservableObject {
             apply(dashboard)
             hasLoadedDashboard = true
             loadingSections = []
-            loadState = .loaded
+            loadState = dashboard.fallbackMessage.map(TodayLoadState.usingFallback) ?? .loaded
         } catch {
             guard generation == refreshGeneration else { return }
             loadingSections = []
