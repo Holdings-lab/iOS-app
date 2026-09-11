@@ -50,7 +50,7 @@ struct NewsroomAndSignalAPIContractTests {
         #expect(APIRequestTimeoutPolicy.timeout(for: newsroomRequest) == 30)
         #expect(APIRequestTimeoutPolicy.timeout(for: portfolioRequest) == 30)
         #expect(APIRequestTimeoutPolicy.timeout(for: holdingsRequest) == 30)
-        #expect(APIRequestTimeoutPolicy.timeout(for: briefingRequest) == nil)
+        #expect(APIRequestTimeoutPolicy.timeout(for: briefingRequest) == 30)
     }
 
     @Test("시그널 이벤트가 인증된 현재 경로를 사용한다")

@@ -94,7 +94,7 @@ nonisolated enum APIRequestTimeoutPolicy {
         if path == "/api/newsroom" || path.hasPrefix("/api/newsroom/") {
             return newsroom
         }
-        if path == "/api/portfolio" || path == "/api/holdings" {
+        if path == "/api/portfolio" || path == "/api/holdings" || path == "/api/daily-briefing" {
             return brokerData
         }
         return nil
