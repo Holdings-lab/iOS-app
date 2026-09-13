@@ -113,7 +113,8 @@ struct BrokerageAPIContractTests {
         let viewModel = OnboardingFlowViewModel(
             onboardingRepository: NoopOnboardingRepository(),
             brokerageConnectionRepository: FailingBrokerageRepository(),
-            brokerBalanceRepository: FailingBalanceRepository()
+            brokerBalanceRepository: FailingBalanceRepository(),
+            authTokenStore: ValidAuthTokenStore()
         )
         viewModel.selectInstitution(viewModel.recommendedInstitution)
 
@@ -123,6 +124,43 @@ struct BrokerageAPIContractTests {
         #expect(viewModel.isBrokerageConnected == false)
         #expect(viewModel.linkedAccount == nil)
         #expect(viewModel.brokerageLinkErrorMessage != nil)
+        #expect(viewModel.requiresBrokerageReauthentication == false)
+    }
+
+    @Test("저장된 access token이 없으면 계좌 연결 전 재로그인을 요구한다")
+    @MainActor
+    func missingAccessTokenRequiresReauthentication() async {
+        let viewModel = OnboardingFlowViewModel(
+            onboardingRepository: NoopOnboardingRepository(),
+            brokerageConnectionRepository: FailingBrokerageRepository(),
+            brokerBalanceRepository: FailingBalanceRepository(),
+            authTokenStore: MissingAuthTokenStore()
+        )
+        viewModel.selectInstitution(viewModel.recommendedInstitution)
+
+        let didConnect = await viewModel.connectBrokerage(userId: 1, reduceMotion: true)
+
+        #expect(didConnect == false)
+        #expect(viewModel.requiresBrokerageReauthentication)
+        #expect(viewModel.brokerageLinkErrorMessage == AppVocabulary.ErrorMessage.loginExpired)
+    }
+
+    @Test("계좌 연결의 최종 401은 재로그인을 요구한다")
+    @MainActor
+    func unauthorizedConnectionRequiresReauthentication() async {
+        let viewModel = OnboardingFlowViewModel(
+            onboardingRepository: NoopOnboardingRepository(),
+            brokerageConnectionRepository: UnauthorizedBrokerageRepository(),
+            brokerBalanceRepository: FailingBalanceRepository(),
+            authTokenStore: ValidAuthTokenStore()
+        )
+        viewModel.selectInstitution(viewModel.recommendedInstitution)
+
+        let didConnect = await viewModel.connectBrokerage(userId: 1, reduceMotion: true)
+
+        #expect(didConnect == false)
+        #expect(viewModel.requiresBrokerageReauthentication)
+        #expect(viewModel.brokerageLinkErrorMessage == AppVocabulary.ErrorMessage.loginExpired)
     }
 
     private var linkedAccountJSON: String {
@@ -192,6 +230,30 @@ private struct FailingBrokerageRepository: BrokerageConnectionRepositoryProtocol
     }
 
     func sync(accountId _: Int64) async throws {}
+}
+
+private struct UnauthorizedBrokerageRepository: BrokerageConnectionRepositoryProtocol {
+    func connectKISDemoAccount(institutionID _: String) async throws -> BrokerageConnection {
+        throw NetworkError.httpStatus(401)
+    }
+
+    func sync(accountId _: Int64) async throws {}
+}
+
+private struct ValidAuthTokenStore: AuthTokenStore {
+    func currentAccessToken() -> String? { "test-access-token" }
+    func currentRefreshToken() -> String? { "test-refresh-token" }
+    func currentExpiresAt() -> Date? { Date().addingTimeInterval(3_600) }
+    func updateTokens(_: AuthTokenPayload) {}
+    func clearTokens() {}
+}
+
+private struct MissingAuthTokenStore: AuthTokenStore {
+    func currentAccessToken() -> String? { nil }
+    func currentRefreshToken() -> String? { nil }
+    func currentExpiresAt() -> Date? { nil }
+    func updateTokens(_: AuthTokenPayload) {}
+    func clearTokens() {}
 }
 
 private struct FailingBalanceRepository: BrokerBalanceRepositoryProtocol {

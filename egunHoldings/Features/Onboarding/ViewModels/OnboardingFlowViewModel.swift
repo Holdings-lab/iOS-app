@@ -22,22 +22,28 @@ final class OnboardingFlowViewModel: ObservableObject {
     /// 연결이 끝난 뒤 요약 카드에 노출할 계좌 정보.
     @Published private(set) var linkedAccount: LinkedDemoAccount?
     @Published private(set) var brokerageLinkErrorMessage: String?
+    /// 계좌 연결을 계속해도 성공할 수 없는 인증 실패인지 여부.
+    /// 화면은 이 상태일 때만 사용자를 로그인 화면으로 안내한다.
+    @Published private(set) var requiresBrokerageReauthentication = false
 
     private let onboardingRepository: OnboardingRepositoryProtocol
     private let brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol
     private let brokerBalanceRepository: BrokerBalanceRepositoryProtocol
+    private let authTokenStore: AuthTokenStore
     private var hasCustomTargetAmount = false
 
     init(
         userName: String = "회원",
         onboardingRepository: OnboardingRepositoryProtocol = LiveOnboardingRepository(),
         brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol = LiveBrokerageConnectionRepository(),
-        brokerBalanceRepository: BrokerBalanceRepositoryProtocol = BackendPortfolioBalanceRepository()
+        brokerBalanceRepository: BrokerBalanceRepositoryProtocol = BackendPortfolioBalanceRepository(),
+        authTokenStore: AuthTokenStore = SessionAuthTokenStore()
     ) {
         self.userName = userName
         self.onboardingRepository = onboardingRepository
         self.brokerageConnectionRepository = brokerageConnectionRepository
         self.brokerBalanceRepository = brokerBalanceRepository
+        self.authTokenStore = authTokenStore
     }
 
     var recommendedInstitution: AccountInstitution {
@@ -125,6 +131,7 @@ final class OnboardingFlowViewModel: ObservableObject {
         linkedAccount = nil
         brokerageAccountId = nil
         brokerageLinkErrorMessage = nil
+        requiresBrokerageReauthentication = false
     }
 
     // MARK: - Step 8: 완료 처리
@@ -176,6 +183,14 @@ final class OnboardingFlowViewModel: ObservableObject {
 
         guard userId != nil else {
             brokerageLinkErrorMessage = "로그인 정보를 확인할 수 없어요. 다시 로그인해 주세요."
+            requiresBrokerageReauthentication = true
+            return false
+        }
+
+        guard let accessToken = authTokenStore.currentAccessToken(), !accessToken.isEmpty else {
+            TokenDebugLog.log("온보딩 계좌 연결 중단 → 저장된 access token 없음")
+            brokerageLinkErrorMessage = AppVocabulary.ErrorMessage.loginExpired
+            requiresBrokerageReauthentication = true
             return false
         }
 
@@ -216,7 +231,28 @@ final class OnboardingFlowViewModel: ObservableObject {
         } catch {
             activeLinkStage = nil
             isBrokerageConnected = false
-            brokerageLinkErrorMessage = error.localizedDescription
+            requiresBrokerageReauthentication = Self.isAuthenticationFailure(error)
+            if requiresBrokerageReauthentication {
+                TokenDebugLog.log("온보딩 계좌 연결 인증 실패 → 재로그인 필요")
+                brokerageLinkErrorMessage = AppVocabulary.ErrorMessage.loginExpired
+            } else {
+                brokerageLinkErrorMessage = error.localizedDescription
+            }
+            return false
+        }
+    }
+
+    private static func isAuthenticationFailure(_ error: Error) -> Bool {
+        guard let networkError = error as? NetworkError else {
+            return false
+        }
+
+        switch networkError {
+        case .httpStatus(401), .missingRefreshToken:
+            return true
+        case .apiFailure(let statusCode, let code, _):
+            return statusCode == 401 || code == "AUTH_REQUIRED"
+        default:
             return false
         }
     }

@@ -75,7 +75,8 @@ struct OnboardingFlowView: View {
                         userId: userId,
                         onBack: navigateBack,
                         onNext: { path.append(.completion) },
-                        onSkip: { path.append(.completion) }
+                        onSkip: { path.append(.completion) },
+                        onReauthenticate: onLogout
                     )
                 case .completion:
                     OnboardingStep8CompletionView(

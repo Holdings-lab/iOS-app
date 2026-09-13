@@ -6,6 +6,7 @@ struct OnboardingStep7BrokerageView: View {
     let onBack: () -> Void
     let onNext: () -> Void
     let onSkip: () -> Void
+    let onReauthenticate: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
@@ -108,7 +109,13 @@ struct OnboardingStep7BrokerageView: View {
 
             Button("계좌 연결하기", role: .cancel) {}
         }
-        .alert("계좌를 연결하지 못했어요", isPresented: $isLinkErrorPresented) {
+        .alert(
+            viewModel.requiresBrokerageReauthentication ? "다시 로그인이 필요해요" : "계좌를 연결하지 못했어요",
+            isPresented: $isLinkErrorPresented
+        ) {
+            if viewModel.requiresBrokerageReauthentication {
+                Button("다시 로그인", action: onReauthenticate)
+            }
             Button("확인", role: .cancel) {}
         } message: {
             Text(viewModel.brokerageLinkErrorMessage ?? "잠시 후 다시 시도해 주세요.")
@@ -511,6 +518,13 @@ private extension AccountInstitution {
 }
 
 #Preview {
-    OnboardingStep7BrokerageView(viewModel: OnboardingFlowViewModel(), userId: nil, onBack: {}, onNext: {}, onSkip: {})
+    OnboardingStep7BrokerageView(
+        viewModel: OnboardingFlowViewModel(),
+        userId: nil,
+        onBack: {},
+        onNext: {},
+        onSkip: {},
+        onReauthenticate: {}
+    )
         .preferredColorScheme(.light)
 }
