@@ -59,7 +59,7 @@ struct NewsroomTickerDigestHeroCard: View {
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if let summary = holding.summary {
+                if let summary = holding.summary.map(NewsroomSummaryText.firstSentence(of:)), !summary.isEmpty {
                     Text(summary)
                         .font(.pretendard(13.5, weight: .medium))
                         .foregroundStyle(Color.textSecondary)
@@ -136,7 +136,7 @@ struct NewsroomTickerQuietRow: View {
                     .font(.pretendard(13.5, weight: .semibold))
                     .foregroundStyle(Color.textPrimary)
 
-                Text(holding.summary ?? "계속 지켜보고 있어요")
+                Text(NewsroomTickerQuietRow.summaryText(for: holding))
                     .font(.pretendard(12.5, weight: .medium))
                     .foregroundStyle(Color.textSecondary)
             }
@@ -153,7 +153,12 @@ struct NewsroomTickerQuietRow: View {
                 .stroke(Color.hairline, lineWidth: 1)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(holding.ticker), \(holding.headline ?? "특이사항 없음"), \(holding.summary ?? "계속 지켜보고 있어요")")
+        .accessibilityLabel("\(holding.ticker), \(holding.headline ?? "특이사항 없음"), \(Self.summaryText(for: holding))")
+    }
+
+    static func summaryText(for holding: NewsroomHoldingBriefing) -> String {
+        let summary = holding.summary.map(NewsroomSummaryText.firstSentence(of:)) ?? ""
+        return summary.isEmpty ? "계속 지켜보고 있어요" : summary
     }
 }
 
@@ -191,6 +196,21 @@ struct NewsroomTickerLogo: View {
             .font(.pretendard(size * 0.42, weight: .bold))
             .foregroundStyle(Color.brand)
             .frame(width: size, height: size)
+    }
+}
+
+/// 목록 카드는 요약 전문 대신 첫 문장만 보여준다(전문은 상세 화면에서 읽는다).
+/// 마침표를 직접 찾으면 "7.30%"나 "U.S." 같은 값에서 잘리므로 ICU 문장 경계를 쓴다.
+enum NewsroomSummaryText {
+    static func firstSentence(of summary: String) -> String {
+        let trimmed = summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        var first: String?
+        trimmed.enumerateSubstrings(in: trimmed.startIndex..<trimmed.endIndex, options: .bySentences) { substring, _, _, stop in
+            guard let sentence = substring?.trimmingCharacters(in: .whitespacesAndNewlines), !sentence.isEmpty else { return }
+            first = sentence
+            stop = true
+        }
+        return first ?? trimmed
     }
 }
 

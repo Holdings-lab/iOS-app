@@ -23,6 +23,21 @@ struct NewsroomPresentationTests {
         #expect(NewsroomPercentFormat.weight(holding.weightPercent) == "7.12")
     }
 
+    @Test("목록 카드는 요약 전문 대신 첫 문장만 보여준다")
+    func showsOnlyFirstSentenceOfSummary() {
+        let body = "8월 28일 자산운용사 젝스는 QQQ가 8연속 하락장을 기록했다고 분석했다. 한편 마블 테크놀로지는 7% 하락했다."
+        #expect(NewsroomSummaryText.firstSentence(of: body) == "8월 28일 자산운용사 젝스는 QQQ가 8연속 하락장을 기록했다고 분석했다.")
+        // 소수점과 약어는 문장 끝이 아니다.
+        #expect(NewsroomSummaryText.firstSentence(of: "QQQ는 7.30% 비중이다. 다음 문장.") == "QQQ는 7.30% 비중이다.")
+        #expect(NewsroomSummaryText.firstSentence(of: "  마침표 없는 한 문장  ") == "마침표 없는 한 문장")
+    }
+
+    @Test("Quiet 행은 요약이 비어도 기본 문구를 유지한다")
+    func keepsQuietRowFallbackCopy() throws {
+        let holding = try #require(NewsroomDigestMockData.calmMixed.sortedHoldings.last)
+        #expect(NewsroomTickerQuietRow.summaryText(for: holding).isEmpty == false)
+    }
+
     @Test("시세는 현재가와 전일 종가로 계산하고 실제 보합 0%도 보존한다")
     func calculatesMarketChange() throws {
         for (price, expected) in [(99.0, -1.0), (102.0, 2.0), (100.0, 0.0)] {
