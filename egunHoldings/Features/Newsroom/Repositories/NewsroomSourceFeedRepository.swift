@@ -2,6 +2,10 @@ import Foundation
 
 /// 여러 종목의 선행 로딩은 피드 1회 조회를 공유한다. 계정/보유 종목을 공개 API에 보내지 않는다.
 actor NewsroomSourceFeedRepository {
+    /// 상세 캐시(CachedNewsroomDigestRepository.fetchDetail)와 같은 수명이다 —
+    /// 목록에서 미리 받아둔 피드가 상세를 여는 동안 먼저 만료돼 같은 조회를 다시 보내지 않도록 맞춘다.
+    private static let lifetime: TimeInterval = 300
+
     private let apiClient: APIClient
     private let currentDate: @Sendable () -> String
     private var cached: (date: String, feed: NewsroomSourceFeedDTO, expires: Date)?
@@ -32,7 +36,7 @@ actor NewsroomSourceFeedRepository {
         inFlight = (date, task)
         do {
             let feed = try await task.value
-            cached = (date, feed, Date().addingTimeInterval(60))
+            cached = (date, feed, Date().addingTimeInterval(Self.lifetime))
             inFlight = nil
             return feed.sources(for: ticker, on: date)
         } catch {

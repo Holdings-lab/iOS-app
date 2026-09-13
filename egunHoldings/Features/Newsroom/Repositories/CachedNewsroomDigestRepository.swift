@@ -3,6 +3,9 @@ import Foundation
 /// RootTabView가 로그인 세션마다 소유한다. 오늘/뉴스룸이 같은 요청을 기다리며,
 /// 성공한 최신 목록만 잠깐 재사용한다. 디스크나 전역 사용자 캐시는 만들지 않는다.
 actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
+    /// 상세 캐시에 담아 두는 종목 수 한도.
+    private static let detailCapacity = 60
+
     private let repository: NewsroomDigestRepositoryProtocol
     private let lifetime: TimeInterval
     private let now: @Sendable () -> Date
@@ -94,7 +97,9 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
             let detail = try await task.value
             if detailRequests[key]?.id == id {
                 details = details.filter { $0.value.expires > now() }
-                if details.count >= 20, let oldest = details.min(by: { $0.value.expires < $1.value.expires }) {
+                // 목록 진입이 보유 종목 전체를 미리 받으므로, 한 화면치 목록은 다 담을 만큼 잡는다.
+                if details.count >= Self.detailCapacity,
+                   let oldest = details.min(by: { $0.value.expires < $1.value.expires }) {
                     details[oldest.key] = nil
                 }
                 details[key] = (detail, now().addingTimeInterval(300))

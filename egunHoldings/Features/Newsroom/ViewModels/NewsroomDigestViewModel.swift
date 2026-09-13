@@ -12,6 +12,9 @@ final class NewsroomDigestViewModel: ObservableObject {
     private var repository: NewsroomDigestRepositoryProtocol
     private var prefetchTask: Task<Void, Never>?
 
+    /// 상세 선행 조회를 동시에 보낼 종목 수.
+    private static let prefetchBatchSize = 3
+
     init(userId: Int64? = nil, repository: NewsroomDigestRepositoryProtocol? = nil) {
         self.repository = repository ?? NewsroomDigestRepositoryFactory.makeDefault(userId: userId)
     }
@@ -72,27 +75,36 @@ final class NewsroomDigestViewModel: ObservableObject {
         NewsroomTickerDetailViewModel(holding: holding, repository: repository)
     }
 
+    /// 목록에 들어오면 보이는 모든 종목의 상세를 미리 받아둔다 — 어느 카드를 눌러도
+    /// 상세가 새 요청 없이 캐시(CachedNewsroomDigestRepository)에서 바로 열린다.
+    /// Quiet 종목도 카드를 누르면 같은 상세 화면을 열기 때문에 함께 받는다.
     private func loadSupplementaryContent() {
         prefetchTask?.cancel()
         guard let briefing, briefing.errorState == nil, briefing.emptyState == nil else { return }
-        let holdings = briefing.sortedHoldings.filter { $0.briefingType != .quiet }
+        let tickers = briefing.sortedHoldings.map(\.ticker)
         let repository = repository
         prefetchTask = Task {
-            await withTaskGroup(of: Void.self) { group in
-                for holding in holdings.prefix(2) {
-                    group.addTask {
-                        guard !Task.isCancelled,
-                              let sources = try? await repository.fetchSources(ticker: holding.ticker),
-                              !Task.isCancelled else { return }
-                        await NewsroomImageLoader.shared.preload(
-                            urls: [sources.first?.thumbnailURL].compactMap { $0 }
-                        )
-                    }
-                    group.addTask {
-                        guard !Task.isCancelled,
-                              let detail = try? await repository.fetchDetail(ticker: holding.ticker, briefingDate: nil),
-                              !Task.isCancelled else { return }
-                        await NewsroomImageLoader.shared.preload(urls: detail.imageCandidates)
+            // 화면 순서대로 작은 묶음씩 받아, 종목이 많아도 서버에 요청을 한꺼번에 쏟지 않는다.
+            for start in stride(from: 0, to: tickers.count, by: Self.prefetchBatchSize) {
+                guard !Task.isCancelled else { return }
+                let batch = tickers[start..<min(start + Self.prefetchBatchSize, tickers.count)]
+                await withTaskGroup(of: Void.self) { group in
+                    for ticker in batch {
+                        // 출처 피드는 종목과 무관한 한 번의 조회를 모두가 공유한다(NewsroomSourceFeedRepository).
+                        group.addTask {
+                            guard !Task.isCancelled,
+                                  let sources = try? await repository.fetchSources(ticker: ticker),
+                                  !Task.isCancelled else { return }
+                            await NewsroomImageLoader.shared.preload(
+                                urls: [sources.first?.thumbnailURL].compactMap { $0 }
+                            )
+                        }
+                        group.addTask {
+                            guard !Task.isCancelled,
+                                  let detail = try? await repository.fetchDetail(ticker: ticker, briefingDate: nil),
+                                  !Task.isCancelled else { return }
+                            await NewsroomImageLoader.shared.preload(urls: detail.imageCandidates)
+                        }
                     }
                 }
             }

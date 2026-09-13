@@ -168,6 +168,50 @@ struct NewsroomPresentationTests {
         await source.finishDetail()
     }
 
+    @Test("목록에 들어오면 Quiet까지 모든 보유 종목의 상세를 미리 받는다")
+    func prefetchesEveryHoldingOnLoad() async throws {
+        let source = PrefetchRecordingRepository()
+        let model = NewsroomDigestViewModel(repository: CachedNewsroomDigestRepository(repository: source))
+        model.load()
+
+        let tickers = await source.waitForDetails(count: 4)
+        #expect(Set(tickers) == ["AAPL", "NVDA", "MSFT", "QQQ"])
+
+        // 카드를 눌러 상세로 들어갈 때는 이미 받아둔 값을 쓰고 새 요청을 보내지 않는다.
+        let holding = try #require(NewsroomDigestMockData.calmMixed.holdings.first)
+        let detailModel = model.makeDetailViewModel(for: holding)
+        detailModel.load()
+        for await detail in detailModel.$detail.values {
+            if detail != nil { break }
+        }
+        #expect(await source.detailTickers.count == 4)
+    }
+}
+
+/// 목록 진입이 어떤 종목의 상세를 미리 받는지 기록한다.
+private actor PrefetchRecordingRepository: NewsroomDigestRepositoryProtocol {
+    private(set) var detailTickers: [String] = []
+    private var waiter: (count: Int, continuation: CheckedContinuation<Void, Never>)?
+
+    func fetchBriefing(briefingDate: String?) async throws -> NewsroomBriefing {
+        await NewsroomDigestMockData.calmMixed
+    }
+
+    func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail {
+        detailTickers.append(ticker)
+        if let waiter, detailTickers.count >= waiter.count {
+            self.waiter = nil
+            waiter.continuation.resume()
+        }
+        return await NewsroomDigestMockData.appleDetail
+    }
+
+    func waitForDetails(count: Int) async -> [String] {
+        if detailTickers.count < count {
+            await withCheckedContinuation { waiter = (count, $0) }
+        }
+        return detailTickers
+    }
 }
 
 private actor DetailCountingRepository: NewsroomDigestRepositoryProtocol {
