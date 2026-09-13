@@ -7,41 +7,40 @@ nonisolated struct LiveOnboardingRepository: OnboardingRepositoryProtocol {
         self.apiClient = apiClient
     }
 
-    func updateSettings(
+    func updateProfile(
         userId: Int64,
         investmentHorizon: InvestmentHorizon,
         maxDrawdownTolerance: MaxDrawdownTolerance,
-        investmentProfile: InvestmentProfile
+        investmentProfile: InvestmentProfile,
+        interests: [WatchAssetSector]
     ) async throws {
         let body = try NetworkJSONCoding.encodeJSON(
-            OnboardingSettingsPatchRequestDTO(
-                investmentHorizon: investmentHorizon.rawValue,
-                maxDrawdownTolerance: maxDrawdownTolerance.percentValue,
-                investmentProfile: investmentProfile.rawValue
+            OnboardingProfilePatchRequestDTO(
+                investmentHorizon: investmentHorizon.wireValue,
+                riskTolerance: maxDrawdownTolerance.wireValue,
+                investmentStyle: investmentProfile.wireValue,
+                interests: interests.map(\.wireValue)
             )
         )
         _ = try await apiClient.requestResult(
-            BackendEndpoint.updateInvestmentProfile(body: body),
-            as: EmptyAPIResult.self
-        )
-    }
-
-    func updateWatchAssets(userId: Int64, sectors: [WatchAssetSector]) async throws {
-        let body = try NetworkJSONCoding.encodeJSON(
-            WatchAssetsUpdateRequestDTO(sectors: sectors.map(\.rawValue))
-        )
-        _ = try await apiClient.requestResult(
-            BackendEndpoint.updateWatchAssets(body: body),
+            BackendEndpoint.updateOnboardingProfile(body: body),
             as: EmptyAPIResult.self
         )
     }
 
     func updateGoal(userId: Int64, financialGoal: FinancialGoal, targetAmount: Int64) async throws {
         let body = try NetworkJSONCoding.encodeJSON(
-            GoalUpdateRequestDTO(financialGoal: financialGoal.rawValue, targetAmount: targetAmount)
+            GoalUpdateRequestDTO(financialGoal: financialGoal.wireValue, targetAmount: targetAmount)
         )
         _ = try await apiClient.requestResult(
             BackendEndpoint.updateGoal(body: body),
+            as: EmptyAPIResult.self
+        )
+    }
+
+    func skipBrokerageConnection() async throws {
+        _ = try await apiClient.requestResult(
+            BackendEndpoint.skipOnboardingAccount(),
             as: EmptyAPIResult.self
         )
     }

@@ -1,6 +1,13 @@
 import Combine
 import Foundation
 
+struct OnboardingSubmissionFailure: Equatable {
+    let stepTitle: String
+    let endpoint: String
+    let errorCode: String
+    let message: String
+}
+
 @MainActor
 final class OnboardingFlowViewModel: ObservableObject {
     let userName: String
@@ -25,6 +32,7 @@ final class OnboardingFlowViewModel: ObservableObject {
     /// 계좌 연결을 계속해도 성공할 수 없는 인증 실패인지 여부.
     /// 화면은 이 상태일 때만 사용자를 로그인 화면으로 안내한다.
     @Published private(set) var requiresBrokerageReauthentication = false
+    @Published private(set) var onboardingSubmissionFailure: OnboardingSubmissionFailure?
 
     private let onboardingRepository: OnboardingRepositoryProtocol
     private let brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol
@@ -123,7 +131,19 @@ final class OnboardingFlowViewModel: ObservableObject {
         connectedInstitutionID = institution.id
     }
 
-    func skipBrokerageConnection() {
+    func skipBrokerageConnection() async -> Bool {
+        do {
+            try await onboardingRepository.skipBrokerageConnection()
+        } catch {
+            recordSubmissionFailure(
+                stepTitle: "계좌 연결 건너뛰기",
+                endpoint: "POST /api/onboarding/account/skip",
+                error: error
+            )
+            brokerageLinkErrorMessage = onboardingSubmissionFailure?.message
+            return false
+        }
+
         connectedInstitutionID = nil
         isBrokerageConnected = false
         activeLinkStage = nil
@@ -132,38 +152,56 @@ final class OnboardingFlowViewModel: ObservableObject {
         brokerageAccountId = nil
         brokerageLinkErrorMessage = nil
         requiresBrokerageReauthentication = false
+        return true
     }
 
     // MARK: - Step 8: 완료 처리
 
-    /// 서버가 요청을 정상 수신했다는 응답을 받았을 때만 true를 반환한다. 실패/미응답이어도
-    /// 온보딩 자체는 막지 않되, 호출부(Step8 완료 화면)가 이 결과를 보고 목업 대기 여부를 결정한다.
-    func submitSettings(userId: Int64?) async -> Bool {
-        guard let userId else { return false }
+    /// 목표 금액은 `/api/goal`에서 먼저 저장한다. 이 API가 프로필 API와 별도여야 은퇴 목표의
+    /// 20억 원 상한을 보존할 수 있다.
+    func submitGoal(userId: Int64?) async -> Bool {
+        guard let userId else {
+            recordMissingUserFailure(stepTitle: "투자 목표", endpoint: "PATCH /api/goal")
+            return false
+        }
 
         do {
-            try await onboardingRepository.updateSettings(
+            onboardingSubmissionFailure = nil
+            try await onboardingRepository.updateGoal(
                 userId: userId,
-                investmentHorizon: investmentHorizon ?? .threeToFiveYears,
-                maxDrawdownTolerance: maxDrawdownTolerance ?? .withinTen,
-                investmentProfile: investmentProfile ?? .balanced
+                financialGoal: financialGoal,
+                targetAmount: targetAmount
             )
             return true
         } catch {
+            recordSubmissionFailure(stepTitle: "투자 목표", endpoint: "PATCH /api/goal", error: error)
             return false
         }
     }
 
-    func submitWatchAssets(userId: Int64?) async -> Bool {
-        guard let userId else { return false }
+    /// 관심 섹터를 포함한 프로필은 목표 저장 뒤, 마지막으로 한 번만 저장한다.
+    func submitProfile(userId: Int64?) async -> Bool {
+        guard let userId else {
+            recordMissingUserFailure(stepTitle: "맞춤 설정", endpoint: "PATCH /api/onboarding/profile")
+            return false
+        }
 
         do {
-            try await onboardingRepository.updateWatchAssets(
+            onboardingSubmissionFailure = nil
+            try await onboardingRepository.updateProfile(
                 userId: userId,
-                sectors: Array(selectedWatchAssets)
+                investmentHorizon: investmentHorizon ?? .threeToFiveYears,
+                maxDrawdownTolerance: maxDrawdownTolerance ?? .withinTen,
+                investmentProfile: investmentProfile ?? .balanced,
+                interests: selectedWatchAssets.sorted { $0.rawValue < $1.rawValue }
             )
             return true
         } catch {
+            recordSubmissionFailure(
+                stepTitle: "맞춤 설정",
+                endpoint: "PATCH /api/onboarding/profile",
+                error: error
+            )
             return false
         }
     }
@@ -257,20 +295,46 @@ final class OnboardingFlowViewModel: ObservableObject {
         }
     }
 
-    func submitGoal(userId: Int64?) async -> Bool {
-        guard let userId else { return false }
+    private func recordMissingUserFailure(stepTitle: String, endpoint: String) {
+        onboardingSubmissionFailure = OnboardingSubmissionFailure(
+            stepTitle: stepTitle,
+            endpoint: endpoint,
+            errorCode: "AUTH_REQUIRED",
+            message: "로그인 정보를 확인할 수 없어요. 다시 로그인해 주세요."
+        )
+        logSubmissionFailure(onboardingSubmissionFailure!)
+    }
 
-        do {
-            try await onboardingRepository.updateGoal(
-                userId: userId,
-                financialGoal: financialGoal,
-                targetAmount: targetAmount
-            )
-            return true
-        } catch {
-            APIFallbackLog.log("PATCH /api/users/\(userId)/goal", error: error)
-            return false
+    private func recordSubmissionFailure(stepTitle: String, endpoint: String, error: Error) {
+        let networkError = error as? NetworkError
+        let errorCode: String
+        let message: String
+
+        switch networkError {
+        case .apiFailure(_, let code, let serverMessage):
+            errorCode = code
+            message = serverMessage
+        case .httpStatus(let statusCode):
+            errorCode = "HTTP_\(statusCode)"
+            message = error.localizedDescription
+        default:
+            errorCode = "REQUEST_FAILED"
+            message = error.localizedDescription
         }
+
+        onboardingSubmissionFailure = OnboardingSubmissionFailure(
+            stepTitle: stepTitle,
+            endpoint: endpoint,
+            errorCode: errorCode,
+            message: message
+        )
+        logSubmissionFailure(onboardingSubmissionFailure!)
+    }
+
+    private func logSubmissionFailure(_ failure: OnboardingSubmissionFailure) {
+        #if DEBUG
+        print("[Onboarding] \(failure.endpoint) failed (\(failure.errorCode)): \(failure.message)")
+        #endif
     }
 
     func makeOnboardingResult() -> OnboardingResult {

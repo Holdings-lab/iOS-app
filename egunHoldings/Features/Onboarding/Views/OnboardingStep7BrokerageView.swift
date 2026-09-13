@@ -12,6 +12,7 @@ struct OnboardingStep7BrokerageView: View {
     @State private var isProgressCollapsed = false
     @State private var isSkipConfirmationPresented = false
     @State private var isLinking = false
+    @State private var isSkipping = false
     @State private var isLinkCompleted = false
     @State private var isLinkErrorPresented = false
     @State private var isRevealed = false
@@ -103,9 +104,18 @@ struct OnboardingStep7BrokerageView: View {
             titleVisibility: .visible
         ) {
             Button("지금은 건너뛸게요") {
-                viewModel.skipBrokerageConnection()
-                onSkip()
+                Task {
+                    isSkipping = true
+                    let didSkip = await viewModel.skipBrokerageConnection()
+                    isSkipping = false
+                    if didSkip {
+                        onSkip()
+                    } else {
+                        isLinkErrorPresented = true
+                    }
+                }
             }
+            .disabled(isSkipping)
 
             Button("계좌 연결하기", role: .cancel) {}
         }

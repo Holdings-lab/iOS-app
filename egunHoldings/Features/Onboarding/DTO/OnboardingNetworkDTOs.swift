@@ -1,13 +1,10 @@
 import Foundation
 
-nonisolated struct WatchAssetsUpdateRequestDTO: Encodable {
-    let sectors: [String]
-}
-
-nonisolated struct OnboardingSettingsPatchRequestDTO: Encodable {
+nonisolated struct OnboardingProfilePatchRequestDTO: Encodable {
     let investmentHorizon: String
-    let maxDrawdownTolerance: Int
-    let investmentProfile: String
+    let riskTolerance: String
+    let investmentStyle: String
+    let interests: [String]
 }
 
 nonisolated struct GoalUpdateRequestDTO: Encodable {
