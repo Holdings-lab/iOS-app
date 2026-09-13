@@ -52,11 +52,12 @@ nonisolated struct NewsroomHoldingBriefingDTO: Decodable, Sendable {
     let logoUrl: String?
     let weightPct: Double
     let briefingType: NewsroomBriefingTypeDTO
+    let dailyChangePct: Double?
     let headline: String?
     let summary: String?
     let detailPath: String?
 
-    // 구 서버 dailyChangePct는 모델 예측값이므로 시세로 사용하지 않는다.
+    /// 오늘 등락은 서버가 주는 값만 쓴다 — 앱에서 외부 시세 API를 직접 호출하지 않는다.
     func toDomain() -> NewsroomHoldingBriefing {
         NewsroomHoldingBriefing(
             ticker: ticker,
@@ -64,7 +65,7 @@ nonisolated struct NewsroomHoldingBriefingDTO: Decodable, Sendable {
             logoURL: NewsroomRemoteURL.parse(logoUrl),
             weightPercent: weightPct,
             briefingType: NewsroomBriefingType(dto: briefingType),
-            dailyChangePercent: nil,
+            dailyChangePercent: dailyChangePct,
             headline: headline,
             summary: summary,
             detailPath: detailPath
@@ -127,6 +128,7 @@ nonisolated struct NewsroomStockMetaDTO: Decodable, Sendable {
     let ticker: String
     let name: String
     let logoUrl: String?
+    let dailyChangePct: Double?
     let weightPct: Double?
 
     func toDomain() -> NewsroomStockMeta {
@@ -134,7 +136,7 @@ nonisolated struct NewsroomStockMetaDTO: Decodable, Sendable {
             ticker: ticker,
             name: name,
             logoURL: NewsroomRemoteURL.parse(logoUrl),
-            dailyChangePercent: nil,
+            dailyChangePercent: dailyChangePct,
             weightPercent: weightPct
         )
     }

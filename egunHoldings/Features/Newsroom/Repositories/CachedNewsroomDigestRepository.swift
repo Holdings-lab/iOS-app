@@ -33,6 +33,8 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
         return try await startBriefingFetch()
     }
 
+    /// 사용자가 직접 당겨서 새로고침한 경우다. 목록을 기다리던 화면이 곧 이 함수의
+    /// 새 결과를 받으므로, 이전 요청은 취소해 서버 부하를 남기지 않는다.
     func refreshBriefing() async throws -> NewsroomBriefing {
         invalidateDetails()
         cached = nil
@@ -40,10 +42,12 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
         return try await startBriefingFetch()
     }
 
+    /// 잔고 동기화 같은 다른 탭의 사건으로 캐시만 버리는 경로다(LiveTodayRepository.invalidateNews).
+    /// 여기서 취소하면 마침 뉴스룸을 보고 있던 사용자의 화면이 대신 실패하므로 떼어내기만 한다.
     func invalidateBriefing() async {
         invalidateDetails()
         cached = nil
-        cancelInFlightBriefing()
+        detachInFlightBriefing()
     }
 
     private func startBriefingFetch() async throws -> NewsroomBriefing {
@@ -68,8 +72,14 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
     }
 
     private func cancelInFlightBriefing() {
-        // 새로고침/자산 변경 전의 응답은 새 캐시에 들어갈 수 없고, 서버 부하도 남길 이유가 없다.
         inFlight?.task.cancel()
+        inFlight = nil
+    }
+
+    /// 진행 중인 요청을 캐시에서 떼어낼 뿐, 취소하지는 않는다.
+    /// 공유 Task라서 취소하면 그 응답을 기다리던 화면까지 같이 실패한다 —
+    /// 결과가 새 캐시에 들어가지 않는 건 `startBriefingFetch`의 세대(id) 비교가 이미 보장한다.
+    private func detachInFlightBriefing() {
         inFlight = nil
     }
 
@@ -97,17 +107,15 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
         }
     }
 
-    func fetchQuote(ticker: String) async -> NewsroomMarketQuote? {
-        await repository.fetchQuote(ticker: ticker)
-    }
-
     func fetchSources(ticker: String) async throws -> [NewsroomSourceItem] {
         try await repository.fetchSources(ticker: ticker)
     }
 
+    /// 상세도 같은 이유로 취소하지 않는다. 상세는 목록과 달리 다른 화면(상세 뷰)이 직접
+    /// 기다리고 있어서, 목록 새로고침이든 잔고 갱신이든 여기서 취소해 버리면 마침 상세를 연
+    /// 사용자만 "상세 정보를 불러오지 못했어요"를 보게 된다.
     private func invalidateDetails() {
         details.removeAll()
-        detailRequests.values.forEach { $0.task.cancel() }
         detailRequests.removeAll()
     }
 }

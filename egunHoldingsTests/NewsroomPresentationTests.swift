@@ -14,13 +14,24 @@ struct NewsroomPresentationTests {
         #expect(scrambled.sortedHoldings.last?.weightPercent == 35)
     }
 
-    @Test("예측값과 기여도를 실제 오늘 등락으로 표시하지 않는다")
-    func ignoresPredictionFields() throws {
-        let data = Data(#"{"ticker":"QQQ","name":"QQQ","weightPct":7.12,"briefingType":"Hero","dailyChangePct":0,"totalAssetImpactPct":0}"#.utf8)
-        let holding = try JSONDecoder().decode(NewsroomHoldingBriefingDTO.self, from: data).toDomain()
-        #expect(holding.dailyChangePercent == nil)
+    @Test("오늘 등락은 서버가 준 값만 쓰고 없으면 미확인으로 둔다")
+    func usesServerSuppliedDailyChange() throws {
+        let hero = Data(#"{"ticker":"QQQ","name":"QQQ","weightPct":7.12,"briefingType":"Hero","dailyChangePct":-1.25}"#.utf8)
+        let holding = try JSONDecoder().decode(NewsroomHoldingBriefingDTO.self, from: hero).toDomain()
+        #expect(holding.dailyChangePercent == -1.25)
         #expect(holding.weightPercent == 7.12)
         #expect(NewsroomPercentFormat.weight(holding.weightPercent) == "7.12")
+
+        let quiet = Data(#"{"ticker":"XLV","name":"XLV","weightPct":2,"briefingType":"Quiet"}"#.utf8)
+        #expect(try JSONDecoder().decode(NewsroomHoldingBriefingDTO.self, from: quiet).toDomain().dailyChangePercent == nil)
+    }
+
+    @Test("상세 헤더의 등락도 상세 응답의 값을 그대로 쓴다")
+    func usesServerSuppliedDetailChange() throws {
+        let data = Data(#"{"ticker":"XLE","name":"SPDR ENERGY SELECT SECTOR","logoUrl":null,"dailyChangePct":0.3,"weightPct":1.3}"#.utf8)
+        let stock = try JSONDecoder().decode(NewsroomStockMetaDTO.self, from: data).toDomain()
+        #expect(stock.dailyChangePercent == 0.3)
+        #expect(stock.weightPercent == 1.3)
     }
 
     @Test("목록 카드는 요약 전문 대신 첫 문장만 보여준다")
@@ -36,22 +47,6 @@ struct NewsroomPresentationTests {
     func keepsQuietRowFallbackCopy() throws {
         let holding = try #require(NewsroomDigestMockData.calmMixed.sortedHoldings.last)
         #expect(NewsroomTickerQuietRow.summaryText(for: holding).isEmpty == false)
-    }
-
-    @Test("시세는 현재가와 전일 종가로 계산하고 실제 보합 0%도 보존한다")
-    func calculatesMarketChange() throws {
-        for (price, expected) in [(99.0, -1.0), (102.0, 2.0), (100.0, 0.0)] {
-            let response = try chart(price: price, previous: 100)
-            let quote = try #require(response.quote(for: "QQQ", now: Date(timeIntervalSince1970: 1_000)))
-            #expect(abs(quote.changePercent - expected) < 0.000_001)
-        }
-    }
-
-    @Test("전일 종가 0, 잘못된 티커, 오래된 시세는 미확인으로 둔다")
-    func rejectsInvalidQuote() throws {
-        #expect(try chart(price: 99, previous: 0).quote(for: "QQQ") == nil)
-        #expect(try chart(price: 99, previous: 100).quote(for: "NVDA") == nil)
-        #expect(try chart(price: 99, previous: 100).quote(for: "QQQ", now: Date(timeIntervalSince1970: 900_000)) == nil)
     }
 
     @Test("이미지 URL 결측값을 버리고 출처의 유효한 이미지를 사용한다")
@@ -80,6 +75,25 @@ struct NewsroomPresentationTests {
         await repository.invalidateBriefing()
         _ = try await repository.fetchDetail(ticker: "AAPL", briefingDate: nil)
         #expect(await source.count == 3)
+    }
+
+    @Test("자산 갱신이 끼어들어도 열려 있는 상세 요청은 끝까지 간다")
+    func keepsOpenDetailRequestAliveThroughInvalidation() async throws {
+        // 잔고가 갱신되면 Today 탭이 invalidateNews() → invalidateBriefing()을 호출한다.
+        // 그때 마침 상세를 열어 둔 사용자의 요청까지 취소되면 안 된다.
+        let source = GatedDetailRepository()
+        let repository = CachedNewsroomDigestRepository(repository: source)
+        async let opened = repository.fetchDetail(ticker: "AAPL", briefingDate: nil)
+
+        await source.waitUntilRequestStarted()
+        await repository.invalidateBriefing()
+        await source.release()
+        #expect(try await opened.headline.isEmpty == false)
+
+        // 무효화 뒤의 진입은 캐시를 재사용하지 않고 새로 조회한다.
+        await source.release()
+        _ = try await repository.fetchDetail(ticker: "AAPL", briefingDate: nil)
+        #expect(await source.count == 2)
     }
 
     @Test("상세 실패는 캐시하지 않아 다음 진입에서 재시도한다")
@@ -154,11 +168,6 @@ struct NewsroomPresentationTests {
         await source.finishDetail()
     }
 
-    private func chart(price: Double, previous: Double) throws -> NewsroomChartResponse {
-        try JSONDecoder().decode(NewsroomChartResponse.self, from: Data(
-            #"{"chart":{"result":[{"meta":{"symbol":"QQQ","regularMarketPrice":\#(price),"previousClose":\#(previous),"regularMarketTime":1000}}]}}"#.utf8
-        ))
-    }
 }
 
 private actor DetailCountingRepository: NewsroomDigestRepositoryProtocol {
@@ -173,6 +182,47 @@ private actor DetailCountingRepository: NewsroomDigestRepositoryProtocol {
         if count == 1 && failFirst { throw URLError(.timedOut) }
         try await Task.sleep(for: .milliseconds(20))
         return await NewsroomDigestMockData.appleDetail
+    }
+}
+
+/// 요청이 실제로 서버까지 나간 순간을 테스트가 붙잡을 수 있게 한 스텁.
+/// 진행 중인 요청에 무효화가 끼어드는 순서를 타이밍에 기대지 않고 재현한다.
+private actor GatedDetailRepository: NewsroomDigestRepositoryProtocol {
+    private(set) var count = 0
+    private var started: CheckedContinuation<Void, Never>?
+    private var gate: CheckedContinuation<Void, Never>?
+    private var pendingRelease = false
+
+    func fetchBriefing(briefingDate: String?) async throws -> NewsroomBriefing {
+        await NewsroomDigestMockData.calmMixed
+    }
+
+    func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail {
+        count += 1
+        started?.resume()
+        started = nil
+        if pendingRelease {
+            pendingRelease = false
+        } else {
+            await withCheckedContinuation { gate = $0 }
+        }
+        try Task.checkCancellation()
+        return await NewsroomDigestMockData.appleDetail
+    }
+
+    func waitUntilRequestStarted() async {
+        guard count == 0 else { return }
+        await withCheckedContinuation { started = $0 }
+    }
+
+    /// 대기 중인 요청을 풀어 준다. 아직 시작 전이면 다음 요청이 그냥 통과한다.
+    func release() {
+        if let gate {
+            self.gate = nil
+            gate.resume()
+        } else {
+            pendingRelease = true
+        }
     }
 }
 

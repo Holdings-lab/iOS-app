@@ -54,6 +54,17 @@ nonisolated final class AuthRefreshInterceptor: RequestInterceptor {
         dueTo error: any Error,
         completion: @escaping @Sendable (RetryResult) -> Void
     ) {
+        // 앱이 한동안 유휴 상태였다면 서버가 이미 닫은 keep-alive 커넥션을 재사용하게 되고,
+        // 그 뒤 첫 요청만 -1005로 끊긴다(응답 자체가 없어 401 재시도 경로에도 걸리지 않는다).
+        // 새 커넥션으로 다시 보내면 그대로 성공하므로 부작용이 없는 GET만 한 번 재시도한다.
+        if request.retryCount < Self.transientRetryLimit,
+           request.request?.httpMethod == "GET",
+           Self.isRetriableTransportError(error) {
+            TokenDebugLog.log("연결 끊김 감지 → \(request.request?.url?.path ?? "?") 새 커넥션으로 1회 재시도")
+            completion(.retry)
+            return
+        }
+
         guard
             request.response?.statusCode == 401,
             request.request?.value(forHTTPHeaderField: "Authorization") != nil
@@ -76,6 +87,18 @@ nonisolated final class AuthRefreshInterceptor: RequestInterceptor {
                 completion(.doNotRetryWithError(error))
             }
         }
+    }
+}
+
+extension AuthRefreshInterceptor {
+    static let transientRetryLimit = 1
+
+    /// 재시도해도 안전하고, 재시도하면 실제로 달라지는 전송 계층 오류만 고른다.
+    /// 연결 없음/타임아웃처럼 다시 보내도 같은 결과인 오류는 호출자에게 그대로 전달한다.
+    static func isRetriableTransportError(_ error: any Error) -> Bool {
+        let underlying = (error as? AFError)?.underlyingError ?? error
+        guard let urlError = underlying as? URLError else { return false }
+        return urlError.code == .networkConnectionLost
     }
 }
 

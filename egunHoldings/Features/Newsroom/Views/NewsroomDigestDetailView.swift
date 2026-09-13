@@ -21,7 +21,7 @@ struct NewsroomDigestDetailView: View {
             ticker: viewModel.holding.ticker,
             name: viewModel.holding.name,
             logoURL: viewModel.detail?.stock.logoURL ?? viewModel.holding.logoURL,
-            dailyChangePercent: viewModel.quote?.changePercent ?? viewModel.holding.dailyChangePercent,
+            dailyChangePercent: viewModel.detail?.stock.dailyChangePercent ?? viewModel.holding.dailyChangePercent,
             weightPercent: viewModel.holding.weightPercent
         )
     }
@@ -185,8 +185,8 @@ struct NewsroomDigestDetailView: View {
                         .font(.pretendard(12.5, weight: .semibold))
                         .foregroundStyle(Color.textSecondary)
                 }
-                if let asOf = viewModel.quote?.asOf ?? viewModel.holding.quoteAsOf {
-                    Text("\(NewsroomDigestDateFormat.asOfAtText(for: asOf)) · Yahoo Finance · 시세 지연 가능")
+                if let asOf = viewModel.detail?.asOfAt {
+                    Text(NewsroomDigestDateFormat.asOfAtText(for: asOf))
                         .font(.pretendard(10.5, weight: .medium))
                         .foregroundStyle(Color.textTertiary)
                         .fixedSize(horizontal: false, vertical: true)

@@ -10,7 +10,6 @@ final class NewsroomDigestViewModel: ObservableObject {
     @Published private(set) var refreshStatusMessage: String?
 
     private var repository: NewsroomDigestRepositoryProtocol
-    private var quoteTask: Task<Void, Never>?
     private var prefetchTask: Task<Void, Never>?
 
     init(userId: Int64? = nil, repository: NewsroomDigestRepositoryProtocol? = nil) {
@@ -50,16 +49,10 @@ final class NewsroomDigestViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
+            // 등락률도 브리핑 응답에 함께 오므로 따로 보존할 상태가 없다.
             let fetched = try await repository.refreshBriefing()
-            // 별도 시세를 보존해 새로고침 때 숫자가 사라지지 않도록 한다.
-            let previous = briefing
-            let merged = fetched.replacingHoldings(fetched.holdings.map { holding in
-                guard let old = previous?.holdings.first(where: { $0.ticker == holding.ticker }),
-                      let asOf = old.quoteAsOf, let change = old.dailyChangePercent else { return holding }
-                return holding.replacingQuote(NewsroomMarketQuote(changePercent: change, asOf: asOf))
-            })
-            let unchanged = merged == previous
-            briefing = merged
+            let unchanged = fetched == briefing
+            briefing = fetched
             errorMessage = nil
             loadSupplementaryContent()
             if unchanged {
@@ -80,28 +73,10 @@ final class NewsroomDigestViewModel: ObservableObject {
     }
 
     private func loadSupplementaryContent() {
-        quoteTask?.cancel()
         prefetchTask?.cancel()
         guard let briefing, briefing.errorState == nil, briefing.emptyState == nil else { return }
         let holdings = briefing.sortedHoldings.filter { $0.briefingType != .quiet }
         let repository = repository
-        quoteTask = Task { [weak self] in
-            // 작은 묶음으로 요청해 종목이 많아도 시세 서버에 요청을 한꺼번에 쏟지 않는다.
-            for start in stride(from: 0, to: holdings.count, by: 3) {
-                guard !Task.isCancelled else { return }
-                await withTaskGroup(of: (String, NewsroomMarketQuote?).self) { group in
-                    for holding in holdings[start..<min(start + 3, holdings.count)] {
-                        group.addTask { (holding.ticker, await repository.fetchQuote(ticker: holding.ticker)) }
-                    }
-                    for await (ticker, quote) in group {
-                        guard !Task.isCancelled, let quote, let current = self?.briefing else { continue }
-                        self?.briefing = current.replacingHoldings(current.holdings.map {
-                            $0.ticker == ticker ? $0.replacingQuote(quote) : $0
-                        })
-                    }
-                }
-            }
-        }
         prefetchTask = Task {
             await withTaskGroup(of: Void.self) { group in
                 for holding in holdings.prefix(2) {

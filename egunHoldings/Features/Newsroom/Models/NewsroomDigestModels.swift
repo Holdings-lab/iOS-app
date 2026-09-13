@@ -54,15 +54,8 @@ nonisolated struct NewsroomHoldingBriefing: Identifiable, Equatable, Hashable, S
     let headline: String?
     let summary: String?
     let detailPath: String?
-    var quoteAsOf: Date? = nil
 
     var id: String { ticker }
-
-    func replacingQuote(_ quote: NewsroomMarketQuote) -> Self {
-        Self(ticker: ticker, name: name, logoURL: logoURL, weightPercent: weightPercent,
-             briefingType: briefingType, dailyChangePercent: quote.changePercent,
-             headline: headline, summary: summary, detailPath: detailPath, quoteAsOf: quote.asOf)
-    }
 }
 
 nonisolated struct NewsroomEmptyState: Equatable, Sendable {

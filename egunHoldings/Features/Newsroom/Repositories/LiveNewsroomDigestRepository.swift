@@ -5,7 +5,6 @@ import Foundation
 /// 계산해서 응답하므로 (예전 다이제스트처럼 백그라운드 생성 후 폴링하는 상태가 없다) 재시도/대기 로직이 없다.
 nonisolated struct LiveNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
     private let apiClient: APIClient
-    private let quotes = NewsroomMarketQuoteRepository()
     private let sources: NewsroomSourceFeedRepository
 
     init(apiClient: APIClient = APIClientFactory.makeDefault()) {
@@ -39,10 +38,6 @@ nonisolated struct LiveNewsroomDigestRepository: NewsroomDigestRepositoryProtoco
             as: NewsroomTickerDetailResponseDTO.self
         )
         return response.toDomain()
-    }
-
-    func fetchQuote(ticker: String) async -> NewsroomMarketQuote? {
-        await quotes.fetch(ticker: ticker)
     }
 
     func fetchSources(ticker: String) async throws -> [NewsroomSourceItem] {

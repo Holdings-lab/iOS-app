@@ -10,7 +10,6 @@ final class NewsroomTickerDetailViewModel: ObservableObject {
     @Published private(set) var detail: NewsroomTickerDetail?
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
-    @Published private(set) var quote: NewsroomMarketQuote?
     @Published private(set) var earlySources: [NewsroomSourceItem] = []
 
     var imageCandidates: [URL] {
@@ -42,10 +41,6 @@ final class NewsroomTickerDetailViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
-        Task { [weak self] in
-            guard let self else { return }
-            quote = await repository.fetchQuote(ticker: holding.ticker)
-        }
         Task { [weak self] in
             guard let self else { return }
             earlySources = (try? await repository.fetchSources(ticker: holding.ticker)) ?? []

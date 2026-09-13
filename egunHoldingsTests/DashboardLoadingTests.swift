@@ -50,6 +50,24 @@ struct DashboardLoadingTests {
         #expect(await source.count == 2)
     }
 
+    @Test("다른 탭의 캐시 무효화는 진행 중인 뉴스룸 요청을 취소하지 않는다")
+    func invalidationLeavesInFlightBriefingRunning() async throws {
+        // 잔고 동기화가 끝나면 Today 탭이 invalidateNews() → invalidateBriefing()을 호출한다.
+        // 사용자가 직접 새로고침한 게 아니므로, 뉴스룸을 열어 둔 화면의 요청을 끊으면 안 된다.
+        let source = BlockingNewsroomRepository()
+        let cache = CachedNewsroomDigestRepository(repository: source)
+        let opened = Task { try await cache.fetchBriefing(briefingDate: nil) }
+        await source.waitUntilFirstRequestStarts()
+
+        await cache.invalidateBriefing()
+        #expect(await source.firstRequestWasCancelled == false)
+
+        // 무효화됐으므로 그 결과는 캐시에 남지 않고 다음 조회는 새로 나간다.
+        _ = try await cache.fetchBriefing(briefingDate: nil)
+        #expect(await source.count == 2)
+        opened.cancel()
+    }
+
     @Test("실패 응답은 캐시하지 않고 다음 호출에서 재시도한다")
     func retriesFailedRequest() async throws {
         let source = CountingNewsroomRepository(failFirst: true)
