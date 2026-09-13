@@ -109,15 +109,15 @@ final class NewsroomDigestViewModel: ObservableObject {
                         guard !Task.isCancelled,
                               let sources = try? await repository.fetchSources(ticker: holding.ticker),
                               !Task.isCancelled else { return }
-                        _ = await NewsroomImageLoader.shared.image(
-                            urls: [sources.first?.thumbnailURL].compactMap { $0 }, articleURL: sources.first?.url
+                        await NewsroomImageLoader.shared.preload(
+                            urls: [sources.first?.thumbnailURL].compactMap { $0 }
                         )
                     }
                     group.addTask {
                         guard !Task.isCancelled,
                               let detail = try? await repository.fetchDetail(ticker: holding.ticker, briefingDate: nil),
                               !Task.isCancelled else { return }
-                        _ = await NewsroomImageLoader.shared.image(urls: detail.imageCandidates, articleURL: detail.primaryArticleURL)
+                        await NewsroomImageLoader.shared.preload(urls: detail.imageCandidates)
                     }
                 }
             }

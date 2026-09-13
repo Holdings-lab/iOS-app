@@ -17,6 +17,12 @@ final class NewsroomImageLoader {
         images.countLimit = 30
     }
 
+    /// 목록 진입 시에는 서버가 제공한 이미지 주소만 미리 받는다.
+    /// 기사 메타데이터 폴백은 BrowserEngineKit 프로세스를 띄우므로 실제 상세 화면에서만 실행한다.
+    func preload(urls: [URL]) async {
+        _ = await image(urls: urls)
+    }
+
     func image(urls: [URL], articleURL: URL? = nil) async -> UIImage? {
         let key = (urls.map(\.absoluteString) + [articleURL?.absoluteString ?? ""]).joined(separator: "\n")
         guard !urls.isEmpty || articleURL != nil else { return nil }

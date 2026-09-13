@@ -92,6 +92,17 @@ struct NewsroomPresentationTests {
         #expect(first === second)
     }
 
+    @Test("목록 이미지 선조회는 직접 URL만 받아 상세 화면의 캐시에 재사용한다")
+    func preloadsDirectImages() async {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [NewsroomImageURLProtocol.self]
+        let loader = NewsroomImageLoader(session: URLSession(configuration: configuration))
+        let imageURL = URL(string: "https://example.com/image.png")!
+        await loader.preload(urls: [imageURL])
+        let loaded = await loader.image(urls: [imageURL])
+        #expect(loaded != nil)
+    }
+
     @Test("선행 출처 피드는 서버와 같은 종목 필터를 쓰고 기사 사진을 섞지 않는다")
     func matchesEarlySources() throws {
         let json = #"{"cards":[{"newsId":"1","title":"UPS news","date":"2026-09-10","link":"https://example.com/ups","thumbnailUrl":"nan","assetSignals":[{"ticker":"QQQ"}]},{"newsId":"2","title":"Apple news","date":"2026-09-09","link":"https://example.com/apple","thumbnailUrl":"https://example.com/apple.png","assetSignals":[{"ticker":"QQQ"}]},{"newsId":"3","title":"Daily ETF Flows: XLE","date":"2026-09-10","link":"https://example.com/xle"}]}"#
