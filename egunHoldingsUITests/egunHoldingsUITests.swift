@@ -77,6 +77,11 @@ final class egunHoldingsUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["총자산 기준 18%"].exists)
         let nvidia = app.buttons["newsroom.holding.NVDA"]
         XCTAssertLessThan(apple.frame.minY, nvidia.frame.minY)
+        let quietRow = app.descendants(matching: .any)["newsroom.holding.QQQ"]
+        XCTAssertTrue(quietRow.waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["newsroom.holding.QQQ"].exists)
+        quietRow.tap()
+        XCTAssertTrue(app.staticTexts["내 보유 종목"].waitForExistence(timeout: 3))
         attachScreenshot(of: app, named: "Newsroom - sorted holdings and allocation")
         apple.tap()
         XCTAssertTrue(app.staticTexts["내 자산의 18%"].waitForExistence(timeout: 5))

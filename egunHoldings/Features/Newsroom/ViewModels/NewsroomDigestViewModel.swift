@@ -75,13 +75,14 @@ final class NewsroomDigestViewModel: ObservableObject {
         NewsroomTickerDetailViewModel(holding: holding, repository: repository)
     }
 
-    /// 목록에 들어오면 보이는 모든 종목의 상세를 미리 받아둔다 — 어느 카드를 눌러도
-    /// 상세가 새 요청 없이 캐시(CachedNewsroomDigestRepository)에서 바로 열린다.
-    /// Quiet 종목도 카드를 누르면 같은 상세 화면을 열기 때문에 함께 받는다.
+    /// 목록에 들어오면 상세로 열 수 있는 종목의 자료를 미리 받아둔다 — 카드를 누르면
+    /// 캐시(CachedNewsroomDigestRepository)에서 바로 연다. Quiet 행은 정적 안내라 제외한다.
     private func loadSupplementaryContent() {
         prefetchTask?.cancel()
         guard let briefing, briefing.errorState == nil, briefing.emptyState == nil else { return }
-        let tickers = briefing.sortedHoldings.map(\.ticker)
+        let tickers = briefing.sortedHoldings
+            .filter { $0.briefingType != .quiet }
+            .map(\.ticker)
         let repository = repository
         prefetchTask = Task {
             // 화면 순서대로 작은 묶음씩 받아, 종목이 많아도 서버에 요청을 한꺼번에 쏟지 않는다.

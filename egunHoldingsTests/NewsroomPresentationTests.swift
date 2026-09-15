@@ -43,10 +43,10 @@ struct NewsroomPresentationTests {
         #expect(NewsroomSummaryText.firstSentence(of: "  마침표 없는 한 문장  ") == "마침표 없는 한 문장")
     }
 
-    @Test("Quiet 행은 요약이 비어도 기본 문구를 유지한다")
-    func keepsQuietRowFallbackCopy() throws {
-        let holding = try #require(NewsroomDigestMockData.calmMixed.sortedHoldings.last)
-        #expect(NewsroomTickerQuietRow.summaryText(for: holding).isEmpty == false)
+    @Test("Quiet 행은 상세 기사 대신 정적 안내문을 쓴다")
+    func usesStaticQuietRowCopy() {
+        #expect(NewsroomTickerQuietRow.titleText == "특이사항 없음")
+        #expect(NewsroomTickerQuietRow.subtitleText == "계속 지켜보고 있어요")
     }
 
     @Test("이미지 URL 결측값을 버리고 출처의 유효한 이미지를 사용한다")
@@ -168,14 +168,15 @@ struct NewsroomPresentationTests {
         await source.finishDetail()
     }
 
-    @Test("목록에 들어오면 Quiet까지 모든 보유 종목의 상세를 미리 받는다")
-    func prefetchesEveryHoldingOnLoad() async throws {
+    @Test("목록에 들어오면 상세로 열 수 있는 보유 종목만 미리 받는다")
+    func prefetchesOnlyInteractiveHoldingsOnLoad() async throws {
         let source = PrefetchRecordingRepository()
         let model = NewsroomDigestViewModel(repository: CachedNewsroomDigestRepository(repository: source))
         model.load()
 
-        let tickers = await source.waitForDetails(count: 4)
-        #expect(Set(tickers) == ["AAPL", "NVDA", "MSFT", "QQQ"])
+        let tickers = await source.waitForDetails(count: 3)
+        #expect(Set(tickers) == ["AAPL", "NVDA", "MSFT"])
+        #expect(!tickers.contains("QQQ"))
 
         // 카드를 눌러 상세로 들어갈 때는 이미 받아둔 값을 쓰고 새 요청을 보내지 않는다.
         let holding = try #require(NewsroomDigestMockData.calmMixed.holdings.first)

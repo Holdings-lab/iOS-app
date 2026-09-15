@@ -5,10 +5,15 @@ enum NewsroomTickerDigestRow: View {
     case compact(NewsroomHoldingBriefing, onOpenDetail: () -> Void)
     case quiet(NewsroomHoldingBriefing)
 
-    static func make(for holding: NewsroomHoldingBriefing, isHighlighted: Bool, onOpenDetail: @escaping () -> Void) -> NewsroomTickerDigestRow {
+    static func make(
+        for holding: NewsroomHoldingBriefing,
+        isHighlighted: Bool,
+        onOpenDetail: @escaping () -> Void
+    ) -> NewsroomTickerDigestRow {
         switch holding.briefingType {
         case .hero: return .hero(holding, isHighlighted: isHighlighted, onOpenDetail: onOpenDetail)
         case .compact: return .compact(holding, onOpenDetail: onOpenDetail)
+        // Quiet 행은 상세 뉴스가 없는 정적 안내이므로, 열기 동작을 보관하지 않는다.
         case .quiet: return .quiet(holding)
         }
     }
@@ -126,23 +131,23 @@ struct NewsroomTickerDigestCompactRow: View {
 
 struct NewsroomTickerQuietRow: View {
     let holding: NewsroomHoldingBriefing
+    static let titleText = "특이사항 없음"
+    static let subtitleText = "계속 지켜보고 있어요"
 
     var body: some View {
         HStack(spacing: 11) {
             NewsroomTickerLogo(ticker: holding.ticker, logoURL: holding.logoURL, size: 32)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(holding.ticker) · \(holding.headline ?? "특이사항 없음")")
-                    .font(.pretendard(13.5, weight: .semibold))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(holding.ticker) · 내 자산의 \(NewsroomPercentFormat.weight(holding.weightPercent))%")
+                    .font(.pretendard(13, weight: .semibold))
                     .foregroundStyle(Color.textPrimary)
 
-                Text(NewsroomTickerQuietRow.summaryText(for: holding))
+                Text("\(Self.titleText) · \(Self.subtitleText)")
                     .font(.pretendard(12.5, weight: .medium))
                     .foregroundStyle(Color.textSecondary)
             }
-            .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
@@ -153,12 +158,7 @@ struct NewsroomTickerQuietRow: View {
                 .stroke(Color.hairline, lineWidth: 1)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(holding.ticker), \(holding.headline ?? "특이사항 없음"), \(Self.summaryText(for: holding))")
-    }
-
-    static func summaryText(for holding: NewsroomHoldingBriefing) -> String {
-        let summary = holding.summary.map(NewsroomSummaryText.firstSentence(of:)) ?? ""
-        return summary.isEmpty ? "계속 지켜보고 있어요" : summary
+        .accessibilityLabel("\(holding.ticker), 내 자산의 \(NewsroomPercentFormat.weight(holding.weightPercent))%, \(Self.titleText), \(Self.subtitleText)")
     }
 }
 
