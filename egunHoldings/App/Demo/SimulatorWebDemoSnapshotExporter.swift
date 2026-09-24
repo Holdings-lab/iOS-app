@@ -6,8 +6,9 @@ import Foundation
 nonisolated enum SimulatorWebDemoSnapshotExporter {
     static func exportIfRequested() async {
         #if DEBUG
+        await connectLocalPreviewIfRequested()
         guard ProcessInfo.processInfo.arguments.contains("-export-web-demo-snapshot") else { return }
-        guard let session = KeychainAuthSessionStore().load() else { return }
+        guard let session = await currentSession() else { return }
 
         var responses: [String: Any] = [:]
         let paths = [
@@ -15,7 +16,10 @@ nonisolated enum SimulatorWebDemoSnapshotExporter {
             "/api/holdings",
             "/api/goal-progress",
             "/api/portfolio",
-            "/api/newsroom"
+            "/api/newsroom",
+            "/api/me/settings",
+            "/api/me/settings/interests",
+            "/api/interest-sectors"
         ]
 
         for path in paths {
@@ -66,6 +70,52 @@ nonisolated enum SimulatorWebDemoSnapshotExporter {
     }
 
     #if DEBUG
+    private static func currentSession() async -> AppUserSession? {
+        let sessionStore = KeychainAuthSessionStore()
+        guard let initial = sessionStore.load() else { return nil }
+        if initial.expiresAt > Date().addingTimeInterval(30) { return initial }
+
+        // The app may be refreshing on launch at the same time. Reuse its
+        // saved token if it finishes before starting another refresh.
+        for _ in 0..<5 {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            if let refreshed = sessionStore.load(), refreshed.expiresAt > Date().addingTimeInterval(30) {
+                return refreshed
+            }
+        }
+
+        let tokenStore = SessionAuthTokenStore(sessionStore: sessionStore)
+        let refresher = AlamofireAccessTokenRefresher(
+            tokenStore: tokenStore,
+            refreshURL: NetworkConfiguration.authRefreshURL
+        )
+        guard let payload = try? await refresher.refreshAccessToken() else { return nil }
+        tokenStore.updateTokens(payload)
+        return sessionStore.load()
+    }
+
+    /// Hands the current simulator session to a loopback-only preview process.
+    /// The token stays in process memory on both sides and is never written to the ZIP.
+    private static func connectLocalPreviewIfRequested() async {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-web-demo-bridge-nonce"),
+              arguments.indices.contains(index + 1),
+              let session = await currentSession(),
+              let url = URL(string: "http://127.0.0.1:4173/internal/simulator-session")
+        else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(arguments[index + 1], forHTTPHeaderField: "X-Demo-Bridge-Nonce")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "token": session.token,
+            "userId": session.userId.map(String.init) ?? ""
+        ])
+        request.timeoutInterval = 5
+        _ = try? await URLSession.shared.data(for: request)
+    }
+
     private static func fetch(path: String, token: String) async -> Any? {
         guard let url = URL(string: path, relativeTo: NetworkConfiguration.backendBaseURL)?.absoluteURL else {
             return nil

@@ -1,6 +1,9 @@
 import SwiftUI
 
 private enum AppLaunchMode {
+    static var opensSettingsForUITests: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing-settings")
+    }
     /// UI 테스트에서만 인증/네트워크 상태와 독립적으로 실제 메인 탭 레이아웃을 검사한다.
     static var opensMainTabsForUITests: Bool {
         ProcessInfo.processInfo.arguments.contains("-ui-testing-main-tabs")
@@ -28,7 +31,9 @@ struct egunHoldingsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if AppLaunchMode.opensMainTabsForUITests {
+            if AppLaunchMode.opensSettingsForUITests {
+                SettingsRootView(notificationCenter: AppNotificationCenter.shared)
+            } else if AppLaunchMode.opensMainTabsForUITests {
                 RootTabView(
                     initialTab: AppLaunchMode.initialMainTab,
                     brokerBalanceSnapshot: AppMockData.brokerBalanceSnapshot

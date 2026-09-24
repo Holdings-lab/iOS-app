@@ -7,7 +7,10 @@
     app.textContent = "현재 시뮬레이터 사용자의 데모 데이터를 찾지 못했습니다.";
     return;
   }
-  const state = { tab: "today", detailTicker: null, overlay: null, liveToday: false, liveError: null };
+  const state = { tab: "today", detailTicker: null, overlay: null, liveToday: false, liveError: null,
+    settingsPage: "root", settings: data.responses?.["/api/me/settings"]?.result || null, settingsError: null, settingsBusy: false, toast: null,
+    policyChangeAlert: null, briefingTime: null, interestOptions: [], selectedInterests: [], accounts: null,
+    goalCode: null, goalAmount: null, loginError: null };
   const number = new Intl.NumberFormat("ko-KR");
   const currency = (value, code = "KRW") => new Intl.NumberFormat(code === "KRW" ? "ko-KR" : "en-US", {
     style: "currency", currency: code, maximumFractionDigits: 0
@@ -110,7 +113,7 @@
         <button class="round-icon" data-action="settings" aria-label="설정">${icon("gear")}</button>
       </div></header>
       ${!state.liveToday && !state.liveError ? `<div class="fallback-banner">${icon("alert")}<span>실시간 데이터를 불러오지 못했어요. 일부 값은 이전 또는 예시 데이터일 수 있습니다.</span></div>` : ""}
-      ${state.liveError ? `<div class="fallback-banner">${icon("alert")}<span>${escapeHTML(state.liveError)}</span></div>` : ""}
+      ${state.liveError ? `<div class="fallback-banner">${icon("alert")}<span>${escapeHTML(state.liveError)} <button class="inline-link" data-action="login">실시간 연결</button></span></div>` : ""}
       <section class="card briefing-card"><div class="briefing-metric"><span class="eyebrow">고점 대비</span><strong>${drawdown > 0 ? "+" : ""}${drawdown}%</strong><span class="muted-pill">전일 대비 ${percent(briefing.dailyChangePct)}</span></div><p>${escapeHTML(message)}</p></section>
       <section class="card"><h2>보유 비중 Top 3</h2><div class="section-rule"></div><div class="today-holdings">${rows.map((row, index) => `<div class="today-holding"><div class="holding-line"><i class="dot" style="--dot:${colors[index % colors.length]}"></i><strong>${escapeHTML(row.ticker)}</strong><span class="truncate">${escapeHTML(row.name)}</span><b>${wholePercent(row.weightPct)}</b></div><div class="track"><span style="width:${Math.min(100, Number(row.weightPct) || 0)}%;background:${colors[index % colors.length]}"></span></div></div>`).join("")}</div></section>
       <button class="card goal-card card-button" data-action="asset"><div class="goal-top"><h2>목표 대비</h2><strong>${escapeHTML(goalStatus)}</strong></div><div class="track"><span style="width:${Math.min(100, goalProgress)}%"></span></div><div class="goal-bottom"><b>${goalProgress}%</b><span>${escapeHTML(goal?.goalLabel || "아직 목표가 없어요")} · ${escapeHTML(goal?.scheduleNote || "")}</span></div></button>
@@ -199,11 +202,84 @@
       <p class="detail-disclaimer">${escapeHTML(detail.footer?.aiNotice || "AI가 여러 기사를 요약했어요. 원문과 다를 수 있어요.")}</p></div></div>`;
   }
 
+  const goalLabels = { RETIREMENT: "은퇴 자금 마련", SEED_MONEY: "목돈(종잣돈) 모으기", SPARE_FUND: "여유자금 굴리기", HOUSE: "내 집 마련" };
+  const goalAmounts = { RETIREMENT: 500000000, SEED_MONEY: 50000000, SPARE_FUND: 30000000, HOUSE: 300000000 };
+  const goalRanges = { RETIREMENT: [100000000, 1500000000, 50000000], SEED_MONEY: [10000000, 300000000, 5000000],
+    SPARE_FUND: [5000000, 200000000, 5000000], HOUSE: [50000000, 1000000000, 50000000] };
+  const goalDescriptions = { RETIREMENT: "긴 호흡으로 은퇴 후 생활 자금을 쌓아가요", SEED_MONEY: "결혼, 창업 등 앞으로의 시작 자금을 준비해요",
+    SPARE_FUND: "당장 쓸 일 없는 자금을 편하게 굴려봐요", HOUSE: "주택 구입 시점에 맞춰 자금을 준비해요" };
+  const shortWon = amount => Number(amount) >= 100000000 ? `${Number(amount) / 100000000}억원` :
+    Number(amount) >= 10000000 ? `${Number(amount) / 10000000}천만원` : currency(amount);
+  const interestCatalog = [
+    ["SEMICONDUCTOR", "반도체"], ["AI_PLATFORM", "AI · 플랫폼"], ["SECONDARY_BATTERY", "2차전지"],
+    ["GREEN_ENERGY", "친환경 · 에너지"], ["FINANCE", "금융"], ["HEALTHCARE_BIO", "헬스케어 · 바이오"],
+    ["CONSUMER_RETAIL", "소비재 · 리테일"], ["REAL_ESTATE_REIT", "부동산 · 리츠"]
+  ].map(([code, label]) => ({ code, label }));
+  const settingRow = (label, sub, action, glyph, right = icon("chevron"), danger = false) => `<button class="setting-row ${danger ? "setting-danger" : ""}" data-action="${action}"><span class="setting-glyph">${glyph}</span><span class="setting-copy"><strong>${escapeHTML(label)}</strong>${sub ? `<small>${escapeHTML(sub)}</small>` : ""}</span><span class="setting-right">${right}</span></button>`;
+  const settingSection = (title, rows) => `<section class="setting-section"><h3>${escapeHTML(title)}</h3><div class="setting-group">${rows}</div></section>`;
+  const settingsBack = title => `<header class="setting-nav"><button data-action="settings-back" aria-label="뒤로">${icon("back")}</button><strong>${escapeHTML(title)}</strong><span></span></header>`;
+
+  function renderSettingsRoot() {
+    const settings = state.settings;
+    const user = settings?.user;
+    const investment = settings?.investment;
+    const count = Number(investment?.connectedAccounts?.count || 0);
+    const expired = Number(investment?.connectedAccounts?.expiredCount || 0);
+    const policyOn = state.policyChangeAlert ?? settings?.notifications?.policyChangeAlert ?? false;
+    const time = state.briefingTime ?? settings?.notifications?.briefingTime ?? "09:00";
+    return `<header class="setting-large-head"><div><small>계정 및 앱 관리</small><h2>설정</h2></div><button data-action="close-overlay" aria-label="설정 닫기">${icon("close")}</button></header>
+      <div class="setting-scroll">
+        ${state.settingsError ? `<p class="setting-notice">${escapeHTML(state.settingsError)} <button data-action="settings-retry">다시 시도</button></p>` : ""}
+        ${expired ? `<button class="setting-issue" data-action="settings-accounts">연결된 계정 ${expired}개의 인증이 만료됐어요. <b>확인</b></button>` : ""}
+        <button class="setting-profile" data-action="settings-accounts"><span class="setting-avatar">${escapeHTML((user?.nickname || data.user?.userName || "투")[0])}</span><span><strong>${escapeHTML(user?.nickname || data.user?.userName || "투자자")}</strong><em>균형형</em><small>${escapeHTML(user?.email || "실시간 연결 후 이메일 표시")}</small></span>${icon("chevron")}</button>
+        ${settingSection("알림",
+          settingRow("정책 변화 알림", "중요 정책 변화를 알려드려요", "settings-policy-toggle", icon("settings-bell"), `<span class="setting-switch ${policyOn ? "on" : ""}" role="switch" aria-checked="${policyOn}"></span>`) +
+          `<div class="setting-row"><span class="setting-glyph">${icon("sun")}</span><span class="setting-copy"><strong>오늘 브리핑 시간</strong><small>선택한 시간에 오늘의 브리핑을 보내드려요</small></span><span class="setting-segments">${["08:00", "09:00", "10:00"].map(option => `<button data-action="settings-time" data-time="${option}" class="${time === option ? "selected" : ""}">${option.slice(0, 2)}시</button>`).join("")}</span></div>` +
+          settingRow("테스트 알림 보내기", "기기에 알림이 도착하는지 확인해요", "settings-test", icon("settings-send")))}
+        ${settingSection("투자 설정",
+          settingRow("투자 목표", `${investment?.goal?.label || "아직 목표가 없어요"}${investment?.goal ? ` · ${shortWon(state.goalAmount || 500000000)}` : ""}`, "settings-goal", icon("settings-target")) +
+          settingRow("연결 계좌", `${count}개${expired ? " · 주의 필요" : ""}`, "settings-accounts", icon("settings-account")) +
+          settingRow("관심 정책", `${investment?.interests?.count ?? 0}개`, "settings-interests", icon("settings-policy")))}
+        ${settingSection("계정",
+          settingRow("이메일", user?.email || "—", "settings-email", icon("settings-email"), "") +
+          settingRow("비밀번호 변경", "", "settings-password", icon("settings-lock")) +
+          settingRow("로그아웃", "", "settings-logout", icon("settings-logout")) +
+          settingRow("회원 탈퇴", "", "settings-delete", icon("settings-delete"), icon("chevron"), true) +
+          settingRow("개인정보 처리방침", "", "settings-document", icon("settings-privacy")) +
+          settingRow("이용약관", "", "settings-document", icon("settings-terms")))}
+        <p class="setting-version">v3.1.0</p>
+      </div>`;
+  }
+
+  function renderSettingsPage() {
+    const page = state.settingsPage;
+    if (page === "root") return renderSettingsRoot();
+    if (page === "accounts") {
+      const count = state.settings?.investment?.connectedAccounts?.count ?? 0;
+      return `${settingsBack("연결된 계좌")}<div class="setting-scroll setting-subpage"><p class="setting-notice">조회 전용으로 연결돼요. 주문 권한은 요청하지 않고, 언제든 해제할 수 있어요.</p><div class="setting-group">${state.accounts?.length ? state.accounts.map(account => `<div class="setting-row"><span class="setting-glyph">${icon("settings-account")}</span><span class="setting-copy"><strong>${escapeHTML(account.brokerName || account.accountNickname || "연결 계좌")}</strong><small>${escapeHTML(account.status || "상태 확인 중")}${account.lastSyncedAt ? ` · ${escapeHTML(asOfDate(account.lastSyncedAt))} 동기화` : ""}</small></span></div>`).join("") : `<div class="setting-summary"><strong>연결된 계좌 ${count}개</strong><small>${state.accounts ? "서버에 연결된 계좌가 없어요." : "서버에서 계좌 상태를 확인 중이에요."}</small></div>`}</div></div>`;
+    }
+    if (page === "goal") {
+      const code = state.goalCode || state.settings?.investment?.goal?.code || "RETIREMENT";
+      const [min, max, step] = goalRanges[code];
+      const amount = state.goalAmount || 500000000;
+      const displayMax = Math.max(max, amount);
+      return `${settingsBack("목표 설정")}<div class="setting-scroll setting-subpage"><h3>투자 목적</h3><div class="setting-choices">${Object.entries(goalLabels).map(([value, label]) => `<button class="${code === value ? "selected" : ""}" data-action="settings-goal-choice" data-value="${value}"><strong>${escapeHTML(label)}</strong><small>${escapeHTML(goalDescriptions[value])}</small></button>`).join("")}</div><h3>목표 금액</h3><div class="setting-amount-card"><strong id="setting-goal-value">${escapeHTML(shortWon(amount))}</strong><small>${amount === goalAmounts[code] ? "제안 금액 그대로" : "직접 조정한 금액"}</small><input type="range" min="${min}" max="${displayMax}" step="${step}" id="setting-goal-amount" value="${amount}" aria-label="목표 금액"><div><span>${shortWon(min)}</span><span>${shortWon(displayMax)}</span></div></div><button class="primary-button" data-action="settings-goal-save">저장</button></div>`;
+    }
+    if (page === "goal-confirm") return `${settingsBack("목표 설정")}<div class="setting-scroll setting-subpage"><div class="setting-group setting-summary"><strong>목표를 변경할까요?</strong><small>목표를 변경하면 진행 속도 추적이 처음부터 다시 시작돼요.</small></div><button class="primary-button" data-action="settings-goal-confirm-save">변경 저장</button><button class="setting-cancel" data-action="settings-goal">취소</button></div>`;
+    if (page === "interests") {
+      return `${settingsBack("관심 정책 카테고리")}<div class="setting-scroll setting-subpage"><p class="setting-notice">정책 신호 분석에 사용돼요. 1개 이상 5개 이하로 선택하세요.</p><div class="setting-choices">${state.interestOptions.map(item => `<button class="${state.selectedInterests.includes(item.code) ? "selected" : ""}" data-action="settings-interest-choice" data-value="${escapeHTML(item.code)}">${escapeHTML(item.label)}</button>`).join("")}</div><button class="primary-button" data-action="settings-interests-save">저장</button></div>`;
+    }
+    if (page === "password") return `${settingsBack("비밀번호 변경")}<form class="setting-scroll setting-subpage setting-form" id="settings-password-form"><label>현재 비밀번호<input name="currentPassword" type="password" required autocomplete="current-password"></label><label>새 비밀번호<input name="newPassword" type="password" required minlength="8" autocomplete="new-password"></label><label>새 비밀번호 확인<input name="confirmPassword" type="password" required minlength="8" autocomplete="new-password"></label><button class="primary-button" type="submit">변경하기</button></form>`;
+    if (page === "logout" || page === "delete") return `${settingsBack(page === "logout" ? "로그아웃" : "회원 탈퇴")}<div class="setting-scroll setting-subpage"><div class="setting-group setting-summary"><strong>${page === "logout" ? "로그아웃할까요?" : "정말 탈퇴하시겠어요?"}</strong><small>${page === "logout" ? "다시 로그인하면 이어서 사용할 수 있어요." : "계정과 모든 설정, 연결된 계좌 정보가 삭제되고 되돌릴 수 없어요."}</small></div><button class="primary-button" data-action="settings-shared-account">${page === "logout" ? "로그아웃" : "탈퇴하기"}</button></div>`;
+    return "";
+  }
+
   function renderOverlay() {
     if (!state.overlay) return "";
+    if (state.overlay === "login") return `<div class="overlay" data-action="close-overlay"><div class="sheet" role="dialog" aria-modal="true" aria-label="실시간 연결"><div class="sheet-handle"></div><div class="sheet-head"><h2>실시간 연결</h2><button data-action="close-overlay" aria-label="닫기">${icon("close")}</button></div><p>서버 계정으로 로그인하면 현재 데이터를 불러옵니다. 로그인 정보는 이 컴퓨터의 실행 중인 서버에만 전달됩니다.</p><form id="demo-login-form" class="setting-form"><label>이메일<input name="email" type="email" required autocomplete="username"></label><label>비밀번호<input name="password" type="password" required autocomplete="current-password"></label>${state.loginError ? `<p class="login-error">${escapeHTML(state.loginError)}</p>` : ""}<button class="primary-button" type="submit">연결하기</button></form></div></div>`;
     if (state.overlay === "connect") return `<div class="overlay" data-action="close-overlay"><div class="sheet" role="dialog" aria-modal="true" aria-label="계좌 연결"><div class="sheet-handle"></div><div class="sheet-head"><h2>계좌 연결</h2><button data-action="close-overlay" aria-label="닫기">${icon("close")}</button></div><p>한국투자증권 모의투자 계좌를 연결해 자산을 확인할 수 있어요.</p><div class="sheet-account"><strong>한국투자증권</strong><span>${data.cachedBrokerBalance ? "읽기 전용 계좌 연결됨" : "연결 전"}</span></div><button class="primary-button" data-action="close-overlay">확인</button></div></div>`;
     if (state.overlay === "notifications") return `<div class="overlay" data-action="close-overlay"><div class="sheet full-sheet" role="dialog" aria-modal="true" aria-label="알림"><div class="sheet-head"><h2>알림</h2><button data-action="close-overlay" aria-label="닫기">${icon("close")}</button></div><div class="centered-state"><h2>새로운 알림이 없어요</h2><p>새로운 분석이 도착하면 이곳에 알려드릴게요.</p></div></div></div>`;
-    if (state.overlay === "settings") return `<div class="overlay" data-action="close-overlay"><div class="sheet full-sheet" role="dialog" aria-modal="true" aria-label="설정"><div class="sheet-head"><h2>설정</h2><button data-action="close-overlay" aria-label="닫기">${icon("close")}</button></div><div class="settings-profile"><span class="profile-avatar">${escapeHTML(data.user?.userName?.[0] || "투")}</span><div><strong>${escapeHTML(data.user?.userName || "투자자")}</strong><small>내 투자 현황을 확인해 보세요</small></div></div><button class="settings-row" data-action="refresh">${icon("refresh")} 실시간 데이터 새로고침 ${icon("chevron")}</button><button class="settings-row" data-action="asset">${icon("pie")} 내 자산 보기 ${icon("chevron")}</button></div></div>`;
+    if (state.overlay === "settings") return `<div class="overlay settings-overlay"><div class="settings-sheet" role="dialog" aria-modal="true" aria-label="설정">${renderSettingsPage()}${state.toast ? `<div class="setting-toast" role="status">${escapeHTML(state.toast)}</div>` : ""}</div></div>`;
     return "";
   }
 
@@ -242,6 +318,118 @@
     render();
   }
 
+  async function apiJSON(path, method = "GET", payload) {
+    const response = await fetch(path, { method, cache: "no-store", headers: payload ? { "Content-Type": "application/json" } : {}, body: payload ? JSON.stringify(payload) : undefined });
+    const body = await response.json();
+    if (!response.ok || body.isSuccess === false) throw new Error(body.message || `HTTP ${response.status}`);
+    return body.result ?? body;
+  }
+
+  function toast(message) {
+    state.toast = message; render();
+    setTimeout(() => { if (state.toast === message) { state.toast = null; render(); } }, 3000);
+  }
+
+  async function loadSettings() {
+    state.settingsError = null;
+    try {
+      state.settings = await apiJSON("/api/me/settings");
+      state.policyChangeAlert = state.settings.notifications.policyChangeAlert;
+      state.briefingTime = state.settings.notifications.briefingTime;
+    } catch (error) {
+      state.settingsError = state.settings ? "저장된 설정을 보여드려요. 서버에 연결하면 최신 값으로 갱신됩니다." :
+        error.message === "실시간 API를 사용할 수 없어요." ? "서버 연결이 필요해요. 저장된 화면을 보여드려요." : `설정을 불러오지 못했어요: ${error.message}`;
+    }
+    render();
+  }
+
+  async function saveNotification(payload) {
+    if (state.settingsBusy) return;
+    const previousPolicy = state.policyChangeAlert;
+    const previousTime = state.briefingTime;
+    state.settingsBusy = true;
+    if (payload.policyChangeAlert !== undefined) state.policyChangeAlert = payload.policyChangeAlert;
+    if (payload.briefingTime !== undefined) state.briefingTime = payload.briefingTime;
+    render();
+    try {
+      const saved = await apiJSON("/api/me/settings/notifications", "PATCH", payload);
+      state.policyChangeAlert = saved.policyChangeAlert;
+      state.briefingTime = saved.briefingTime;
+      if (state.settings) state.settings.notifications = saved;
+      toast("알림 설정을 저장했어요");
+    } catch (error) {
+      state.policyChangeAlert = previousPolicy; state.briefingTime = previousTime;
+      toast(`알림 설정을 저장하지 못했어요: ${error.message}`);
+    } finally { state.settingsBusy = false; render(); }
+  }
+
+  async function openSettingsPage(page) {
+    state.settingsPage = page; render();
+    if (page === "accounts") {
+      try { state.accounts = await apiJSON("/api/accounts"); }
+      catch (error) { toast(`계좌 상태를 불러오지 못했어요: ${error.message}`); }
+      render();
+    }
+    if (page === "interests") {
+      try {
+        const selected = await apiJSON("/api/me/settings/interests");
+        state.selectedInterests = (selected.interests || []).map(item => item.code);
+        state.interestOptions = interestCatalog;
+        try { const options = await apiJSON("/api/interest-sectors"); if (options.options?.length) state.interestOptions = options.options; }
+        catch { /* The deployed API currently omits the catalog route; use its known enum. */ }
+      } catch (error) { toast(`관심 정책을 불러오지 못했어요: ${error.message}`); }
+      render();
+    }
+  }
+
+  async function handleSettingsAction(target) {
+    const action = target.dataset.action;
+    if (action === "settings-back") { state.settingsPage = state.settingsPage === "goal-confirm" ? "goal" : "root"; render(); return; }
+    if (action === "settings-retry") { await loadSettings(); return; }
+    if (action === "settings-email") return;
+    if (action === "settings-document") { toast("문서 준비 중이에요"); return; }
+    if (action === "settings-shared-account") { toast("공유 데모에서는 계정을 변경할 수 없어요"); return; }
+    if (action === "settings-policy-toggle") { await saveNotification({ policyChangeAlert: !(state.policyChangeAlert ?? false) }); return; }
+    if (action === "settings-time") { await saveNotification({ briefingTime: target.dataset.time }); return; }
+    if (action === "settings-test") {
+      if (state.settingsBusy) return;
+      state.settingsBusy = true;
+      try { const response = await apiJSON("/api/me/notifications/test", "POST"); toast(response.message || "테스트 알림을 보냈어요"); }
+      catch (error) { toast(`테스트 알림을 보내지 못했어요: ${error.message}`); }
+      finally { state.settingsBusy = false; }
+      return;
+    }
+    if (action === "settings-goal-choice") { state.goalCode = target.dataset.value; state.goalAmount = goalAmounts[state.goalCode]; render(); return; }
+    if (action === "settings-goal-save") {
+      const amount = Number(document.getElementById("setting-goal-amount")?.value);
+      if (!Number.isFinite(amount) || amount <= 0) { toast("목표 금액을 확인해 주세요"); return; }
+      state.goalAmount = amount;
+      state.settingsPage = "goal-confirm"; render(); return;
+    }
+    if (action === "settings-goal-confirm-save") {
+      const amount = state.goalAmount;
+      const code = state.goalCode || state.settings?.investment?.goal?.code || "RETIREMENT";
+      try {
+        await apiJSON("/api/goal", "PATCH", { financialGoal: code, targetAmount: amount });
+        state.goalAmount = amount; state.settingsPage = "root"; await loadSettings(); toast("목표를 저장했어요");
+      } catch (error) { toast(`목표를 저장하지 못했어요: ${error.message}`); }
+      return;
+    }
+    if (action === "settings-interest-choice") {
+      const code = target.dataset.value;
+      state.selectedInterests = state.selectedInterests.includes(code) ? state.selectedInterests.filter(item => item !== code) : [...state.selectedInterests, code];
+      render(); return;
+    }
+    if (action === "settings-interests-save") {
+      if (state.selectedInterests.length < 1 || state.selectedInterests.length > 5) { toast("1개 이상 5개 이하로 선택해 주세요"); return; }
+      try { await apiJSON("/api/me/settings/interests", "PATCH", { interests: state.selectedInterests }); state.settingsPage = "root"; await loadSettings(); toast("관심 정책을 저장했어요"); }
+      catch (error) { toast(`관심 정책을 저장하지 못했어요: ${error.message}`); }
+      return;
+    }
+    const pages = { "settings-accounts": "accounts", "settings-goal": "goal", "settings-interests": "interests", "settings-password": "password", "settings-logout": "logout", "settings-delete": "delete" };
+    if (pages[action]) await openSettingsPage(pages[action]);
+  }
+
   app.addEventListener("click", event => {
     const target = event.target.closest("[data-action]");
     if (!target) return;
@@ -253,13 +441,50 @@
     if (action === "detail") { state.detailTicker = target.dataset.ticker; state.tab = "newsroom"; render(); return; }
     if (action === "back") { state.detailTicker = null; render(); return; }
     if (action === "close-overlay") { state.overlay = null; render(); return; }
-    if (["settings", "notifications", "connect"].includes(action)) { state.overlay = action; render(); return; }
+    if (action.startsWith("settings-")) { handleSettingsAction(target); return; }
+    if (["settings", "notifications", "connect", "login"].includes(action)) { state.overlay = action; if (action === "settings") { state.settingsPage = "root"; loadSettings(); } render(); return; }
     if (action === "refresh") refreshLive();
+  });
+  app.addEventListener("submit", async event => {
+    if (event.target.id === "demo-login-form") {
+      event.preventDefault();
+      if (location.protocol === "file:") { state.loginError = "실시간 연결은 로컬 서버를 실행한 뒤 사용할 수 있어요."; render(); return; }
+      const values = new FormData(event.target);
+      try {
+        const response = await fetch("/api/demo-login", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: values.get("email"), password: values.get("password") }) });
+        const body = await response.json();
+        if (!response.ok || !body.connected) throw new Error(body.message || "로그인에 실패했어요.");
+        if (Number(body.userId) !== Number(data.user.userId)) {
+          data.user = { userId: body.userId, userName: "사용자" };
+          data.responses = {};
+          data.cachedBrokerBalance = null;
+          state.settings = null;
+        }
+        state.loginError = null;
+        await refreshLive();
+      } catch (error) { state.loginError = error.message; render(); }
+      return;
+    }
+    if (event.target.id !== "settings-password-form") return;
+    event.preventDefault();
+    const values = new FormData(event.target);
+    if (values.get("newPassword") !== values.get("confirmPassword")) { toast("새 비밀번호가 일치하지 않아요"); return; }
+    toast("비밀번호 변경은 공유 데모에서 사용할 수 없어요");
+  });
+  app.addEventListener("input", event => {
+    if (event.target.id !== "setting-goal-amount") return;
+    state.goalAmount = Number(event.target.value);
+    const label = document.getElementById("setting-goal-value");
+    if (label) label.textContent = shortWon(state.goalAmount);
   });
   document.addEventListener("keydown", event => {
     if (event.key === "Escape") { state.overlay = null; state.detailTicker = null; render(); }
   });
   render();
+  if (location.protocol !== "file:") fetch("/api/demo-status").then(response => response.json()).then(status => {
+    if (status.connected) refreshLive();
+  }).catch(() => {});
   setInterval(() => {
     const clock = document.querySelector(".status-bar strong");
     if (clock) clock.textContent = clockText();

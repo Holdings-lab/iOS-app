@@ -13,7 +13,18 @@ let symbols: [(String, String)] = [
     ("photo", "photo"),
     ("alert", "exclamationmark.triangle.fill"),
     ("refresh", "arrow.clockwise"),
-    ("external", "arrow.up.forward.square")
+    ("external", "arrow.up.forward.square"),
+    ("settings-bell", "bell.badge"),
+    ("settings-send", "arrow.up.right"),
+    ("settings-target", "target"),
+    ("settings-account", "building.columns"),
+    ("settings-policy", "doc.text"),
+    ("settings-email", "envelope"),
+    ("settings-lock", "lock"),
+    ("settings-logout", "rectangle.portrait.and.arrow.right"),
+    ("settings-delete", "person.crop.circle.badge.xmark"),
+    ("settings-privacy", "hand.raised"),
+    ("settings-terms", "doc.plaintext")
 ]
 
 let output = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
