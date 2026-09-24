@@ -83,7 +83,7 @@ nonisolated enum SimulatorWebDemoSnapshotExporter {
 
     private static let sensitiveKeys: Set<String> = [
         "token", "accesstoken", "refreshtoken", "password", "email",
-        "accountnumber", "accountproductcode", "appkey", "appsecret",
+        "accountnumber", "accountproductcode", "productcode", "appkey", "appsecret",
         "credentials", "authorization"
     ]
 
