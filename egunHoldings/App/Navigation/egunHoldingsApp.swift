@@ -35,6 +35,9 @@ struct egunHoldingsApp: App {
                 )
             } else {
                 StartView()
+                    .task {
+                        await SimulatorWebDemoSnapshotExporter.exportIfRequested()
+                    }
             }
         }
     }
