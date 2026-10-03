@@ -92,11 +92,11 @@ struct SettingsRootView: View {
             SettingsConfirmModal(
                 isPresented: activeModal == .logout,
                 title: "로그아웃할까요?",
-                desc: "다시 로그인하면 이어서 사용할 수 있어요.",
+                desc: "데모 화면입니다. 확인해도 실제 로그아웃은 실행되지 않아요.",
                 confirmLabel: "로그아웃",
                 onConfirm: {
                     activeModal = nil
-                    viewModel.notify("로그아웃했어요")
+                    viewModel.notify("데모 화면이에요. 로그아웃은 실행되지 않았어요")
                 },
                 onCancel: { activeModal = nil }
             )
@@ -105,12 +105,12 @@ struct SettingsRootView: View {
             SettingsConfirmModal(
                 isPresented: activeModal == .delete,
                 title: "정말 탈퇴하시겠어요?",
-                desc: "계정과 모든 설정, 연결된 계좌 정보가 삭제되고 되돌릴 수 없어요.",
+                desc: "데모 화면입니다. 확인해도 계정과 연결 정보는 삭제되지 않아요.",
                 confirmLabel: "탈퇴하기",
                 danger: true,
                 onConfirm: {
                     activeModal = nil
-                    viewModel.notify("탈퇴 요청을 접수했어요")
+                    viewModel.notify("데모 화면이에요. 계정은 삭제되지 않았어요")
                 },
                 onCancel: { activeModal = nil }
             )
