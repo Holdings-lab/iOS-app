@@ -108,10 +108,6 @@ nonisolated enum BackendEndpoint {
         Endpoint(baseURL: baseURL, path: "/api/onboarding/account/skip", method: .post, authorizationRequirement: .bearerToken)
     }
 
-    static func goal() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/goal-progress", authorizationRequirement: .bearerToken)
-    }
-
     static func updateGoal(body: Data) -> Endpoint {
         Endpoint(baseURL: baseURL, path: "/api/goal", method: .patch, body: body, authorizationRequirement: .bearerToken)
     }

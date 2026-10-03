@@ -27,6 +27,7 @@ struct AppRootView: View {
             case .main:
                 RootTabView(
                     userId: router.session?.userId,
+                    onboardingResult: router.session?.onboardingResult,
                     userAssetProfile: router.userAssetProfile,
                     portfolioSnapshot: router.portfolioSnapshot,
                     brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot,

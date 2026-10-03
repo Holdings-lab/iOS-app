@@ -23,7 +23,7 @@ struct OnboardingStep2TargetAmountView: View {
 
                 OnboardingV3QuestionHeader(
                     title: "목표 금액을 알려주세요",
-                    subtitle: "\(goal.title) 목적으로 자주 설정하는 금액이에요"
+                    subtitle: "1억원 단위로 목표 금액을 선택해요"
                 )
 
                 VStack(spacing: 20) {

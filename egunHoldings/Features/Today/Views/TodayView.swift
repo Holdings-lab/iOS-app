@@ -24,6 +24,7 @@ struct TodayView: View {
     @State private var presentedNotificationDetail: AppNotificationItem?
     @Binding private var externalSignalRoute: PolSignalRoute?
     private let userId: Int64?
+    private let onboardingResult: OnboardingResult?
     private let userAssetProfile: UserAssetProfile
     private let portfolioSnapshot: PortfolioSnapshot
     private let brokerBalanceSnapshot: BrokerBalanceSnapshot?
@@ -34,6 +35,7 @@ struct TodayView: View {
 
     init(
         userId: Int64? = nil,
+        onboardingResult: OnboardingResult? = nil,
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
@@ -46,6 +48,7 @@ struct TodayView: View {
         onAnalysisNotificationRequested: @escaping (PolSignalAnalysisPayload) -> Void = { _ in }
     ) {
         self.userId = userId
+        self.onboardingResult = onboardingResult
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
@@ -56,6 +59,7 @@ struct TodayView: View {
         _viewModel = StateObject(
             wrappedValue: viewModel ?? TodayViewModel(
                 userId: userId,
+                onboardingResult: onboardingResult,
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
                 brokerBalanceSnapshot: brokerBalanceSnapshot,
@@ -209,6 +213,12 @@ struct TodayView: View {
             .onChange(of: brokerBalanceSnapshot) { _, _ in
                 syncSessionData()
             }
+            .onChange(of: onboardingResult?.targetAmount) { _, _ in
+                syncSessionData()
+            }
+            .onChange(of: onboardingResult?.financialGoal) { _, _ in
+                syncSessionData()
+            }
             .onChange(of: policyNewsViewModel.presentedItem) { _, item in
                 syncPolicyNewsDestination(with: item)
             }
@@ -246,6 +256,7 @@ struct TodayView: View {
         viewModel.updateSessionData(
             userAssetProfile: userAssetProfile,
             portfolioSnapshot: portfolioSnapshot,
+            onboardingResult: onboardingResult,
             brokerBalanceSnapshot: brokerBalanceSnapshot
         )
     }

@@ -39,12 +39,7 @@ nonisolated final class AuthAccountStore: AuthAccountStoring, @unchecked Sendabl
         var mergedAccounts = storedAccounts
 
         for defaultAccount in AuthMockData.defaultRegisteredAccounts {
-            if let existingIndex = mergedAccounts.firstIndex(where: { account in
-                account.normalizedEmail == defaultAccount.normalizedEmail
-            }) {
-                // Demo accounts should remain deterministic even if an older local copy exists.
-                mergedAccounts[existingIndex] = defaultAccount
-            } else {
+            if !mergedAccounts.contains(where: { $0.normalizedEmail == defaultAccount.normalizedEmail }) {
                 mergedAccounts.append(defaultAccount)
             }
         }

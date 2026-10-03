@@ -119,6 +119,8 @@ struct DashboardLoadingTests {
             portfolioSnapshot: AppMockData.portfolioSnapshot
         )
         #expect(dashboard.newsItems.map(\.ticker) == ["NVDA"])
+        #expect(dashboard.goalProgress?.progressPercent == nil)
+        #expect(dashboard.fallbackMessage == nil)
     }
 
     @Test("실시간 Today API 실패는 목 데이터 사용 사실을 표시한다")
@@ -346,8 +348,6 @@ private struct DashboardAPIClient: APIClient {
             result = #"{"isAccountLinked":true,"drawdownPct":-2}"#
         case "/api/holdings":
             result = #"{"isAccountLinked":true,"holdings":[]}"#
-        case "/api/goal-progress":
-            result = #"{"isAccountLinked":true}"#
         case "/api/newsroom":
             if newsScenario == "failure" { throw URLError(.timedOut) }
             let holdings = newsScenario == "empty" ? "[]" :

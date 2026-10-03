@@ -259,14 +259,21 @@ final class AppRouter: ObservableObject {
 
     private func syncRegisteredAccount(with session: AppUserSession) {
         var accounts = accountStore.loadAll()
-        guard let index = accounts.firstIndex(where: { $0.normalizedEmail == normalizedEmail(from: session.email) }) else {
-            return
+        if let index = accounts.firstIndex(where: { $0.normalizedEmail == normalizedEmail(from: session.email) }) {
+            accounts[index].userId = session.userId
+            accounts[index].onboardingCompleted = session.onboardingCompleted
+            accounts[index].onboardingResult = session.onboardingResult
+            accounts[index].brokerBalanceSnapshot = session.brokerBalanceSnapshot
+        } else {
+            accounts.append(RegisteredAuthAccount(
+                userId: session.userId,
+                userName: session.userName,
+                email: session.email,
+                onboardingCompleted: session.onboardingCompleted,
+                onboardingResult: session.onboardingResult,
+                brokerBalanceSnapshot: session.brokerBalanceSnapshot
+            ))
         }
-
-        accounts[index].userId = session.userId
-        accounts[index].onboardingCompleted = session.onboardingCompleted
-        accounts[index].onboardingResult = session.onboardingResult
-        accounts[index].brokerBalanceSnapshot = session.brokerBalanceSnapshot
         accountStore.saveAll(accounts)
     }
 

@@ -15,6 +15,7 @@ final class TodayViewModel: ObservableObject {
 
     private let userId: Int64?
     private let repository: TodayRepositoryProtocol
+    private var onboardingResult: OnboardingResult?
     private var brokerBalanceSnapshot: BrokerBalanceSnapshot?
     private var didLoad = false
     private var refreshGeneration = 0
@@ -23,6 +24,7 @@ final class TodayViewModel: ObservableObject {
 
     init(
         userId: Int64? = nil,
+        onboardingResult: OnboardingResult? = nil,
         userAssetProfile: UserAssetProfile,
         portfolioSnapshot: PortfolioSnapshot,
         holdings: [TodayHolding] = TodayMockData.holdings,
@@ -38,21 +40,28 @@ final class TodayViewModel: ObservableObject {
 
         self.userId = userId
         self.repository = repository ?? TodayRepositoryFactory.makeDefault()
+        self.onboardingResult = onboardingResult
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.userAssetProfile = dashboard.userAssetProfile
         self.portfolioSnapshot = dashboard.portfolioSnapshot
         self.isAccountLinked = dashboard.isAccountLinked
         self.briefing = dashboard.briefing
         self.holdings = brokerBalanceSnapshot?.todayHoldings ?? dashboard.holdings
-        self.goalProgress = dashboard.goalProgress
+        self.goalProgress = Self.goalProgress(
+            userId: userId,
+            onboardingResult: onboardingResult,
+            brokerBalanceSnapshot: brokerBalanceSnapshot,
+            fallback: dashboard.goalProgress
+        )
         self.newsItems = userId == nil ? dashboard.newsItems : []
-        self.loadingSections = userId == nil ? [] : Set(TodaySection.allCases)
+        self.loadingSections = userId == nil ? [] : Set(TodaySection.allCases).subtracting([.goal])
     }
 
     /// Preview/test-only constructor that bypasses the mock-first init and injects a full dashboard directly.
     init(userId: Int64?, dashboard: TodayDashboard, loadState: TodayLoadState = .loaded, repository: TodayRepositoryProtocol? = nil) {
         self.userId = userId
         self.repository = repository ?? TodayRepositoryFactory.makeDefault()
+        self.onboardingResult = nil
         self.brokerBalanceSnapshot = nil
         self.userAssetProfile = dashboard.userAssetProfile
         self.portfolioSnapshot = dashboard.portfolioSnapshot
@@ -101,19 +110,29 @@ final class TodayViewModel: ObservableObject {
     func updateSessionData(
         userAssetProfile: UserAssetProfile,
         portfolioSnapshot: PortfolioSnapshot,
+        onboardingResult: OnboardingResult?,
         brokerBalanceSnapshot: BrokerBalanceSnapshot?
     ) {
         guard userAssetProfile != self.userAssetProfile
                 || portfolioSnapshot != self.portfolioSnapshot
+                || onboardingResult?.financialGoal != self.onboardingResult?.financialGoal
+                || onboardingResult?.targetAmount != self.onboardingResult?.targetAmount
                 || brokerBalanceSnapshot != self.brokerBalanceSnapshot
         else {
             return
         }
 
+        self.onboardingResult = onboardingResult
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
 
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
+        goalProgress = Self.goalProgress(
+            userId: userId,
+            onboardingResult: onboardingResult,
+            brokerBalanceSnapshot: brokerBalanceSnapshot,
+            fallback: goalProgress
+        )
         if let brokerBalanceSnapshot {
             holdings = brokerBalanceSnapshot.todayHoldings
         }
@@ -166,7 +185,7 @@ final class TodayViewModel: ObservableObject {
             loadState = .loading
         }
         if !hasLoadedDashboard {
-            loadingSections = Set(TodaySection.allCases)
+            loadingSections = Set(TodaySection.allCases).subtracting([.goal])
         }
 
         do {
@@ -199,8 +218,30 @@ final class TodayViewModel: ObservableObject {
         isAccountLinked = dashboard.isAccountLinked
         briefing = dashboard.briefing
         holdings = brokerBalanceSnapshot?.todayHoldings ?? dashboard.holdings
-        goalProgress = dashboard.goalProgress
+        goalProgress = Self.goalProgress(
+            userId: userId,
+            onboardingResult: onboardingResult,
+            brokerBalanceSnapshot: brokerBalanceSnapshot,
+            fallback: dashboard.goalProgress
+        )
         newsItems = dashboard.newsItems
+    }
+
+    private static func goalProgress(
+        userId: Int64?,
+        onboardingResult: OnboardingResult?,
+        brokerBalanceSnapshot: BrokerBalanceSnapshot?,
+        fallback: TodayGoalProgress?
+    ) -> TodayGoalProgress? {
+        if let onboardingResult {
+            let currentAssetAmount = brokerBalanceSnapshot?.totalEvaluationAmount
+                ?? AppMockData.brokerBalanceSnapshot.totalEvaluationAmount
+            return TodayLocalGoalProgress.make(
+                onboardingResult: onboardingResult,
+                currentAssetAmount: currentAssetAmount
+            )
+        }
+        return userId == nil ? fallback : nil
     }
 
     private static func errorMessage(for error: Error) -> String {

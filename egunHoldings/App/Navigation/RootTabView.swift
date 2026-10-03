@@ -8,6 +8,7 @@ enum RootTab: Hashable {
 
 struct RootTabView: View {
     let userId: Int64?
+    let onboardingResult: OnboardingResult?
     let userAssetProfile: UserAssetProfile
     let portfolioSnapshot: PortfolioSnapshot
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
@@ -21,6 +22,7 @@ struct RootTabView: View {
     init(
         initialTab: RootTab = .today,
         userId: Int64? = nil,
+        onboardingResult: OnboardingResult? = nil,
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
@@ -31,6 +33,7 @@ struct RootTabView: View {
             repository: NewsroomDigestRepositoryFactory.makeDefault(userId: userId)
         ))
         self.userId = userId
+        self.onboardingResult = onboardingResult
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
@@ -42,6 +45,7 @@ struct RootTabView: View {
         TabView(selection: $selectedTab) {
             TodayView(
                 userId: userId,
+                onboardingResult: onboardingResult,
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
                 brokerBalanceSnapshot: brokerBalanceSnapshot,

@@ -36,8 +36,9 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
 
         var briefing: (isAccountLinked: Bool?, value: TodayBriefing) = (nil, fallback.briefing)
         var holdings: (isAccountLinked: Bool?, value: [TodayHolding]) = (nil, fallback.holdings)
-        var goal: (isAccountLinked: Bool?, value: TodayGoalProgress?) = (nil, fallback.goalProgress)
         var news: [TodayNewsItem] = []
+        // 목표 진행률은 기기에 저장된 온보딩 목표와 자산 금액으로 뷰모델에서 계산한다.
+        onSection?(.goal(isAccountLinked: nil, nil))
 
         // 가장 느린 API를 기다리지 않고 완료된 섹션부터 화면에 전달한다.
         var fallbackMessage: String?
@@ -59,14 +60,6 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
                     fallbackMessage: result.fallbackMessage
                 )
             }
-            group.addTask {
-                let result = await fetchGoal(userId: userId, fallback: fallback.goalProgress)
-                return .goal(
-                    isAccountLinked: result.isAccountLinked,
-                    value: result.value,
-                    fallbackMessage: result.fallbackMessage
-                )
-            }
             group.addTask { .news(value: await fetchNews()) }
 
             for await section in group {
@@ -80,10 +73,6 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
                     holdings = (linked, value)
                     fallbackMessage = fallbackMessage ?? message
                     onSection?(.holdings(isAccountLinked: linked, value))
-                case let .goal(linked, value, message):
-                    goal = (linked, value)
-                    fallbackMessage = fallbackMessage ?? message
-                    onSection?(.goal(isAccountLinked: linked, value))
                 case let .news(value):
                     news = value
                     onSection?(.news(value))
@@ -95,10 +84,10 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
         return TodayDashboard(
             userAssetProfile: userAssetProfile,
             portfolioSnapshot: portfolioSnapshot,
-            isAccountLinked: briefing.isAccountLinked ?? holdings.isAccountLinked ?? goal.isAccountLinked ?? fallback.isAccountLinked,
+            isAccountLinked: briefing.isAccountLinked ?? holdings.isAccountLinked ?? fallback.isAccountLinked,
             briefing: briefing.value,
             holdings: holdings.value,
-            goalProgress: goal.value,
+            goalProgress: nil,
             newsItems: news,
             fallbackMessage: fallbackMessage
         )
@@ -132,22 +121,6 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
             return (response.isAccountLinked, response.toDomain(fallback: fallback), nil)
         } catch {
             APIFallbackLog.log("GET /api/holdings", error: error)
-            return (nil, fallback, Self.liveDataUnavailableMessage)
-        }
-    }
-
-    private func fetchGoal(
-        userId: Int64,
-        fallback: TodayGoalProgress?
-    ) async -> (isAccountLinked: Bool?, value: TodayGoalProgress?, fallbackMessage: String?) {
-        do {
-            let response = try await apiClient.requestResult(
-                BackendEndpoint.goal(),
-                as: TodayGoalResponseDTO.self
-            )
-            return (response.isAccountLinked, response.toDomain(fallback: fallback), nil)
-        } catch {
-            APIFallbackLog.log("GET /api/goal-progress", error: error)
             return (nil, fallback, Self.liveDataUnavailableMessage)
         }
     }
@@ -195,6 +168,5 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
 private enum TodayFetchResult: Sendable {
     case briefing(isAccountLinked: Bool?, value: TodayBriefing, fallbackMessage: String?)
     case holdings(isAccountLinked: Bool?, value: [TodayHolding], fallbackMessage: String?)
-    case goal(isAccountLinked: Bool?, value: TodayGoalProgress?, fallbackMessage: String?)
     case news(value: [TodayNewsItem])
 }

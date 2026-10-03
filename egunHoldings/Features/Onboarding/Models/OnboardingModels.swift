@@ -38,8 +38,8 @@ nonisolated enum FinancialGoal: String, CaseIterable, Identifiable, Codable, Sen
     var defaultTargetAmount: Int64 {
         switch self {
         case .retirement: return 500_000_000
-        case .seedMoney: return 50_000_000
-        case .surplusFunds: return 30_000_000
+        case .seedMoney: return 100_000_000
+        case .surplusFunds: return 100_000_000
         case .homePurchase: return 300_000_000
         }
     }
@@ -47,17 +47,14 @@ nonisolated enum FinancialGoal: String, CaseIterable, Identifiable, Codable, Sen
     var targetAmountSliderRange: ClosedRange<Double> {
         switch self {
         case .retirement: return 100_000_000...2_000_000_000
-        case .seedMoney: return 10_000_000...300_000_000
-        case .surplusFunds: return 5_000_000...200_000_000
-        case .homePurchase: return 50_000_000...1_000_000_000
+        case .seedMoney: return 100_000_000...300_000_000
+        case .surplusFunds: return 100_000_000...200_000_000
+        case .homePurchase: return 100_000_000...1_000_000_000
         }
     }
 
     var targetAmountSliderStep: Double {
-        switch self {
-        case .retirement, .homePurchase: return 10_000_000
-        case .seedMoney, .surplusFunds: return 5_000_000
-        }
+        100_000_000
     }
 }
 
