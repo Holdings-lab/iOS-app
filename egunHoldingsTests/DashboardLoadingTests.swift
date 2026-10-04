@@ -265,7 +265,7 @@ struct DashboardLoadingTests {
         let first = Task { await viewModel.refresh() }
         await source.waitUntilFirstRequestStarts()
         viewModel.cancelLoading()
-        await first.value
+        _ = await first.value
         #expect(!viewModel.isLoading)
         Task {
             try? await Task.sleep(for: .milliseconds(20))

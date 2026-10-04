@@ -181,12 +181,6 @@ struct TodayView: View {
                             openAnalysisNotification(payload)
                         }
                     )
-                case .today(.settings):
-                    // 설정 화면은 자체 NavigationStack을 가진 화면이라 여기서 push하지 않는다 —
-                    // NavigationStack 안에 NavigationStack을 push로 중첩하면 SwiftUI가
-                    // AnyNavigationPath.Error.comparisonTypeMismatch로 크래시한다.
-                    // 실제로는 isSettingsPresented(fullScreenCover)로만 열리므로 이 분기는 도달하지 않는다.
-                    EmptyView()
                 case .signal(.list):
                     EmptyView()
                 case .signal(.detail(let id)):
@@ -255,6 +249,16 @@ struct TodayView: View {
             }
             .task { await viewModel.observeNews() }
             .onDisappear { viewModel.cancelLoading() }
+            #if DEBUG
+            .overlay(alignment: .topLeading) {
+                if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {
+                    Text("로딩: \(viewModel.loadingSections.isEmpty ? 0 : 1)")
+                        .accessibilityIdentifier("ui.todayLoading")
+                        .font(.system(size: 9))
+                        .allowsHitTesting(false)
+                }
+            }
+            #endif
             .sheet(item: $presentedNotificationDetail) { item in
                 NewsDetailSheet(item: item)
                     .presentationDetents([.large])

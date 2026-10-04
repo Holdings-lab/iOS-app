@@ -63,6 +63,14 @@ struct NewsroomView: View {
         .task { await viewModel.observeBriefings() }
         .onDisappear { viewModel.cancelLoading() }
         #if DEBUG
+        .overlay(alignment: .topLeading) {
+            if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {
+                Text("로딩: \(viewModel.isLoading ? 1 : 0)")
+                    .accessibilityIdentifier("ui.newsroomLoading")
+                    .font(.system(size: 9))
+                    .allowsHitTesting(false)
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 scenarioMenu

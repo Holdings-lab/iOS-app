@@ -38,7 +38,7 @@ final class DashboardLifecycleUITests: XCTestCase {
         pullToRefresh(app)
         XCTAssertTrue(waitForVerifiedSwitches(1, in: app))
         XCTAssertTrue(app.tabBars.buttons["오늘"].isSelected)
-        XCTAssertTrue(waitForRefreshCount(0, in: app))
+        XCTAssertTrue(waitForLoadingToEnd(in: app))
         attach(app, name: "Today after returning during refresh")
         let secondNews = app.staticTexts["UI 서버 뉴스 2"]
         scrollTo(secondNews, in: app)
@@ -49,14 +49,14 @@ final class DashboardLifecycleUITests: XCTestCase {
         pullToRefresh(app)
         XCTAssertTrue(waitForVerifiedSwitches(2, in: app))
         XCTAssertTrue(app.tabBars.buttons["뉴스룸"].isSelected)
-        XCTAssertTrue(waitForRefreshCount(0, in: app))
+        XCTAssertTrue(waitForLoadingToEnd(in: app))
         XCTAssertTrue(app.staticTexts["UI 서버 뉴스 3"].waitForExistence(timeout: 8))
         attach(app, name: "Newsroom after returning during refresh")
         app.tabBars.buttons["오늘"].tap()
         let thirdNews = app.staticTexts["UI 서버 뉴스 3"]
         scrollTo(thirdNews, in: app)
         XCTAssertTrue(thirdNews.waitForExistence(timeout: 3))
-        XCTAssertTrue(waitForRefreshCount(0, in: app))
+        XCTAssertTrue(waitForLoadingToEnd(in: app))
         attach(app, name: "latest Newsroom response shared with Today")
     }
 
@@ -82,10 +82,11 @@ final class DashboardLifecycleUITests: XCTestCase {
             .press(forDuration: 0.1, thenDragTo: scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)))
     }
 
-    private func waitForRefreshCount(_ count: Int, in app: XCUIApplication) -> Bool {
-        let predicate = NSPredicate(format: "label == %@", "활성 새로고침: \(count)")
+    private func waitForLoadingToEnd(in app: XCUIApplication) -> Bool {
+        let identifier = app.tabBars.buttons["오늘"].isSelected ? "ui.todayLoading" : "ui.newsroomLoading"
+        let predicate = NSPredicate(format: "label == %@", "로딩: 0")
         return XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: predicate,
-                                                            object: app.staticTexts["ui.refreshControlCount"])],
+                                                            object: app.staticTexts[identifier])],
                               timeout: 3) == .completed
     }
 
