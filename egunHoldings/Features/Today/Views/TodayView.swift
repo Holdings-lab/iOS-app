@@ -252,7 +252,7 @@ struct TodayView: View {
             #if DEBUG
             .overlay(alignment: .topLeading) {
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {
-                    Text("로딩: \(viewModel.loadingSections.isEmpty ? 0 : 1)")
+                    Text("로딩: \(viewModel.loadState == .loading ? 1 : 0)")
                         .accessibilityIdentifier("ui.todayLoading")
                         .font(.system(size: 9))
                         .allowsHitTesting(false)

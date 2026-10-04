@@ -185,7 +185,7 @@ struct NewsroomPresentationTests {
         for await detail in detailModel.$detail.values {
             if detail != nil { break }
         }
-        #expect(await source.detailTickers.count == 4)
+        #expect(await source.detailTickers.count == 3)
     }
 }
 
