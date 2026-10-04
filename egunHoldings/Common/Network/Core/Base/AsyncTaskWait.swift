@@ -32,6 +32,7 @@ nonisolated enum AsyncTaskWait {
                     switch termination {
                     case .cancelled, .finished(.some): task.cancel()
                     case .finished(.none): break
+                    @unknown default: task.cancel()
                     }
                 }
             }

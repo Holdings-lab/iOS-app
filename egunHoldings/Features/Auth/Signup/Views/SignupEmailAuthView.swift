@@ -241,7 +241,7 @@ struct SignupEmailAuthView: View {
     private var emailLocalInput: some View {
         let isDirectEmailEntry = selectedDomain == .direct
 
-        VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: 8) {
             Text("이메일")
                 .font(.pretendard(13, weight: .medium))
                 .foregroundStyle(isDirectEmailEntry ? Color.textDisabled : Color.textTertiary)
