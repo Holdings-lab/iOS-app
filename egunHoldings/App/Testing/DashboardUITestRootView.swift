@@ -8,6 +8,9 @@ struct DashboardUITestRootView: View {
     @StateObject private var router: AppRouter
     @State private var newsroomRepository: CachedNewsroomDigestRepository
     @State private var refreshingControls = 0
+    @State private var verifiedSwitches = 0
+    @State private var isSwitching = false
+    @State private var didSwitchCurrentRefresh = false
     private let apiClient = DashboardUITestAPIClient()
 
     init() {
@@ -36,17 +39,37 @@ struct DashboardUITestRootView: View {
             settingsRepository: LiveSettingsRepository(apiClient: apiClient)
         )
         .overlay(alignment: .bottomLeading) {
-            Text("활성 새로고침: \(refreshingControls)")
-                .font(.system(size: 9))
-                .allowsHitTesting(false)
-                .accessibilityIdentifier("ui.refreshControlCount")
-                .padding(.bottom, 80)
+            VStack {
+                Text("활성 새로고침: \(refreshingControls)")
+                    .accessibilityIdentifier("ui.refreshControlCount")
+                Text("로딩 중 탭 왕복 확인: \(verifiedSwitches)")
+                    .accessibilityIdentifier("ui.verifiedTabSwitches")
+            }
+            .font(.system(size: 9))
+            .allowsHitTesting(false)
+            .padding(.bottom, 80)
         }
         .task {
             while !Task.isCancelled {
                 let active = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
                     .flatMap(\.windows).reduce(0) { $0 + countRefreshingControls(in: $1) }
                 refreshingControls = active > 0 ? 1 : 0
+                if active == 0 && !isSwitching { didSwitchCurrentRefresh = false }
+                if active > 0 && !isSwitching && !didSwitchCurrentRefresh && verifiedSwitches < 2
+                    && ProcessInfo.processInfo.arguments.contains("-ui-testing-switch-during-refresh") {
+                    isSwitching = true
+                    didSwitchCurrentRefresh = true
+                    let original: RootTab = verifiedSwitches == 0 ? .today : .newsroom
+                    NotificationCenter.default.post(name: .dashboardUITestTabRequested,
+                                                    object: original == .today ? RootTab.newsroom : .today)
+                    try? await Task.sleep(for: .milliseconds(200))
+                    NotificationCenter.default.post(name: .dashboardUITestTabRequested, object: original)
+                    try? await Task.sleep(for: .milliseconds(300))
+                    let afterReturn = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+                        .flatMap(\.windows).reduce(0) { $0 + countRefreshingControls(in: $1) }
+                    if afterReturn == 0 { verifiedSwitches += 1 }
+                    isSwitching = false
+                }
                 try? await Task.sleep(for: .milliseconds(100))
             }
         }
@@ -60,6 +83,10 @@ struct DashboardUITestRootView: View {
         let count = refreshing ? 1 : 0
         return count + view.subviews.reduce(0) { $0 + countRefreshingControls(in: $1) }
     }
+}
+
+extension Notification.Name {
+    static let dashboardUITestTabRequested = Notification.Name("dashboardUITestTabRequested")
 }
 
 private actor DashboardUITestNewsRepository: NewsroomDigestRepositoryProtocol {

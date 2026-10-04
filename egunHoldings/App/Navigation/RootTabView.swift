@@ -109,6 +109,13 @@ struct RootTabView: View {
         }
         .tint(AssetTabPalette.brand)
         .preferredColorScheme(.light)
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .dashboardUITestTabRequested)) { notification in
+            guard ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh"),
+                  let tab = notification.object as? RootTab else { return }
+            selectedTab = tab
+        }
+        #endif
         .onAppear {
             consumePendingPushRoute()
         }

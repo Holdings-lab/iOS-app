@@ -27,7 +27,7 @@ final class DashboardLifecycleUITests: XCTestCase {
     }
 
     func testRefreshControlsEndAfterSwitchingTabsAndNewsStaySynced() {
-        let app = launchDashboard()
+        let app = launchDashboard(switchDuringRefresh: true)
         let news = app.staticTexts["UI 서버 뉴스 1"]
         scrollTo(news, in: app)
         XCTAssertTrue(news.waitForExistence(timeout: 4))
@@ -36,10 +36,8 @@ final class DashboardLifecycleUITests: XCTestCase {
             app.scrollViews.firstMatch.swipeDown()
         }
         pullToRefresh(app)
-        XCTAssertTrue(waitForRefreshCount(1, in: app))
-        app.tabBars.buttons["뉴스룸"].tap()
-        XCTAssertTrue(app.buttons["newsroom.holding.NVDA"].waitForExistence(timeout: 4))
-        app.tabBars.buttons["오늘"].tap()
+        XCTAssertTrue(waitForVerifiedSwitches(1, in: app))
+        XCTAssertTrue(app.tabBars.buttons["오늘"].isSelected)
         XCTAssertTrue(waitForRefreshCount(0, in: app))
         attach(app, name: "Today after returning during refresh")
         let secondNews = app.staticTexts["UI 서버 뉴스 2"]
@@ -49,9 +47,8 @@ final class DashboardLifecycleUITests: XCTestCase {
         app.tabBars.buttons["뉴스룸"].tap()
         XCTAssertTrue(app.staticTexts["UI 서버 뉴스 2"].waitForExistence(timeout: 4))
         pullToRefresh(app)
-        XCTAssertTrue(waitForRefreshCount(1, in: app))
-        app.tabBars.buttons["오늘"].tap()
-        app.tabBars.buttons["뉴스룸"].tap()
+        XCTAssertTrue(waitForVerifiedSwitches(2, in: app))
+        XCTAssertTrue(app.tabBars.buttons["뉴스룸"].isSelected)
         XCTAssertTrue(waitForRefreshCount(0, in: app))
         XCTAssertTrue(app.staticTexts["UI 서버 뉴스 3"].waitForExistence(timeout: 8))
         attach(app, name: "Newsroom after returning during refresh")
@@ -63,14 +60,10 @@ final class DashboardLifecycleUITests: XCTestCase {
         attach(app, name: "latest Newsroom response shared with Today")
     }
 
-    private func launchDashboard() -> XCUIApplication {
+    private func launchDashboard(switchDuringRefresh: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
-        // XCTest가 refresh 애니메이션이 끝날 때까지 기다리면 '진행 중 탭 전환'을 검사할 수 없다.
-        // 테스트 러너의 자동 대기만 끄며 앱의 애니메이션/요청은 실제로 계속 실행한다.
-        let selector = NSSelectorFromString("setShouldWaitForQuiescence:")
-        XCTAssertTrue(app.responds(to: selector))
-        app.setValue(false, forKey: "shouldWaitForQuiescence")
         app.launchArguments = ["-ui-testing-dashboard-refresh"]
+        if switchDuringRefresh { app.launchArguments.append("-ui-testing-switch-during-refresh") }
         app.launch()
         XCTAssertTrue(app.tabBars.buttons["오늘"].waitForExistence(timeout: 5))
         return app
@@ -94,6 +87,13 @@ final class DashboardLifecycleUITests: XCTestCase {
         return XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: predicate,
                                                             object: app.staticTexts["ui.refreshControlCount"])],
                               timeout: 3) == .completed
+    }
+
+    private func waitForVerifiedSwitches(_ count: Int, in app: XCUIApplication) -> Bool {
+        let predicate = NSPredicate(format: "label == %@", "로딩 중 탭 왕복 확인: \(count)")
+        return XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: predicate,
+                                                            object: app.staticTexts["ui.verifiedTabSwitches"])],
+                              timeout: 5) == .completed
     }
 
     private func attach(_ app: XCUIApplication, name: String) {
