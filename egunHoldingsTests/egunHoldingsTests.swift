@@ -42,7 +42,7 @@ struct egunHoldingsTests {
     }
 }
 
-private struct SuccessfulEmptyResultClient: APIClient {
+nonisolated private struct SuccessfulEmptyResultClient: APIClient {
     nonisolated func request<T: Decodable>(_: Endpoint, as type: T.Type) async throws -> T {
         let data = Data(
             #"{"isSuccess":true,"code":"OK","message":"","result":null}"#.utf8

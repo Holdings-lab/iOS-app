@@ -195,7 +195,7 @@ private actor PrefetchRecordingRepository: NewsroomDigestRepositoryProtocol {
     private var waiter: (count: Int, continuation: CheckedContinuation<Void, Never>)?
 
     func fetchBriefing(briefingDate: String?) async throws -> NewsroomBriefing {
-        await NewsroomDigestMockData.calmMixed
+        NewsroomDigestMockData.calmMixed
     }
 
     func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail {
@@ -204,7 +204,7 @@ private actor PrefetchRecordingRepository: NewsroomDigestRepositoryProtocol {
             self.waiter = nil
             waiter.continuation.resume()
         }
-        return await NewsroomDigestMockData.appleDetail
+        return NewsroomDigestMockData.appleDetail
     }
 
     func waitForDetails(count: Int) async -> [String] {
@@ -220,13 +220,13 @@ private actor DetailCountingRepository: NewsroomDigestRepositoryProtocol {
     let failFirst: Bool
     init(failFirst: Bool = false) { self.failFirst = failFirst }
     func fetchBriefing(briefingDate: String?) async throws -> NewsroomBriefing {
-        await NewsroomDigestMockData.calmMixed
+        NewsroomDigestMockData.calmMixed
     }
     func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail {
         count += 1
         if count == 1 && failFirst { throw URLError(.timedOut) }
         try await Task.sleep(for: .milliseconds(20))
-        return await NewsroomDigestMockData.appleDetail
+        return NewsroomDigestMockData.appleDetail
     }
 }
 
@@ -239,7 +239,7 @@ private actor GatedDetailRepository: NewsroomDigestRepositoryProtocol {
     private var pendingRelease = false
 
     func fetchBriefing(briefingDate: String?) async throws -> NewsroomBriefing {
-        await NewsroomDigestMockData.calmMixed
+        NewsroomDigestMockData.calmMixed
     }
 
     func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail {
@@ -252,7 +252,7 @@ private actor GatedDetailRepository: NewsroomDigestRepositoryProtocol {
             await withCheckedContinuation { gate = $0 }
         }
         try Task.checkCancellation()
-        return await NewsroomDigestMockData.appleDetail
+        return NewsroomDigestMockData.appleDetail
     }
 
     func waitUntilRequestStarted() async {

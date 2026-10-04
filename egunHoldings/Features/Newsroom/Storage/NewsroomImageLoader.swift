@@ -78,17 +78,3 @@ final class NewsroomImageLoader {
         } catch { return nil }
     }
 }
-
-extension NewsroomTickerDetail {
-    var imageCandidates: [URL] {
-        // 다른 출처의 사진을 현재 헤드라인 사진으로 쓰지 않는다.
-        // 첫 출처에 사진이 없으면 해당 원문의 메타데이터를 조회한다.
-        if let primary = sources.first, primary.url != nil {
-            return [primary.thumbnailURL].compactMap { $0 }
-        }
-        return [imageURL ?? sources.first?.thumbnailURL].compactMap { $0 }
-            .filter { NewsroomRemoteURL.parse($0.absoluteString) != nil }
-    }
-
-    var primaryArticleURL: URL? { sources.compactMap(\.url).first }
-}

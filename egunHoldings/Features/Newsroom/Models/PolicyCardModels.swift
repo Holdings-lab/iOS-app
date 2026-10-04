@@ -46,21 +46,3 @@ enum PolicyImpactDelay: String {
     case oneMonth = "1개월"
     case threeMonths = "3개월"
 }
-
-struct PolicyUpdateSummary {
-    let updatedAtText: String
-    let sourceText: String
-    let reviewText: String
-}
-
-struct PolicyCardMeta {
-    let status: PolicyLifecycleState
-    let direction: PolicyPortfolioDirection
-    let exposurePercent: Int
-    let delay: PolicyImpactDelay
-    let confidence: Int
-    let supportingEvidence: [String]
-    let counterEvidence: String
-    let invalidationCondition: String
-    let updateSummary: PolicyUpdateSummary
-}
