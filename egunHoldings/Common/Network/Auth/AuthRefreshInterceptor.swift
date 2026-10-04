@@ -142,6 +142,15 @@ actor TokenRefreshCoordinator {
     private var refreshTask: (token: String, task: Task<AuthTokenPayload, Error>)?
 
     func refresh(using refresher: AccessTokenRefreshing, token: String, store: AuthTokenStore) async throws -> AuthTokenPayload {
+        // 401 처리 Task가 실행되기 전에 다른 요청의 갱신이 이미 끝났을 수 있다.
+        // 완료된 갱신을 다시 시작하면 회전된 리프레시 토큰을 불필요하게 재사용한다.
+        guard let currentToken = store.currentAccessToken() else {
+            throw NetworkError.missingRefreshToken
+        }
+        if currentToken != token {
+            return AuthTokenPayload(accessToken: currentToken, refreshToken: store.currentRefreshToken(),
+                                    expiresAt: store.currentExpiresAt() ?? .distantPast)
+        }
         if let refreshTask, refreshTask.token == token {
             TokenDebugLog.log("이미 진행 중인 갱신 요청에 합류합니다 (중복 호출 방지)")
             return try await refreshTask.task.value

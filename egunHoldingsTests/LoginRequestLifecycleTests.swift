@@ -66,6 +66,55 @@ struct LoginRequestLifecycleTests {
         #expect(AuthRefreshInterceptor.invalidatesSession(NetworkError.httpStatus(401)))
     }
 
+    @Test("재실행 시 갱신 서버 500은 저장된 로그인 정보를 유지한다")
+    func preservesBootstrapSessionOnTemporaryFailure() async throws {
+        let defaults = try #require(UserDefaults(suiteName: UUID().uuidString))
+        let store = AuthSessionStore(defaults: defaults)
+        store.save(AppUserSession(userId: 42, token: "expired", refreshToken: "refresh",
+                                 expiresAt: .distantPast, userName: "test", email: "test@example.invalid",
+                                 onboardingCompleted: true))
+        let router = AppRouter(store: store, accountStore: AuthAccountStore(defaults: defaults),
+                               tokenRefresher: CountingLoginRefresher(error: .httpStatus(500)))
+        await waitUntil { router.route != .loading }
+        #expect(router.route == .main)
+        #expect(store.load()?.token == "expired")
+    }
+
+    @Test("이미 갱신된 토큰의 뒤늦은 401은 추가 갱신을 만들지 않는다")
+    func skipsRefreshForSupersededToken() async throws {
+        let store = LoginTestTokenStore()
+        let refresher = CountingLoginRefresher(error: nil)
+        let coordinator = TokenRefreshCoordinator()
+        _ = try await coordinator.refresh(using: refresher, token: "old", store: store)
+        let late = try await coordinator.refresh(using: refresher, token: "old", store: store)
+        #expect(late.accessToken == "new")
+        #expect(await refresher.count == 1)
+    }
+
+    @Test("이전 세션의 폐기 알림이 새 로그인을 지우지 않는다")
+    func ignoresOldClearNotificationAfterNewLogin() async throws {
+        let defaults = try #require(UserDefaults(suiteName: UUID().uuidString))
+        let store = AuthSessionStore(defaults: defaults)
+        let router = AppRouter(store: store, accountStore: AuthAccountStore(defaults: defaults))
+        // receive(on: .main)으로 전달될 때까지 새 로그인 저장이 먼저 끝난다.
+        NotificationCenter.default.post(name: .authTokensDidClear, object: nil)
+        router.handleLoginSuccess(loginSession: loginSession)
+        // 메인 큐 알림 전달 뒤에 검사한다.
+        await withCheckedContinuation { continuation in
+            DispatchQueue.main.async { continuation.resume() }
+        }
+        #expect(router.route == .main)
+        #expect(store.load()?.token == loginSession.accessToken)
+    }
+
+    private func waitUntil(_ predicate: () -> Bool) async {
+        for _ in 0..<1000 {
+            if predicate() { return }
+            await Task.yield()
+        }
+        #expect(predicate())
+    }
+
     private var loginSession: LoginSession {
         LoginSession(userId: 42, email: "new@test.example", nickname: "new", accessToken: "new-login",
                      refreshToken: "new-refresh", accessTokenExpiresIn: 1800, onboardingCompleted: true)

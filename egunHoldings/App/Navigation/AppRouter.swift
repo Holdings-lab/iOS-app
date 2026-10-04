@@ -92,8 +92,15 @@ final class AppRouter: ObservableObject {
             resumeSession(refreshedSession)
         } catch {
             guard generation == sessionGeneration, !Task.isCancelled else { return }
-            TokenDebugLog.log("부트스트랩 갱신 실패 → 리프레시 토큰도 무효함, 재로그인 필요: \(error)")
-            clearSessionAndMoveToAuth()
+            if AuthRefreshInterceptor.invalidatesSession(error) {
+                TokenDebugLog.log("부트스트랩: 갱신 자격 무효 → 재로그인 필요")
+                clearSessionAndMoveToAuth()
+            } else {
+                // 타임아웃/500만으로 리프레시 토큰까지 무효라고 판단하지 않는다.
+                // 기존 세션을 유지하고 다음 인증 요청에서 다시 갱신할 수 있게 한다.
+                TokenDebugLog.log("부트스트랩: 일시적 갱신 실패 → 저장된 세션 유지")
+                resumeSession(savedSession)
+            }
         }
     }
 
@@ -257,7 +264,8 @@ final class AppRouter: ObservableObject {
 
     /// 리프레시 토큰까지 무효화되어 자동 갱신이 완전히 실패한 경우, 화면을 즉시 로그인으로 되돌린다.
     private func handleRefreshTokenInvalidated() {
-        guard route != .auth else { return }
+        // 이전 세션의 알림이 메인 큐에 도착하기 전에 새 로그인이 저장될 수 있다.
+        guard route != .auth, store.load() == nil else { return }
         TokenDebugLog.log("리프레시 토큰 만료/무효 감지 → 로그인 화면으로 전환합니다")
         clearSessionAndMoveToAuth()
     }
