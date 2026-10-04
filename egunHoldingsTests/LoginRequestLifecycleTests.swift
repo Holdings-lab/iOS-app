@@ -16,6 +16,31 @@ struct LoginRequestLifecycleTests {
         #expect(SessionAuthTokenStore(sessionStore: store).currentAccessToken() == loginSession.accessToken)
     }
 
+    @Test("로그아웃은 저장된 최신 리프레시 토큰을 서버에 폐기 요청하고 로컬 세션을 지운다")
+    func logoutRevokesCurrentRefreshToken() async throws {
+        let defaults = try #require(UserDefaults(suiteName: UUID().uuidString))
+        let store = AuthSessionStore(defaults: defaults)
+        let repository = LogoutRecordingRepository()
+        let router = AppRouter(store: store, accountStore: AuthAccountStore(defaults: defaults),
+                               loginRepository: repository)
+        router.handleLoginSuccess(loginSession: loginSession)
+
+        var rotatedSession = try #require(store.load())
+        rotatedSession.refreshToken = "rotated-refresh"
+        store.save(rotatedSession)
+
+        router.logout()
+
+        #expect(router.route == .auth)
+        #expect(router.session == nil)
+        #expect(store.load() == nil)
+        for _ in 0..<1000 {
+            if await repository.recordedToken != nil { break }
+            await Task.yield()
+        }
+        #expect(await repository.recordedToken == "rotated-refresh")
+    }
+
     @Test("이전 부트스트랩 갱신 응답이 새 로그인 세션을 덮지 않는다")
     func ignoresBootstrapResponseAfterNewLogin() async throws {
         let defaults = try #require(UserDefaults(suiteName: UUID().uuidString))
@@ -118,6 +143,22 @@ struct LoginRequestLifecycleTests {
     private var loginSession: LoginSession {
         LoginSession(userId: 42, email: "new@test.example", nickname: "new", accessToken: "new-login",
                      refreshToken: "new-refresh", accessTokenExpiresIn: 1800, onboardingCompleted: true)
+    }
+}
+
+private actor LogoutRecordingRepository: LoginRepositoryProtocol {
+    private(set) var recordedToken: String?
+
+    func login(email: String, password: String) async throws -> LoginSession {
+        throw NetworkError.invalidResponse
+    }
+
+    func oauthLogin(provider: String, authorizationCode: String, redirectURI: String) async throws -> LoginOAuthSession {
+        throw NetworkError.invalidResponse
+    }
+
+    func logout(refreshToken: String) async throws {
+        recordedToken = refreshToken
     }
 }
 

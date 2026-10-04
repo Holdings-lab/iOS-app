@@ -149,7 +149,7 @@ final class AppRouter: ObservableObject {
     }
 
     func logout() {
-        let refreshToken = session?.refreshToken
+        let refreshToken = store.load()?.refreshToken ?? session?.refreshToken
         clearSessionAndMoveToAuth()
         revokeRefreshTokenOnServer(refreshToken)
     }

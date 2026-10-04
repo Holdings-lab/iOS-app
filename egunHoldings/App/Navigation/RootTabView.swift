@@ -14,6 +14,7 @@ struct RootTabView: View {
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     let onBrokerBalanceUpdated: (BrokerBalanceSnapshot) -> Void
     let onGoalSaved: (FinancialGoal, Int64) -> Void
+    let onLogout: () -> Void
     @State private var todayRepository: SharedTodayRepository
     private let settingsRepository: any SettingsRepositoryProtocol
     @State private var selectedTab: RootTab
@@ -34,6 +35,7 @@ struct RootTabView: View {
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
         onBrokerBalanceUpdated: @escaping (BrokerBalanceSnapshot) -> Void = { _ in },
         onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
+        onLogout: @escaping () -> Void = {},
         newsroomRepository: CachedNewsroomDigestRepository? = nil,
         todayRepository: TodayRepositoryProtocol? = nil,
         settingsRepository: any SettingsRepositoryProtocol = LiveSettingsRepository()
@@ -53,6 +55,7 @@ struct RootTabView: View {
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.onBrokerBalanceUpdated = onBrokerBalanceUpdated
         self.onGoalSaved = onGoalSaved
+        self.onLogout = onLogout
         self.settingsRepository = settingsRepository
         setupTabBarAppearance()
     }
@@ -68,6 +71,7 @@ struct RootTabView: View {
                 repository: todayRepository,
                 externalSignalRoute: $todaySignalRoute,
                 onGoalSaved: onGoalSaved,
+                onLogout: onLogout,
                 settingsRepository: settingsRepository,
                 refreshSessionID: todayRefreshSession,
                 onPullRefreshStarted: { refreshResetTabs.insert(.today) },

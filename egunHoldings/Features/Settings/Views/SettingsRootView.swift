@@ -21,12 +21,14 @@ struct SettingsRootView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var path: [SettingsRoute] = []
     @State private var activeModal: SettingsModal?
+    private let onLogout: () -> Void
 
     init(
         notificationCenter: AppNotificationCenter,
         initialRoute: SettingsRoute? = nil,
         onboardingResult: OnboardingResult? = nil,
         onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
+        onLogout: @escaping () -> Void = {},
         repository: any SettingsRepositoryProtocol = LiveSettingsRepository()
     ) {
         _path = State(initialValue: initialRoute.map { [$0] } ?? [])
@@ -36,6 +38,7 @@ struct SettingsRootView: View {
             onboardingResult: onboardingResult,
             onGoalSaved: onGoalSaved
         ))
+        self.onLogout = onLogout
     }
 
     var body: some View {
@@ -104,11 +107,11 @@ struct SettingsRootView: View {
             SettingsConfirmModal(
                 isPresented: activeModal == .logout,
                 title: "로그아웃할까요?",
-                desc: "데모 화면입니다. 확인해도 실제 로그아웃은 실행되지 않아요.",
+                desc: "이 기기에서 로그아웃하고 로그인 화면으로 돌아갑니다.",
                 confirmLabel: "로그아웃",
                 onConfirm: {
                     activeModal = nil
-                    viewModel.notify("데모 화면이에요. 로그아웃은 실행되지 않았어요")
+                    onLogout()
                 },
                 onCancel: { activeModal = nil }
             )
