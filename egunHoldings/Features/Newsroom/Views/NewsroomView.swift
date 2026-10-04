@@ -141,7 +141,7 @@ struct NewsroomView: View {
     private func briefingContent(_ briefing: NewsroomBriefing) -> some View {
         tickerSection(briefing)
 
-        Text("오늘 등락은 최근 정규장 시세의 전일 종가 대비예요. 시세는 지연될 수 있어요.")
+        Text("오늘 등락은 최근 정규장 시세의 전일 종가 대비예요.")
             .font(.pretendard(10.5, weight: .medium))
             .foregroundStyle(Color.textTertiary)
             .fixedSize(horizontal: false, vertical: true)

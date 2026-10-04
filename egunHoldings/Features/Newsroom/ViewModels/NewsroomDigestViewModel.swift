@@ -114,8 +114,6 @@ final class NewsroomDigestViewModel: ObservableObject {
             guard generation == currentGeneration else { return false }
             if briefing == nil {
                 errorMessage = "뉴스룸을 불러오지 못했어요. 잠시 후 다시 시도해주세요."
-            } else if refresh {
-                showRefreshStatus("응답이 지연돼 이전 내용을 유지했어요")
             }
             return false
         }
