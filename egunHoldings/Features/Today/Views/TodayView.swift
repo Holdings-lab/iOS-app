@@ -28,6 +28,8 @@ struct TodayView: View {
     @State private var isPushSlotDismissed = false
     @State private var presentedSettings: TodaySettingsDestination?
     @State private var presentedNotificationDetail: AppNotificationItem?
+    @State private var isPullRefreshing = false
+    @State private var refreshScrollID = 0
     @Binding private var externalSignalRoute: PolSignalRoute?
     private let userId: Int64?
     private let onboardingResult: OnboardingResult?
@@ -168,7 +170,10 @@ struct TodayView: View {
                     .padding(.top, 12)
                     .padding(.bottom, 112)
                 }
+                .id(refreshScrollID)
                 .refreshable {
+                    isPullRefreshing = true
+                    defer { isPullRefreshing = false }
                     await viewModel.refresh()
                 }
             }
@@ -248,7 +253,12 @@ struct TodayView: View {
                 await notificationCenter.refreshAuthorizationStatus()
             }
             .task { await viewModel.observeNews() }
-            .onDisappear { viewModel.cancelLoading() }
+            .onDisappear {
+                // SwiftUI가 탭 밖의 refresh indicator를 유지하는 경우도 함께 초기화한다.
+                if isPullRefreshing { refreshScrollID += 1 }
+                isPullRefreshing = false
+                viewModel.cancelLoading()
+            }
             #if DEBUG
             .overlay(alignment: .topLeading) {
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {

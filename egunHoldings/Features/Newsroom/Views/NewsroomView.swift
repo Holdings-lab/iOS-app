@@ -11,6 +11,8 @@ struct NewsroomView: View {
 
     @StateObject private var viewModel: NewsroomDigestViewModel
     @State private var presentedHolding: NewsroomHoldingBriefing?
+    @State private var isPullRefreshing = false
+    @State private var refreshScrollID = 0
 
     init(
         userId: Int64? = nil,
@@ -42,7 +44,10 @@ struct NewsroomView: View {
                     briefingState(briefing)
                 }
             }
+            .id(refreshScrollID)
             .refreshable {
+                isPullRefreshing = true
+                defer { isPullRefreshing = false }
                 await viewModel.refresh()
             }
 
@@ -61,7 +66,11 @@ struct NewsroomView: View {
             viewModel.loadIfNeeded()
         }
         .task { await viewModel.observeBriefings() }
-        .onDisappear { viewModel.cancelLoading() }
+        .onDisappear {
+            if isPullRefreshing { refreshScrollID += 1 }
+            isPullRefreshing = false
+            viewModel.cancelLoading()
+        }
         #if DEBUG
         .overlay(alignment: .topLeading) {
             if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {
