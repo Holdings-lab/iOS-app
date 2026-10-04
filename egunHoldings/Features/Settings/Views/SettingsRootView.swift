@@ -22,8 +22,18 @@ struct SettingsRootView: View {
     @State private var path: [SettingsRoute] = []
     @State private var activeModal: SettingsModal?
 
-    init(notificationCenter: AppNotificationCenter) {
-        _viewModel = StateObject(wrappedValue: SettingsViewModel(notificationCenter: notificationCenter))
+    init(
+        notificationCenter: AppNotificationCenter,
+        initialRoute: SettingsRoute? = nil,
+        onboardingResult: OnboardingResult? = nil,
+        onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in }
+    ) {
+        _path = State(initialValue: initialRoute.map { [$0] } ?? [])
+        _viewModel = StateObject(wrappedValue: SettingsViewModel(
+            notificationCenter: notificationCenter,
+            onboardingResult: onboardingResult,
+            onGoalSaved: onGoalSaved
+        ))
     }
 
     var body: some View {

@@ -21,6 +21,7 @@ struct TodayView: View {
     @State private var navigationPath: [TodayNavDestination] = []
     @State private var isPushSlotDismissed = false
     @State private var isSettingsPresented = false
+    @State private var settingsInitialRoute: SettingsRoute?
     @State private var presentedNotificationDetail: AppNotificationItem?
     @Binding private var externalSignalRoute: PolSignalRoute?
     private let userId: Int64?
@@ -29,6 +30,7 @@ struct TodayView: View {
     private let portfolioSnapshot: PortfolioSnapshot
     private let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     private let onAssetTabRequested: () -> Void
+    private let onGoalSaved: (FinancialGoal, Int64) -> Void
     private let onNewsroomTabRequested: () -> Void
     private let onSignalRouteRequested: (PolSignalRoute) -> Void
     private let onAnalysisNotificationRequested: (PolSignalAnalysisPayload) -> Void
@@ -42,6 +44,7 @@ struct TodayView: View {
         repository: TodayRepositoryProtocol? = nil,
         viewModel: TodayViewModel? = nil,
         externalSignalRoute: Binding<PolSignalRoute?> = .constant(nil),
+        onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
         onAssetTabRequested: @escaping () -> Void = {},
         onNewsroomTabRequested: @escaping () -> Void = {},
         onSignalRouteRequested: @escaping (PolSignalRoute) -> Void = { _ in },
@@ -53,6 +56,7 @@ struct TodayView: View {
         self.portfolioSnapshot = portfolioSnapshot
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.onAssetTabRequested = onAssetTabRequested
+        self.onGoalSaved = onGoalSaved
         self.onNewsroomTabRequested = onNewsroomTabRequested
         self.onSignalRouteRequested = onSignalRouteRequested
         self.onAnalysisNotificationRequested = onAnalysisNotificationRequested
@@ -82,7 +86,10 @@ struct TodayView: View {
                             onNotifications: {
                                 openNotifications()
                             },
-                            onSettings: { isSettingsPresented = true }
+                            onSettings: {
+                                settingsInitialRoute = nil
+                                isSettingsPresented = true
+                            }
                         )
 
                         if let item = notificationCenter.todayPreviewNotification, !isPushSlotDismissed {
@@ -133,8 +140,12 @@ struct TodayView: View {
                         } else {
                             TodayGoalProgressCard(
                                 goalProgress: viewModel.goalProgress,
-                                onSetGoal: onAssetTabRequested
+                                onSetGoal: {
+                                    settingsInitialRoute = .goal
+                                    isSettingsPresented = true
+                                }
                             )
+                            .accessibilityIdentifier("today.goalProgress")
                         }
                         if viewModel.loadingSections.contains(.news) {
                             TodayNewsSkeleton()
@@ -242,7 +253,12 @@ struct TodayView: View {
                     .presentationDragIndicator(.visible)
             }
             .fullScreenCover(isPresented: $isSettingsPresented) {
-                SettingsRootView(notificationCenter: notificationCenter)
+                SettingsRootView(
+                    notificationCenter: notificationCenter,
+                    initialRoute: settingsInitialRoute,
+                    onboardingResult: onboardingResult,
+                    onGoalSaved: onGoalSaved
+                )
             }
         }
     }

@@ -12,7 +12,7 @@ final class AppRouter: ObservableObject {
     private let accountStore: AuthAccountStoring
     private let loginRepository: LoginRepositoryProtocol
     private let tokenRefresher: AccessTokenRefreshing
-    private(set) var session: AppUserSession?
+    @Published private(set) var session: AppUserSession?
     private var lastAuthenticatedEmail: String?
     private var tokenNotificationCancellables = Set<AnyCancellable>()
 
@@ -140,6 +140,16 @@ final class AppRouter: ObservableObject {
     func updateBrokerBalance(_ snapshot: BrokerBalanceSnapshot) {
         guard var currentSession = session else { return }
         currentSession.brokerBalanceSnapshot = snapshot
+        saveSession(currentSession)
+    }
+
+    /// 설정과 온보딩이 같은 로컬 목표를 사용하고, 홈에도 즉시 변경을 발행한다.
+    func updateGoal(goal: FinancialGoal, amount: Int64) {
+        guard amount > 0, var currentSession = session else { return }
+        var result = currentSession.onboardingResult ?? OnboardingResult()
+        result.financialGoal = goal.rawValue
+        result.targetAmount = amount
+        currentSession.onboardingResult = result
         saveSession(currentSession)
     }
 

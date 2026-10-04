@@ -156,7 +156,7 @@ struct SettingsGoalView: View {
         if hasChanges {
             showsChangeConfirm = true
         } else {
-            onBack()
+            save()
         }
     }
 

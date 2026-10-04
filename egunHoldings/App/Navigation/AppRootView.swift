@@ -31,7 +31,8 @@ struct AppRootView: View {
                     userAssetProfile: router.userAssetProfile,
                     portfolioSnapshot: router.portfolioSnapshot,
                     brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot,
-                    onBrokerBalanceUpdated: router.updateBrokerBalance
+                    onBrokerBalanceUpdated: router.updateBrokerBalance,
+                    onGoalSaved: router.updateGoal
                 )
                 .id(router.session?.userId)
             }
