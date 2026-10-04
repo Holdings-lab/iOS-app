@@ -35,7 +35,7 @@ struct FlowPrimaryButton: View {
                 )
         }
         .buttonStyle(.plain)
-        .allowsHitTesting(isEnabled)
+        .disabled(!isEnabled)
         .animation(.easeInOut(duration: 0.2), value: isEnabled)
     }
 

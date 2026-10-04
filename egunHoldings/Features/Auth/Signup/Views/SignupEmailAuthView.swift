@@ -23,6 +23,12 @@ struct SignupEmailAuthView: View {
     let onVerifyCode: (String) -> Void
     let onNext: () -> Void
     @State private var keyboardHeight: CGFloat = 0
+    @FocusState private var focusedEmailField: EmailField?
+
+    private enum EmailField: Hashable {
+        case localPart
+        case fullAddress
+    }
 
     private var canVerifyOTP: Bool {
         otpCode.count == 6 && !isVerified && secondsRemaining > 0
@@ -91,6 +97,9 @@ struct SignupEmailAuthView: View {
         .background(PFGradientBackground())
         .toolbar(.hidden, for: .navigationBar)
         .animation(.easeInOut(duration: 0.2), value: isCompactOTPLayout)
+        .onChange(of: selectedDomain) { _, domain in
+            focusedEmailField = domain == .direct ? .fullAddress : .localPart
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notification in
             guard let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
                 return
@@ -110,7 +119,7 @@ struct SignupEmailAuthView: View {
             }
 
             if selectedDomain == .direct {
-                domainInput
+                customEmailInput
             }
         }
     }
@@ -258,6 +267,8 @@ struct SignupEmailAuthView: View {
                 .font(.pretendard(16, weight: .medium))
                 .foregroundStyle(isDirectEmailEntry ? Color.textDisabled : Color.textPrimary)
                 .disabled(isDirectEmailEntry)
+                .focused($focusedEmailField, equals: .localPart)
+                .accessibilityIdentifier("signup.emailLocalPart")
 
                 Text("@")
                     .font(.pretendard(16, weight: .semibold))
@@ -309,11 +320,12 @@ struct SignupEmailAuthView: View {
                 }
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("signup.emailDomain")
         }
         .frame(width: 150)
     }
 
-    private var domainInput: some View {
+    private var customEmailInput: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("이메일 직접 입력")
                 .font(.pretendard(13, weight: .medium))
@@ -327,6 +339,8 @@ struct SignupEmailAuthView: View {
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled(true)
             .keyboardType(.emailAddress)
+            .focused($focusedEmailField, equals: .fullAddress)
+            .accessibilityIdentifier("signup.fullEmailAddress")
             .font(.pretendard(16, weight: .medium))
             .foregroundStyle(Color.textPrimary)
             .padding(.horizontal, 16)

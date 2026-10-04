@@ -31,7 +31,13 @@ struct egunHoldingsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {
+            if ProcessInfo.processInfo.arguments.contains("-ui-testing-signup-email") {
+                #if DEBUG
+                SignUpView(onBackToLogin: {}, onCompleted: { _ in })
+                #else
+                StartView()
+                #endif
+            } else if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {
                 #if DEBUG
                 DashboardUITestRootView()
                 #else

@@ -12,7 +12,13 @@ struct SignUpView: View {
     ) {
         self.onBackToLogin = onBackToLogin
         self.onCompleted = onCompleted
-        _viewModel = StateObject(wrappedValue: SignUpFlowViewModel())
+        let model = SignUpFlowViewModel()
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-signup-email") {
+            model.moveToEmailVerification()
+        }
+        #endif
+        _viewModel = StateObject(wrappedValue: model)
     }
 
     var body: some View {
