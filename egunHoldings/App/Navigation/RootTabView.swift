@@ -14,7 +14,7 @@ struct RootTabView: View {
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     let onBrokerBalanceUpdated: (BrokerBalanceSnapshot) -> Void
     let onGoalSaved: (FinancialGoal, Int64) -> Void
-    private let todayRepository: TodayRepositoryProtocol?
+    @State private var todayRepository: SharedTodayRepository
     private let settingsRepository: any SettingsRepositoryProtocol
     @State private var selectedTab: RootTab
     @State private var refreshResetTabs: Set<RootTab> = []
@@ -39,8 +39,12 @@ struct RootTabView: View {
         settingsRepository: any SettingsRepositoryProtocol = LiveSettingsRepository()
     ) {
         _selectedTab = State(initialValue: initialTab)
-        _newsroomRepository = State(initialValue: newsroomRepository ?? CachedNewsroomDigestRepository(
+        let sharedNewsroom = newsroomRepository ?? CachedNewsroomDigestRepository(
             repository: NewsroomDigestRepositoryFactory.makeDefault(userId: userId)
+        )
+        _newsroomRepository = State(initialValue: sharedNewsroom)
+        _todayRepository = State(initialValue: SharedTodayRepository(
+            repository: todayRepository ?? LiveTodayRepository(newsroomRepository: sharedNewsroom)
         ))
         self.userId = userId
         self.onboardingResult = onboardingResult
@@ -49,7 +53,6 @@ struct RootTabView: View {
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.onBrokerBalanceUpdated = onBrokerBalanceUpdated
         self.onGoalSaved = onGoalSaved
-        self.todayRepository = todayRepository
         self.settingsRepository = settingsRepository
         setupTabBarAppearance()
     }
@@ -62,7 +65,7 @@ struct RootTabView: View {
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
                 brokerBalanceSnapshot: brokerBalanceSnapshot,
-                repository: todayRepository ?? LiveTodayRepository(newsroomRepository: newsroomRepository),
+                repository: todayRepository,
                 externalSignalRoute: $todaySignalRoute,
                 onGoalSaved: onGoalSaved,
                 settingsRepository: settingsRepository,
