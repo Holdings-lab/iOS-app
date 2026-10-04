@@ -44,8 +44,9 @@ struct DashboardUITestRootView: View {
         }
         .task {
             while !Task.isCancelled {
-                refreshingControls = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+                let active = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
                     .flatMap(\.windows).reduce(0) { $0 + countRefreshingControls(in: $1) }
+                refreshingControls = active > 0 ? 1 : 0
                 try? await Task.sleep(for: .milliseconds(100))
             }
         }
@@ -53,7 +54,10 @@ struct DashboardUITestRootView: View {
 
     private func countRefreshingControls(in view: UIView) -> Int {
         guard !view.isHidden, view.alpha > 0 else { return 0 }
-        let count = (view as? UIScrollView)?.refreshControl?.isRefreshing == true ? 1 : 0
+        let refreshing = (view as? UIScrollView)?.refreshControl?.isRefreshing == true
+            || (view as? UIRefreshControl)?.isRefreshing == true
+            || (view as? UIActivityIndicatorView)?.isAnimating == true
+        let count = refreshing ? 1 : 0
         return count + view.subviews.reduce(0) { $0 + countRefreshingControls(in: $1) }
     }
 }

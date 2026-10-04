@@ -65,6 +65,11 @@ final class DashboardLifecycleUITests: XCTestCase {
 
     private func launchDashboard() -> XCUIApplication {
         let app = XCUIApplication()
+        // XCTest가 refresh 애니메이션이 끝날 때까지 기다리면 '진행 중 탭 전환'을 검사할 수 없다.
+        // 테스트 러너의 자동 대기만 끄며 앱의 애니메이션/요청은 실제로 계속 실행한다.
+        let selector = NSSelectorFromString("setShouldWaitForQuiescence:")
+        XCTAssertTrue(app.responds(to: selector))
+        app.setValue(false, forKey: "shouldWaitForQuiescence")
         app.launchArguments = ["-ui-testing-dashboard-refresh"]
         app.launch()
         XCTAssertTrue(app.tabBars.buttons["오늘"].waitForExistence(timeout: 5))
