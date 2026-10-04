@@ -23,27 +23,29 @@ nonisolated final class AuthRefreshInterceptor: RequestInterceptor {
         for session: Alamofire.Session,
         completion: @escaping @Sendable (Result<URLRequest, any Error>) -> Void
     ) {
-        guard
-            urlRequest.value(forHTTPHeaderField: "Authorization") != nil,
-            tokenStore.isAccessTokenExpiring()
-        else {
+        guard urlRequest.value(forHTTPHeaderField: "Authorization") != nil else {
             completion(.success(urlRequest))
             return
         }
-
-        TokenDebugLog.log("선제적 갱신 트리거 → \(urlRequest.url?.path ?? "?") 요청 전 만료 임박 감지 (\(TokenDebugLog.expiryDescription(for: tokenStore)))")
-
+        guard let accessToken = tokenStore.currentAccessToken(), !accessToken.isEmpty else {
+            completion(.failure(NetworkError.missingRefreshToken))
+            return
+        }
+        // Alamofire 재시도는 원래 URLRequest를 재사용하므로 최신 토큰을 매번 다시 붙인다.
+        var latestRequest = urlRequest
+        latestRequest.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+        guard tokenStore.isAccessTokenExpiring() else {
+            completion(.success(latestRequest))
+            return
+        }
+        let request = latestRequest
         Task {
             do {
-                let tokenPayload = try await coordinator.refresh(using: refresher)
-                tokenStore.updateTokens(tokenPayload)
-
-                var adaptedRequest = urlRequest
-                adaptedRequest.setValue("Bearer \(tokenPayload.accessToken)", forHTTPHeaderField: "Authorization")
-                completion(.success(adaptedRequest))
+                _ = try await coordinator.refresh(using: refresher, token: accessToken, store: tokenStore)
+                completion(.success(Self.withCurrentToken(request, store: tokenStore)))
             } catch {
-                TokenDebugLog.log("선제적 갱신 실패 → 기존 토큰으로 요청을 계속 진행합니다: \(error)")
-                completion(.success(urlRequest))
+                // 일시적인 지연/서버 오류는 로그인 세션을 삭제하지 않는다.
+                completion(.success(Self.withCurrentToken(request, store: tokenStore)))
             }
         }
     }
@@ -73,25 +75,57 @@ nonisolated final class AuthRefreshInterceptor: RequestInterceptor {
             return
         }
 
-        TokenDebugLog.log("401 응답 수신 → \(request.request?.url?.path ?? "?") 리액티브 갱신 시도")
-
+        // 같은 요청에서 401 갱신을 반복하면 영원히 끝나지 않을 수 있다.
+        guard request.retryCount < Self.authenticationRetryLimit else {
+            completion(.doNotRetry)
+            return
+        }
+        guard let currentToken = tokenStore.currentAccessToken(), !currentToken.isEmpty else {
+            completion(.doNotRetry)
+            return
+        }
+        if request.request?.value(forHTTPHeaderField: "Authorization") != "Bearer \(currentToken)" {
+            // 다른 요청이 이미 갱신했거나 새 로그인 세션이 시작되었다.
+            completion(.retry)
+            return
+        }
         Task {
             do {
-                let tokenPayload = try await coordinator.refresh(using: refresher)
-                tokenStore.updateTokens(tokenPayload)
-                TokenDebugLog.log("리액티브 갱신 성공 → 요청 재시도")
+                _ = try await coordinator.refresh(using: refresher, token: currentToken, store: tokenStore)
                 completion(.retry)
             } catch {
-                TokenDebugLog.log("리액티브 갱신 실패 → 세션 종료 처리(재로그인 필요): \(error)")
-                tokenStore.clearTokens()
+                if tokenStore.currentAccessToken() == currentToken,
+                   Self.invalidatesSession(error) {
+                    tokenStore.clearTokens()
+                }
                 completion(.doNotRetryWithError(error))
             }
         }
     }
+
+    private static func withCurrentToken(_ request: URLRequest, store: AuthTokenStore) -> URLRequest {
+        var request = request
+        let token = store.currentAccessToken().map { "Bearer \($0)" }
+        request.setValue(token, forHTTPHeaderField: "Authorization")
+        return request
+    }
+
 }
 
 extension AuthRefreshInterceptor {
     static let transientRetryLimit = 1
+    static let authenticationRetryLimit = 1
+
+    static func invalidatesSession(_ error: any Error) -> Bool {
+        if let error = error as? AFError, let code = error.responseCode {
+            return code == 401 || code == 403
+        }
+        switch error as? NetworkError {
+        case .missingRefreshToken: return true
+        case .httpStatus(let code), .apiFailure(let code?, _, _): return code == 401 || code == 403
+        default: return false
+        }
+    }
 
     /// 재시도해도 안전하고, 재시도하면 실제로 달라지는 전송 계층 오류만 고른다.
     /// 연결 없음/타임아웃처럼 다시 보내도 같은 결과인 오류는 호출자에게 그대로 전달한다.
@@ -105,21 +139,24 @@ extension AuthRefreshInterceptor {
 /// 동시에 여러 요청이 401을 받거나 만료를 감지해도 리프레시 네트워크 호출은 단 한 번만 나가도록
 /// 직렬화한다(그렇지 않으면 리프레시 토큰이 회전 방식이라 두 번째 호출이 이미 폐기된 토큰으로 실패한다).
 actor TokenRefreshCoordinator {
-    private var refreshTask: Task<AuthTokenPayload, Error>?
+    private var refreshTask: (token: String, task: Task<AuthTokenPayload, Error>)?
 
-    func refresh(using refresher: AccessTokenRefreshing) async throws -> AuthTokenPayload {
-        if let refreshTask {
+    func refresh(using refresher: AccessTokenRefreshing, token: String, store: AuthTokenStore) async throws -> AuthTokenPayload {
+        if let refreshTask, refreshTask.token == token {
             TokenDebugLog.log("이미 진행 중인 갱신 요청에 합류합니다 (중복 호출 방지)")
-            return try await refreshTask.value
+            return try await refreshTask.task.value
         }
 
         let task = Task {
-            try await refresher.refreshAccessToken()
+            let payload = try await refresher.refreshAccessToken()
+            // 합류한 호출자가 깨어나기 전에 한 번 저장해 늦은 401도 새 토큰을 보게 한다.
+            if store.currentAccessToken() == token { store.updateTokens(payload) }
+            return payload
         }
-        refreshTask = task
+        refreshTask = (token, task)
 
         defer {
-            refreshTask = nil
+            if refreshTask?.token == token { refreshTask = nil }
         }
 
         return try await task.value

@@ -13,6 +13,8 @@ final class AppRouter: ObservableObject {
     private let loginRepository: LoginRepositoryProtocol
     private let tokenRefresher: AccessTokenRefreshing
     @Published private(set) var session: AppUserSession?
+    private var bootstrapTask: Task<Void, Never>?
+    private var sessionGeneration = 0
     private var lastAuthenticatedEmail: String?
     private var tokenNotificationCancellables = Set<AnyCancellable>()
 
@@ -35,6 +37,9 @@ final class AppRouter: ObservableObject {
     }
 
     func bootstrap() {
+        sessionGeneration += 1
+        let generation = sessionGeneration
+        bootstrapTask?.cancel()
         guard let savedSession = store.load() else {
             clearSessionAndMoveToAuth()
             return
@@ -43,8 +48,8 @@ final class AppRouter: ObservableObject {
         guard savedSession.isTokenValid else {
             // 액세스 토큰(30분)은 만료됐어도 리프레시 토큰(14일)이 살아있을 확률이 높은 흔한 경로다.
             // 여기서 바로 로그인 화면으로 보내면 30분마다 재로그인해야 하는 셈이라, 리프레시를 먼저 시도한다.
-            Task {
-                await attemptBootstrapRefresh(savedSession)
+            bootstrapTask = Task {
+                await attemptBootstrapRefresh(savedSession, generation: generation)
             }
             return
         }
@@ -64,7 +69,7 @@ final class AppRouter: ObservableObject {
 
     /// 액세스 토큰은 만료됐지만 리프레시 토큰이 있는 상태로 앱이 (재)실행됐을 때, 로그인 화면을 보여주기 전에
     /// 조용히 한 번 갱신을 시도한다. 성공하면 세션을 그대로 복원하고, 리프레시 토큰까지 무효면 로그인으로 보낸다.
-    private func attemptBootstrapRefresh(_ savedSession: AppUserSession) async {
+    private func attemptBootstrapRefresh(_ savedSession: AppUserSession, generation: Int) async {
         guard let refreshToken = savedSession.refreshToken, !refreshToken.isEmpty else {
             TokenDebugLog.log("부트스트랩: 액세스 토큰 만료 + 리프레시 토큰 없음 → 재로그인 필요")
             clearSessionAndMoveToAuth()
@@ -75,6 +80,7 @@ final class AppRouter: ObservableObject {
 
         do {
             let payload = try await tokenRefresher.refreshAccessToken()
+            guard generation == sessionGeneration, !Task.isCancelled else { return }
 
             var refreshedSession = savedSession
             refreshedSession.token = payload.accessToken
@@ -85,12 +91,16 @@ final class AppRouter: ObservableObject {
             TokenDebugLog.log("부트스트랩 갱신 성공 → 재로그인 없이 세션 복원 (만료까지 \(Int(payload.expiresAt.timeIntervalSinceNow))초)")
             resumeSession(refreshedSession)
         } catch {
+            guard generation == sessionGeneration, !Task.isCancelled else { return }
             TokenDebugLog.log("부트스트랩 갱신 실패 → 리프레시 토큰도 무효함, 재로그인 필요: \(error)")
             clearSessionAndMoveToAuth()
         }
     }
 
     func handleLoginSuccess(loginSession: LoginSession) {
+        sessionGeneration += 1
+        bootstrapTask?.cancel()
+        bootstrapTask = nil
         let existingAccount = registeredAccount(for: loginSession.email)
         let newSession = AppUserSession(
             userId: loginSession.userId,
@@ -106,9 +116,10 @@ final class AppRouter: ObservableObject {
         TokenDebugLog.log("로그인 성공 → 액세스 토큰 만료까지 \(loginSession.accessTokenExpiresIn)초, refreshToken 발급=\(loginSession.refreshToken != nil)")
 
         let isNewUser = newSession.onboardingCompleted == false
+        // 인증 헤더는 Keychain에서 읽는다. 화면을 전환하기 전에 새 토큰을 저장한다.
+        persistSessionNow(newSession)
         applySession(newSession)
         route = isNewUser ? .onboarding : .main
-        persistSessionAfterRoute(newSession)
 
     }
 
@@ -124,9 +135,9 @@ final class AppRouter: ObservableObject {
         currentSession.onboardingResult = result
         currentSession.brokerBalanceSnapshot = nil
 
+        persistSessionNow(currentSession)
         applySession(currentSession)
         route = .main
-        persistSessionAfterRoute(currentSession)
 
     }
 
@@ -180,27 +191,15 @@ final class AppRouter: ObservableObject {
         persistSessionNow(session)
     }
 
-    private func persistSessionAfterRoute(_ session: AppUserSession) {
-        Task { [weak self] in
-            await Task.yield()
-            guard let self else { return }
-            guard let currentSession = self.session else { return }
-
-            if currentSession.token == session.token,
-               currentSession.onboardingCompleted && !session.onboardingCompleted {
-                return
-            }
-
-            self.persistSessionNow(session)
-        }
-    }
-
     private func persistSessionNow(_ session: AppUserSession) {
         store.save(session)
         syncRegisteredAccount(with: session)
     }
 
     private func clearSessionAndMoveToAuth() {
+        sessionGeneration += 1
+        bootstrapTask?.cancel()
+        bootstrapTask = nil
         session = nil
         lastAuthenticatedEmail = nil
         userAssetProfile = AppMockData.userAssetProfile
