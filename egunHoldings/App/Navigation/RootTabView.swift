@@ -14,6 +14,8 @@ struct RootTabView: View {
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     let onBrokerBalanceUpdated: (BrokerBalanceSnapshot) -> Void
     let onGoalSaved: (FinancialGoal, Int64) -> Void
+    private let todayRepository: TodayRepositoryProtocol?
+    private let settingsRepository: any SettingsRepositoryProtocol
     @State private var selectedTab: RootTab
     @State private var newsroomRepository: CachedNewsroomDigestRepository
     @State private var todaySignalRoute: PolSignalRoute?
@@ -28,10 +30,13 @@ struct RootTabView: View {
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
         onBrokerBalanceUpdated: @escaping (BrokerBalanceSnapshot) -> Void = { _ in },
-        onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in }
+        onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
+        newsroomRepository: CachedNewsroomDigestRepository? = nil,
+        todayRepository: TodayRepositoryProtocol? = nil,
+        settingsRepository: any SettingsRepositoryProtocol = LiveSettingsRepository()
     ) {
         _selectedTab = State(initialValue: initialTab)
-        _newsroomRepository = State(initialValue: CachedNewsroomDigestRepository(
+        _newsroomRepository = State(initialValue: newsroomRepository ?? CachedNewsroomDigestRepository(
             repository: NewsroomDigestRepositoryFactory.makeDefault(userId: userId)
         ))
         self.userId = userId
@@ -41,6 +46,8 @@ struct RootTabView: View {
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.onBrokerBalanceUpdated = onBrokerBalanceUpdated
         self.onGoalSaved = onGoalSaved
+        self.todayRepository = todayRepository
+        self.settingsRepository = settingsRepository
         setupTabBarAppearance()
     }
 
@@ -52,9 +59,10 @@ struct RootTabView: View {
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
                 brokerBalanceSnapshot: brokerBalanceSnapshot,
-                repository: LiveTodayRepository(newsroomRepository: newsroomRepository),
+                repository: todayRepository ?? LiveTodayRepository(newsroomRepository: newsroomRepository),
                 externalSignalRoute: $todaySignalRoute,
                 onGoalSaved: onGoalSaved,
+                settingsRepository: settingsRepository,
                 onAssetTabRequested: {
                     selectedTab = .asset
                 },

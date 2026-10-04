@@ -31,7 +31,13 @@ struct egunHoldingsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if AppLaunchMode.opensSettingsForUITests {
+            if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {
+                #if DEBUG
+                DashboardUITestRootView()
+                #else
+                StartView()
+                #endif
+            } else if AppLaunchMode.opensSettingsForUITests {
                 SettingsRootView(notificationCenter: AppNotificationCenter.shared)
             } else if AppLaunchMode.opensMainTabsForUITests {
                 RootTabView(

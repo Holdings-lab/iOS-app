@@ -31,6 +31,7 @@ struct TodayView: View {
     private let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     private let onAssetTabRequested: () -> Void
     private let onGoalSaved: (FinancialGoal, Int64) -> Void
+    private let settingsRepository: any SettingsRepositoryProtocol
     private let onNewsroomTabRequested: () -> Void
     private let onSignalRouteRequested: (PolSignalRoute) -> Void
     private let onAnalysisNotificationRequested: (PolSignalAnalysisPayload) -> Void
@@ -45,6 +46,7 @@ struct TodayView: View {
         viewModel: TodayViewModel? = nil,
         externalSignalRoute: Binding<PolSignalRoute?> = .constant(nil),
         onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
+        settingsRepository: any SettingsRepositoryProtocol = LiveSettingsRepository(),
         onAssetTabRequested: @escaping () -> Void = {},
         onNewsroomTabRequested: @escaping () -> Void = {},
         onSignalRouteRequested: @escaping (PolSignalRoute) -> Void = { _ in },
@@ -57,6 +59,7 @@ struct TodayView: View {
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.onAssetTabRequested = onAssetTabRequested
         self.onGoalSaved = onGoalSaved
+        self.settingsRepository = settingsRepository
         self.onNewsroomTabRequested = onNewsroomTabRequested
         self.onSignalRouteRequested = onSignalRouteRequested
         self.onAnalysisNotificationRequested = onAnalysisNotificationRequested
@@ -259,7 +262,8 @@ struct TodayView: View {
                     notificationCenter: notificationCenter,
                     initialRoute: settingsInitialRoute,
                     onboardingResult: onboardingResult,
-                    onGoalSaved: onGoalSaved
+                    onGoalSaved: onGoalSaved,
+                    repository: settingsRepository
                 )
             }
         }

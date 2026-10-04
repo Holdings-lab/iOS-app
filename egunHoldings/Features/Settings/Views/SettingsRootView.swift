@@ -26,11 +26,13 @@ struct SettingsRootView: View {
         notificationCenter: AppNotificationCenter,
         initialRoute: SettingsRoute? = nil,
         onboardingResult: OnboardingResult? = nil,
-        onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in }
+        onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
+        repository: any SettingsRepositoryProtocol = LiveSettingsRepository()
     ) {
         _path = State(initialValue: initialRoute.map { [$0] } ?? [])
         _viewModel = StateObject(wrappedValue: SettingsViewModel(
             notificationCenter: notificationCenter,
+            repository: repository,
             onboardingResult: onboardingResult,
             onGoalSaved: onGoalSaved
         ))
