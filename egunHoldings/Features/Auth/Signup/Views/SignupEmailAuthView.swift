@@ -4,11 +4,12 @@ import SwiftUI
 struct SignupEmailAuthView: View {
     @Binding var emailLocalPart: String
     @Binding var selectedDomain: SignupEmailDomainOption
-    @Binding var customDomain: String
+    @Binding var customEmailAddress: String
     @Binding var otpCode: String
 
     let availableDomains: [SignupEmailDomainOption]
     let emailAddress: String
+    let canSendVerificationCode: Bool
     let hasSentCode: Bool
     let isVerified: Bool
     let secondsRemaining: Int
@@ -22,13 +23,6 @@ struct SignupEmailAuthView: View {
     let onVerifyCode: (String) -> Void
     let onNext: () -> Void
     @State private var keyboardHeight: CGFloat = 0
-
-    private var canSend: Bool {
-        let local = emailLocalPart.trimmingCharacters(in: .whitespacesAndNewlines)
-        let domainValue = selectedDomain == .direct ? customDomain : selectedDomain.rawValue
-        let domain = domainValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !local.isEmpty && domain.contains(".")
-    }
 
     private var canVerifyOTP: Bool {
         otpCode.count == 6 && !isVerified && secondsRemaining > 0
@@ -87,7 +81,7 @@ struct SignupEmailAuthView: View {
         .safeAreaInset(edge: .bottom) {
             FlowPrimaryButton(
                 title: bottomButtonTitle,
-                isEnabled: hasSentCode ? isVerified : canSend,
+                isEnabled: hasSentCode ? isVerified : canSendVerificationCode,
                 action: hasSentCode ? onNext : onSendCode
             )
             .padding(.horizontal, MidnightLayout.horizontal)
@@ -245,10 +239,12 @@ struct SignupEmailAuthView: View {
     }
 
     private var emailLocalInput: some View {
+        let isDirectEmailEntry = selectedDomain == .direct
+
         VStack(alignment: .leading, spacing: 8) {
             Text("이메일")
                 .font(.pretendard(13, weight: .medium))
-                .foregroundStyle(Color.textTertiary)
+                .foregroundStyle(isDirectEmailEntry ? Color.textDisabled : Color.textTertiary)
 
             HStack(spacing: 8) {
                 TextField(
@@ -260,18 +256,20 @@ struct SignupEmailAuthView: View {
                 .autocorrectionDisabled(true)
                 .keyboardType(.emailAddress)
                 .font(.pretendard(16, weight: .medium))
-                .foregroundStyle(Color.textPrimary)
+                .foregroundStyle(isDirectEmailEntry ? Color.textDisabled : Color.textPrimary)
+                .disabled(isDirectEmailEntry)
 
                 Text("@")
                     .font(.pretendard(16, weight: .semibold))
-                    .foregroundStyle(Color.textTertiary)
+                    .foregroundStyle(isDirectEmailEntry ? Color.textDisabled : Color.textTertiary)
             }
+            .opacity(isDirectEmailEntry ? 0.56 : 1)
             .padding(.horizontal, 16)
             .frame(height: 54)
-            .background(Color.elevated, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .background(Color.elevated.opacity(isDirectEmailEntry ? 0.62 : 1), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.divider, lineWidth: 1)
+                    .stroke(Color.divider.opacity(isDirectEmailEntry ? 0.6 : 1), lineWidth: 1)
             }
         }
         .frame(maxWidth: .infinity)
@@ -317,14 +315,14 @@ struct SignupEmailAuthView: View {
 
     private var domainInput: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("직접 입력")
+            Text("이메일 직접 입력")
                 .font(.pretendard(13, weight: .medium))
                 .foregroundStyle(Color.textTertiary)
 
             TextField(
                 "",
-                text: $customDomain,
-                prompt: Text("domain.com").foregroundStyle(Color.textDisabled)
+                text: $customEmailAddress,
+                prompt: Text("name@example.com").foregroundStyle(Color.textDisabled)
             )
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled(true)
@@ -350,17 +348,18 @@ struct SignupEmailAuthView: View {
 private struct PreviewSignupEmailAuth: View {
     @State private var emailLocalPart = "policy"
     @State private var selectedDomain: SignupEmailDomainOption = .naver
-    @State private var customDomain = ""
+    @State private var customEmailAddress = ""
     @State private var otp = ""
 
     var body: some View {
         SignupEmailAuthView(
             emailLocalPart: $emailLocalPart,
             selectedDomain: $selectedDomain,
-            customDomain: $customDomain,
+            customEmailAddress: $customEmailAddress,
             otpCode: $otp,
             availableDomains: SignupEmailDomainOption.allCases,
             emailAddress: "policy@naver.com",
+            canSendVerificationCode: true,
             hasSentCode: false,
             isVerified: false,
             secondsRemaining: 180,

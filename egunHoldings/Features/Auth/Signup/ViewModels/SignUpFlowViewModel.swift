@@ -28,7 +28,7 @@ final class SignUpFlowViewModel: ObservableObject {
     @Published private(set) var selectedConsentIDs: Set<String> = []
     @Published private(set) var emailLocalPart: String = ""
     @Published private(set) var selectedDomain: SignupEmailDomainOption = .naver
-    @Published private(set) var customDomain: String = ""
+    @Published private(set) var customEmailAddress: String = ""
     @Published private(set) var otpCode: String = ""
     @Published private(set) var hasSentCode = false
     @Published private(set) var isEmailVerified = false
@@ -120,9 +120,12 @@ final class SignUpFlowViewModel: ObservableObject {
     }
 
     var emailAddress: String {
+        if selectedDomain == .direct {
+            return customEmailAddress.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
         let local = emailLocalPart.trimmingCharacters(in: .whitespacesAndNewlines)
-        let domainValue = selectedDomain == .direct ? customDomain : selectedDomain.rawValue
-        let domain = domainValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let domain = selectedDomain.rawValue
 
         guard !local.isEmpty, !domain.isEmpty else {
             return ""
@@ -132,10 +135,22 @@ final class SignUpFlowViewModel: ObservableObject {
     }
 
     var canSendVerificationCode: Bool {
-        let local = emailLocalPart.trimmingCharacters(in: .whitespacesAndNewlines)
-        let domainValue = selectedDomain == .direct ? customDomain : selectedDomain.rawValue
-        let domain = domainValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !local.isEmpty && domain.contains(".")
+        Self.isValidEmailAddress(emailAddress)
+    }
+
+    private static func isValidEmailAddress(_ value: String) -> Bool {
+        let email = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard email.rangeOfCharacter(from: .whitespacesAndNewlines) == nil else {
+            return false
+        }
+
+        let parts = email.components(separatedBy: "@")
+        guard parts.count == 2, !parts[0].isEmpty else {
+            return false
+        }
+
+        let domainParts = parts[1].split(separator: ".", omittingEmptySubsequences: false)
+        return domainParts.count >= 2 && domainParts.allSatisfy { !$0.isEmpty }
     }
 
     func startSignup() {
@@ -192,13 +207,11 @@ final class SignUpFlowViewModel: ObservableObject {
         resetEmailVerificationStateIfNeeded()
     }
 
-    func updateCustomDomain(_ newValue: String) {
-        let sanitized = newValue
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "@", with: "")
+    func updateCustomEmailAddress(_ newValue: String) {
+        let sanitized = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard customDomain != sanitized else { return }
-        customDomain = sanitized
+        guard customEmailAddress != sanitized else { return }
+        customEmailAddress = sanitized
         resetEmailVerificationStateIfNeeded()
     }
 
