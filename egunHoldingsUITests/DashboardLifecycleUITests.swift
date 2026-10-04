@@ -31,7 +31,10 @@ final class DashboardLifecycleUITests: XCTestCase {
         let news = app.staticTexts["UI 서버 뉴스 1"]
         scrollTo(news, in: app)
         XCTAssertTrue(news.waitForExistence(timeout: 4))
-        for _ in 0..<3 { app.scrollViews.firstMatch.swipeDown() }
+        for _ in 0..<3 {
+            if app.buttons["설정"].isHittable { break }
+            app.scrollViews.firstMatch.swipeDown()
+        }
         pullToRefresh(app)
         XCTAssertTrue(waitForRefreshCount(1, in: app))
         app.tabBars.buttons["뉴스룸"].tap()

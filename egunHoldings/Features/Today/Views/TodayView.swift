@@ -12,6 +12,12 @@ enum TodayNavDestination: Hashable {
     case policyNews(PolicyNewsItem)
 }
 
+private enum TodaySettingsDestination: String, Identifiable {
+    case root, goal
+    var id: String { rawValue }
+    var initialRoute: SettingsRoute? { self == .goal ? .goal : nil }
+}
+
 // MARK: - TodayView
 
 struct TodayView: View {
@@ -20,8 +26,7 @@ struct TodayView: View {
     @StateObject private var notificationCenter = AppNotificationCenter.shared
     @State private var navigationPath: [TodayNavDestination] = []
     @State private var isPushSlotDismissed = false
-    @State private var isSettingsPresented = false
-    @State private var settingsInitialRoute: SettingsRoute?
+    @State private var presentedSettings: TodaySettingsDestination?
     @State private var presentedNotificationDetail: AppNotificationItem?
     @Binding private var externalSignalRoute: PolSignalRoute?
     private let userId: Int64?
@@ -90,8 +95,7 @@ struct TodayView: View {
                                 openNotifications()
                             },
                             onSettings: {
-                                settingsInitialRoute = nil
-                                isSettingsPresented = true
+                                presentedSettings = .root
                             }
                         )
 
@@ -144,8 +148,7 @@ struct TodayView: View {
                             TodayGoalProgressCard(
                                 goalProgress: viewModel.goalProgress,
                                 onSetGoal: {
-                                    settingsInitialRoute = .goal
-                                    isSettingsPresented = true
+                                    presentedSettings = .goal
                                 }
                             )
                             .accessibilityIdentifier("today.goalProgress")
@@ -257,10 +260,10 @@ struct TodayView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
-            .fullScreenCover(isPresented: $isSettingsPresented) {
+            .fullScreenCover(item: $presentedSettings) { destination in
                 SettingsRootView(
                     notificationCenter: notificationCenter,
-                    initialRoute: settingsInitialRoute,
+                    initialRoute: destination.initialRoute,
                     onboardingResult: onboardingResult,
                     onGoalSaved: onGoalSaved,
                     repository: settingsRepository

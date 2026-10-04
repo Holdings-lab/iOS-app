@@ -63,7 +63,7 @@ private actor DashboardUITestNewsRepository: NewsroomDigestRepositoryProtocol {
     func fetchBriefing(briefingDate: String?) async throws -> NewsroomBriefing {
         count += 1
         let revision = count
-        try await Task.sleep(for: .milliseconds(revision == 1 ? 800 : 5_000))
+        try await Task.sleep(for: .milliseconds(revision == 1 ? 800 : 7_000))
         return NewsroomBriefing(title: "뉴스룸", asOfAt: Date(), subtitle: "UI 테스트", holdings: [
             NewsroomHoldingBriefing(ticker: "NVDA", name: "NVIDIA", logoURL: nil, weightPercent: 100,
                                     briefingType: .hero, dailyChangePercent: 1,
