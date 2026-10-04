@@ -11,16 +11,20 @@ struct NewsroomView: View {
 
     @StateObject private var viewModel: NewsroomDigestViewModel
     @State private var presentedHolding: NewsroomHoldingBriefing?
-    @State private var isPullRefreshing = false
-    @State private var refreshScrollID = 0
+    private let refreshSessionID: Int
+    private let onPullRefreshStarted: () -> Void
 
     init(
         userId: Int64? = nil,
         userAssetProfile: UserAssetProfile,
+        refreshSessionID: Int = 0,
+        onPullRefreshStarted: @escaping () -> Void = {},
         onAssetTabRequested: @escaping () -> Void = {},
         viewModel: NewsroomDigestViewModel? = nil
     ) {
         self.userAssetProfile = userAssetProfile
+        self.refreshSessionID = refreshSessionID
+        self.onPullRefreshStarted = onPullRefreshStarted
         self.onAssetTabRequested = onAssetTabRequested
         _viewModel = StateObject(wrappedValue: viewModel ?? NewsroomDigestViewModel(userId: userId))
     }
@@ -44,12 +48,11 @@ struct NewsroomView: View {
                     briefingState(briefing)
                 }
             }
-            .id(refreshScrollID)
             .refreshable {
-                isPullRefreshing = true
-                defer { isPullRefreshing = false }
+                onPullRefreshStarted()
                 await viewModel.refresh()
             }
+            .id(refreshSessionID)
 
             if let refreshStatusMessage = viewModel.refreshStatusMessage {
                 refreshToast(refreshStatusMessage)
@@ -66,11 +69,7 @@ struct NewsroomView: View {
             viewModel.loadIfNeeded()
         }
         .task { await viewModel.observeBriefings() }
-        .onDisappear {
-            if isPullRefreshing { refreshScrollID += 1 }
-            isPullRefreshing = false
-            viewModel.cancelLoading()
-        }
+        .onDisappear { viewModel.cancelLoading() }
         #if DEBUG
         .overlay(alignment: .topLeading) {
             if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {

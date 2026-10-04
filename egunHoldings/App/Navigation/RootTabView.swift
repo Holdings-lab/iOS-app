@@ -17,6 +17,9 @@ struct RootTabView: View {
     private let todayRepository: TodayRepositoryProtocol?
     private let settingsRepository: any SettingsRepositoryProtocol
     @State private var selectedTab: RootTab
+    @State private var refreshResetTabs: Set<RootTab> = []
+    @State private var todayRefreshSession = 0
+    @State private var newsroomRefreshSession = 0
     @State private var newsroomRepository: CachedNewsroomDigestRepository
     @State private var todaySignalRoute: PolSignalRoute?
     @State private var presentedSignalRoute: PolSignalRoute?
@@ -63,6 +66,8 @@ struct RootTabView: View {
                 externalSignalRoute: $todaySignalRoute,
                 onGoalSaved: onGoalSaved,
                 settingsRepository: settingsRepository,
+                refreshSessionID: todayRefreshSession,
+                onPullRefreshStarted: { refreshResetTabs.insert(.today) },
                 onAssetTabRequested: {
                     selectedTab = .asset
                 },
@@ -85,6 +90,8 @@ struct RootTabView: View {
                 NewsroomView(
                     userId: userId,
                     userAssetProfile: userAssetProfile,
+                    refreshSessionID: newsroomRefreshSession,
+                    onPullRefreshStarted: { refreshResetTabs.insert(.newsroom) },
                     onAssetTabRequested: {
                         selectedTab = .asset
                     },
@@ -109,6 +116,14 @@ struct RootTabView: View {
         }
         .tint(AssetTabPalette.brand)
         .preferredColorScheme(.light)
+        .onChange(of: selectedTab) { previous, _ in
+            guard refreshResetTabs.remove(previous) != nil else { return }
+            switch previous {
+            case .today: todayRefreshSession += 1
+            case .newsroom: newsroomRefreshSession += 1
+            case .asset: break
+            }
+        }
         #if DEBUG
         .onReceive(NotificationCenter.default.publisher(for: .dashboardUITestTabRequested)) { notification in
             guard ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh"),

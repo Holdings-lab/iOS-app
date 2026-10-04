@@ -39,6 +39,8 @@ final class DashboardLifecycleUITests: XCTestCase {
         XCTAssertTrue(waitForVerifiedSwitches(1, in: app))
         XCTAssertTrue(app.tabBars.buttons["오늘"].isSelected)
         XCTAssertTrue(waitForLoadingToEnd(in: app))
+        XCTAssertLessThan(app.staticTexts["오늘"].firstMatch.frame.minY, 150,
+                          "새로고침 종료 후 홈이 화면 아래로 밀린 채 아이콘이 남으면 안 됩니다")
         attach(app, name: "Today after returning during refresh")
         let secondNews = app.staticTexts["UI 서버 뉴스 2"]
         scrollTo(secondNews, in: app)

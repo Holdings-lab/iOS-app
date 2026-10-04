@@ -28,8 +28,6 @@ struct TodayView: View {
     @State private var isPushSlotDismissed = false
     @State private var presentedSettings: TodaySettingsDestination?
     @State private var presentedNotificationDetail: AppNotificationItem?
-    @State private var isPullRefreshing = false
-    @State private var refreshScrollID = 0
     @Binding private var externalSignalRoute: PolSignalRoute?
     private let userId: Int64?
     private let onboardingResult: OnboardingResult?
@@ -39,6 +37,8 @@ struct TodayView: View {
     private let onAssetTabRequested: () -> Void
     private let onGoalSaved: (FinancialGoal, Int64) -> Void
     private let settingsRepository: any SettingsRepositoryProtocol
+    private let refreshSessionID: Int
+    private let onPullRefreshStarted: () -> Void
     private let onNewsroomTabRequested: () -> Void
     private let onSignalRouteRequested: (PolSignalRoute) -> Void
     private let onAnalysisNotificationRequested: (PolSignalAnalysisPayload) -> Void
@@ -54,6 +54,8 @@ struct TodayView: View {
         externalSignalRoute: Binding<PolSignalRoute?> = .constant(nil),
         onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
         settingsRepository: any SettingsRepositoryProtocol = LiveSettingsRepository(),
+        refreshSessionID: Int = 0,
+        onPullRefreshStarted: @escaping () -> Void = {},
         onAssetTabRequested: @escaping () -> Void = {},
         onNewsroomTabRequested: @escaping () -> Void = {},
         onSignalRouteRequested: @escaping (PolSignalRoute) -> Void = { _ in },
@@ -67,6 +69,8 @@ struct TodayView: View {
         self.onAssetTabRequested = onAssetTabRequested
         self.onGoalSaved = onGoalSaved
         self.settingsRepository = settingsRepository
+        self.refreshSessionID = refreshSessionID
+        self.onPullRefreshStarted = onPullRefreshStarted
         self.onNewsroomTabRequested = onNewsroomTabRequested
         self.onSignalRouteRequested = onSignalRouteRequested
         self.onAnalysisNotificationRequested = onAnalysisNotificationRequested
@@ -170,10 +174,8 @@ struct TodayView: View {
                     .padding(.top, 12)
                     .padding(.bottom, 112)
                 }
-                .id(refreshScrollID)
                 .refreshable {
-                    isPullRefreshing = true
-                    defer { isPullRefreshing = false }
+                    onPullRefreshStarted()
                     await viewModel.refresh()
                 }
             }
@@ -253,12 +255,7 @@ struct TodayView: View {
                 await notificationCenter.refreshAuthorizationStatus()
             }
             .task { await viewModel.observeNews() }
-            .onDisappear {
-                // SwiftUI가 탭 밖의 refresh indicator를 유지하는 경우도 함께 초기화한다.
-                if isPullRefreshing { refreshScrollID += 1 }
-                isPullRefreshing = false
-                viewModel.cancelLoading()
-            }
+            .onDisappear { viewModel.cancelLoading() }
             #if DEBUG
             .overlay(alignment: .topLeading) {
                 if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {
@@ -284,6 +281,8 @@ struct TodayView: View {
                 )
             }
         }
+        // 뷰모델과 경로는 TodayView에 남기고, 이전 refresh control만 재생성한다.
+        .id(refreshSessionID)
     }
 
     private var dataFallbackMessage: String? {
