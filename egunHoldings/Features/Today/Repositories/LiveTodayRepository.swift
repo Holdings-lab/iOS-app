@@ -5,17 +5,20 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
     private let fallbackRepository: MockTodayRepository
     private let newsroomRepository: NewsroomDigestRepositoryProtocol
     private let newsTimeout: Duration
+    private let requestTimeout: Duration
 
     init(
         apiClient: APIClient = APIClientFactory.makeDefault(),
         fallbackRepository: MockTodayRepository = MockTodayRepository(),
         newsroomRepository: NewsroomDigestRepositoryProtocol? = nil,
-        newsTimeout: Duration = .seconds(5)
+        newsTimeout: Duration = .seconds(5),
+        requestTimeout: Duration = .seconds(8)
     ) {
         self.apiClient = apiClient
         self.fallbackRepository = fallbackRepository
         self.newsroomRepository = newsroomRepository ?? LiveNewsroomDigestRepository(apiClient: apiClient)
         self.newsTimeout = newsTimeout
+        self.requestTimeout = requestTimeout
     }
 
     func fetchDashboard(
@@ -98,9 +101,11 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
         fallback: TodayBriefing
     ) async -> (isAccountLinked: Bool?, value: TodayBriefing, fallbackMessage: String?) {
         do {
-            let response = try await apiClient.requestResult(
-                BackendEndpoint.dailyBriefing(),
-                as: TodayDailyBriefingResponseDTO.self
+            let request = Task {
+                try await apiClient.requestResult(BackendEndpoint.dailyBriefing(), as: TodayDailyBriefingResponseDTO.self)
+            }
+            let response = try await AsyncTaskWait.value(
+                of: request, timeout: requestTimeout, cancelsTaskOnInterruption: true
             )
             return (response.isAccountLinked, response.toDomain(fallback: fallback), nil)
         } catch {
@@ -114,9 +119,11 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
         fallback: [TodayHolding]
     ) async -> (isAccountLinked: Bool?, value: [TodayHolding], fallbackMessage: String?) {
         do {
-            let response = try await apiClient.requestResult(
-                BackendEndpoint.todayHoldings(),
-                as: TodayHoldingsResponseDTO.self
+            let request = Task {
+                try await apiClient.requestResult(BackendEndpoint.todayHoldings(), as: TodayHoldingsResponseDTO.self)
+            }
+            let response = try await AsyncTaskWait.value(
+                of: request, timeout: requestTimeout, cancelsTaskOnInterruption: true
             )
             return (response.isAccountLinked, response.toDomain(fallback: fallback), nil)
         } catch {
@@ -127,6 +134,20 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
 
     func invalidateNews() async {
         await newsroomRepository.invalidateBriefing()
+    }
+
+    func newsUpdates() async -> AsyncStream<[TodayNewsItem]> {
+        let updates = await newsroomRepository.briefingUpdates()
+        return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
+            let observer = Task {
+                for await briefing in updates {
+                    guard !Task.isCancelled else { break }
+                    continuation.yield(Self.newsItems(from: briefing))
+                }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in observer.cancel() }
+        }
     }
 
     private func fetchNews() async -> [TodayNewsItem] {
@@ -146,19 +167,24 @@ nonisolated struct LiveTodayRepository: TodayRepositoryProtocol {
     private func fetchLiveNews() async -> [TodayNewsItem] {
         do {
             let response = try await newsroomRepository.fetchBriefing(briefingDate: nil)
-            return response.holdings.filter { $0.briefingType != .quiet }.prefix(3).map { holding in
-                TodayNewsItem(
-                    id: holding.ticker,
-                    title: holding.headline ?? holding.name,
-                    summary: holding.summary ?? "새로운 뉴스를 확인해 보세요.",
-                    ticker: holding.ticker
-                )
-            }
+            return Self.newsItems(from: response)
         } catch is CancellationError {
             return []
         } catch {
             APIFallbackLog.log("GET /api/newsroom", error: error)
             return []
+        }
+    }
+
+    private static func newsItems(from briefing: NewsroomBriefing) -> [TodayNewsItem] {
+        guard briefing.errorState == nil, briefing.emptyState == nil else { return [] }
+        return briefing.sortedHoldings.filter { $0.briefingType != .quiet }.prefix(3).map { holding in
+            TodayNewsItem(
+                id: holding.ticker,
+                title: holding.headline ?? holding.name,
+                summary: holding.summary ?? "새로운 뉴스를 확인해 보세요.",
+                ticker: holding.ticker
+            )
         }
     }
 

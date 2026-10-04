@@ -247,6 +247,8 @@ struct TodayView: View {
                 await viewModel.load()
                 await notificationCenter.refreshAuthorizationStatus()
             }
+            .task { await viewModel.observeNews() }
+            .onDisappear { viewModel.cancelLoading() }
             .sheet(item: $presentedNotificationDetail) { item in
                 NewsDetailSheet(item: item)
                     .presentationDetents([.large])

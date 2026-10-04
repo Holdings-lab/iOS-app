@@ -21,6 +21,8 @@ final class TodayViewModel: ObservableObject {
     private var refreshGeneration = 0
     private var hasLoadedDashboard = false
     private var refreshTask: Task<Void, Never>?
+    private var settledLoadState: TodayLoadState = .idle
+    private var newsRevision = 0
 
     init(
         userId: Int64? = nil,
@@ -74,6 +76,7 @@ final class TodayViewModel: ObservableObject {
         self.loadingSections = loadState == .loading ? Set(TodaySection.allCases) : []
         self.didLoad = true
         self.hasLoadedDashboard = true
+        self.settledLoadState = loadState
     }
 
     var connectedBrokerStatusText: String {
@@ -103,6 +106,24 @@ final class TodayViewModel: ObservableObject {
         await refresh(showsLoading: true)
     }
 
+    func observeNews() async {
+        let updates = await repository.newsUpdates()
+        for await items in updates {
+            guard !Task.isCancelled else { return }
+            newsRevision += 1
+            newsItems = items
+        }
+    }
+
+    func cancelLoading() {
+        refreshGeneration += 1
+        refreshTask?.cancel()
+        refreshTask = nil
+        loadingSections = []
+        didLoad = hasLoadedDashboard
+        loadState = settledLoadState
+    }
+
     /// 잔고 조회 응답 등으로 상위(AppRouter) 세션 데이터가 갱신됐을 때 호출한다.
     /// 예전에는 상위에서 `.id(portfolioSnapshot)`으로 화면을 통째로 재생성했는데,
     /// 그러면 뷰모델·네비게이션 경로·스크롤 위치가 전부 초기화되고 로딩 스켈레톤이 다시 노출됐다.
@@ -113,6 +134,9 @@ final class TodayViewModel: ObservableObject {
         onboardingResult: OnboardingResult?,
         brokerBalanceSnapshot: BrokerBalanceSnapshot?
     ) {
+        let needsServerRefresh = userAssetProfile != self.userAssetProfile
+            || portfolioSnapshot != self.portfolioSnapshot
+            || brokerBalanceSnapshot != self.brokerBalanceSnapshot
         guard userAssetProfile != self.userAssetProfile
                 || portfolioSnapshot != self.portfolioSnapshot
                 || onboardingResult?.financialGoal != self.onboardingResult?.financialGoal
@@ -137,7 +161,7 @@ final class TodayViewModel: ObservableObject {
             holdings = brokerBalanceSnapshot.todayHoldings
         }
 
-        guard didLoad else { return }
+        guard didLoad, needsServerRefresh else { return }
         // 다음 refresh의 세대 번호를 즉시 올려 이전 응답의 반영을 막는다.
         refreshGeneration += 1
         let generation = refreshGeneration
@@ -181,6 +205,7 @@ final class TodayViewModel: ObservableObject {
     }
 
     private func performRefresh(showsLoading: Bool, generation: Int) async {
+        let newsRevisionAtStart = newsRevision
         if showsLoading {
             loadState = .loading
         }
@@ -196,23 +221,25 @@ final class TodayViewModel: ObservableObject {
             )
             try Task<Never, Never>.checkCancellation()
             guard generation == refreshGeneration else { return }
-            apply(dashboard)
+            apply(dashboard, newsRevisionAtStart: newsRevisionAtStart)
             hasLoadedDashboard = true
             loadingSections = []
             loadState = dashboard.fallbackMessage.map(TodayLoadState.usingFallback) ?? .loaded
+            settledLoadState = loadState
         } catch {
             guard generation == refreshGeneration else { return }
             loadingSections = []
             if error is CancellationError {
-                didLoad = false
-                loadState = .idle
+                didLoad = hasLoadedDashboard
+                loadState = settledLoadState
                 return
             }
             loadState = .usingFallback(message: Self.errorMessage(for: error))
+            settledLoadState = loadState
         }
     }
 
-    private func apply(_ dashboard: TodayDashboard) {
+    private func apply(_ dashboard: TodayDashboard, newsRevisionAtStart: Int) {
         userAssetProfile = dashboard.userAssetProfile
         portfolioSnapshot = dashboard.portfolioSnapshot
         isAccountLinked = dashboard.isAccountLinked
@@ -224,7 +251,8 @@ final class TodayViewModel: ObservableObject {
             brokerBalanceSnapshot: brokerBalanceSnapshot,
             fallback: dashboard.goalProgress
         )
-        newsItems = dashboard.newsItems
+        // 뉴스룸의 늦은 성공 응답을 대시보드의 앞선 타임아웃 결과([])로 덮어쓰지 않는다.
+        if newsRevision == newsRevisionAtStart { newsItems = dashboard.newsItems }
     }
 
     private static func goalProgress(

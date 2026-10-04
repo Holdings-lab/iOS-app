@@ -8,6 +8,7 @@ protocol TodayRepositoryProtocol {
         onSection: (@MainActor @Sendable (TodaySectionUpdate) -> Void)?
     ) async throws -> TodayDashboard
     func invalidateNews() async
+    func newsUpdates() async -> AsyncStream<[TodayNewsItem]>
 }
 
 extension TodayRepositoryProtocol {
@@ -19,6 +20,9 @@ extension TodayRepositoryProtocol {
     }
 
     func invalidateNews() async {}
+    func newsUpdates() async -> AsyncStream<[TodayNewsItem]> {
+        AsyncStream { $0.finish() }
+    }
 }
 
 enum TodaySection: CaseIterable, Hashable, Sendable {

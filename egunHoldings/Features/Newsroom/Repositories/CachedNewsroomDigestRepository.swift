@@ -11,6 +11,7 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
     private let now: @Sendable () -> Date
     private var cached: (briefing: NewsroomBriefing, expiresAt: Date)?
     private var inFlight: (id: UUID, task: Task<NewsroomBriefing, Error>)?
+    private var subscribers: [UUID: AsyncStream<NewsroomBriefing>.Continuation] = [:]
     private struct DetailKey: Hashable { let ticker: String; let date: String? }
     private var details: [DetailKey: (detail: NewsroomTickerDetail, expires: Date)] = [:]
     private var detailRequests: [DetailKey: (id: UUID, task: Task<NewsroomTickerDetail, Error>)] = [:]
@@ -31,65 +32,66 @@ actor CachedNewsroomDigestRepository: NewsroomDigestRepositoryProtocol {
             return try await repository.fetchBriefing(briefingDate: briefingDate)
         }
         if let cached, now() < cached.expiresAt { return cached.briefing }
-        if let inFlight { return try await inFlight.task.value }
+        if let inFlight { return try await AsyncTaskWait.value(of: inFlight.task) }
 
         return try await startBriefingFetch()
     }
 
-    /// 사용자가 직접 당겨서 새로고침한 경우다. 목록을 기다리던 화면이 곧 이 함수의
-    /// 새 결과를 받으므로, 이전 요청은 취소해 서버 부하를 남기지 않는다.
+    /// 이미 새 목록을 조회 중이면 같은 결과를 기다린다. 탭 전환/동시 새로고침으로
+    /// 진행 중인 요청을 끊거나 같은 서버 계산을 중복 실행하지 않는다.
     func refreshBriefing() async throws -> NewsroomBriefing {
+        if let inFlight { return try await AsyncTaskWait.value(of: inFlight.task) }
         invalidateDetails()
         cached = nil
-        cancelInFlightBriefing()
         return try await startBriefingFetch()
     }
 
     /// 잔고 동기화 같은 다른 탭의 사건으로 캐시만 버리는 경로다(LiveTodayRepository.invalidateNews).
-    /// 여기서 취소하면 마침 뉴스룸을 보고 있던 사용자의 화면이 대신 실패하므로 떼어내기만 한다.
+    /// 진행 중인 최신 조회는 두 탭이 계속 공유한다.
     func invalidateBriefing() async {
         invalidateDetails()
         cached = nil
-        detachInFlightBriefing()
     }
+
+    func briefingUpdates() -> AsyncStream<NewsroomBriefing> {
+        let id = UUID()
+        return AsyncStream(bufferingPolicy: .bufferingNewest(1)) { continuation in
+            subscribers[id] = continuation
+            if let cached, now() < cached.expiresAt { continuation.yield(cached.briefing) }
+            continuation.onTermination = { [weak self] _ in
+                Task { await self?.removeSubscriber(id) }
+            }
+        }
+    }
+
+    private func removeSubscriber(_ id: UUID) { subscribers[id] = nil }
 
     private func startBriefingFetch() async throws -> NewsroomBriefing {
         let id = UUID()
-        let task = Task { try await repository.fetchBriefing(briefingDate: nil) }
-        inFlight = (id, task)
-        do {
-            let briefing = try await task.value
-            if inFlight?.id == id {
+        let task = Task {
+            do {
+                let briefing = try await repository.fetchBriefing(briefingDate: nil)
                 // 서버가 result에 담아 준 장애 안내는 성공 데이터가 아니다. 캐시하면
                 // "다시 시도"가 60초 동안 같은 안내만 다시 보여주게 된다.
                 if briefing.errorState == nil {
                     cached = (briefing, now().addingTimeInterval(lifetime))
+                    for subscriber in subscribers.values { subscriber.yield(briefing) }
                 }
-                inFlight = nil
+                if inFlight?.id == id { inFlight = nil }
+                return briefing
+            } catch {
+                if inFlight?.id == id { inFlight = nil }
+                throw error
             }
-            return briefing
-        } catch {
-            if inFlight?.id == id { inFlight = nil }
-            throw error
         }
-    }
-
-    private func cancelInFlightBriefing() {
-        inFlight?.task.cancel()
-        inFlight = nil
-    }
-
-    /// 진행 중인 요청을 캐시에서 떼어낼 뿐, 취소하지는 않는다.
-    /// 공유 Task라서 취소하면 그 응답을 기다리던 화면까지 같이 실패한다 —
-    /// 결과가 새 캐시에 들어가지 않는 건 `startBriefingFetch`의 세대(id) 비교가 이미 보장한다.
-    private func detachInFlightBriefing() {
-        inFlight = nil
+        inFlight = (id, task)
+        return try await AsyncTaskWait.value(of: task)
     }
 
     func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail {
         let key = DetailKey(ticker: ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased(), date: briefingDate)
         if let cached = details[key], cached.expires > now() { return cached.detail }
-        if let request = detailRequests[key] { return try await request.task.value }
+        if let request = detailRequests[key] { return try await AsyncTaskWait.value(of: request.task) }
         let id = UUID()
         let task = Task { try await repository.fetchDetail(ticker: key.ticker, briefingDate: key.date) }
         detailRequests[key] = (id, task)

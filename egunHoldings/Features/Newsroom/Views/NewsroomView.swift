@@ -60,6 +60,8 @@ struct NewsroomView: View {
         .onAppear {
             viewModel.loadIfNeeded()
         }
+        .task { await viewModel.observeBriefings() }
+        .onDisappear { viewModel.cancelLoading() }
         #if DEBUG
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {

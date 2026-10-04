@@ -6,6 +6,7 @@ nonisolated protocol NewsroomDigestRepositoryProtocol: Sendable {
     func fetchBriefing(briefingDate: String?) async throws -> NewsroomBriefing
     func refreshBriefing() async throws -> NewsroomBriefing
     func invalidateBriefing() async
+    func briefingUpdates() async -> AsyncStream<NewsroomBriefing>
     func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail
     func fetchSources(ticker: String) async throws -> [NewsroomSourceItem]
 }
@@ -16,5 +17,8 @@ extension NewsroomDigestRepositoryProtocol {
     }
 
     func invalidateBriefing() async {}
+    func briefingUpdates() async -> AsyncStream<NewsroomBriefing> {
+        AsyncStream { $0.finish() }
+    }
     func fetchSources(ticker: String) async throws -> [NewsroomSourceItem] { [] }
 }
