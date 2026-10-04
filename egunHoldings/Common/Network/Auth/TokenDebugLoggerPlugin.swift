@@ -1,5 +1,6 @@
 import Foundation
 @preconcurrency import Moya
+@preconcurrency import Alamofire
 
 /// 모든 네트워크 응답을 받은 직후, 현재 액세스 토큰의 만료 상태를 Xcode 콘솔에 출력한다.
 /// 요청/응답 바디와 토큰 값은 기록하지 않고, 토큰 수명 추적에만 집중한다.
@@ -8,6 +9,11 @@ nonisolated struct TokenDebugLoggerPlugin: PluginType {
 
     init(tokenStore: AuthTokenStore) {
         self.tokenStore = tokenStore
+    }
+
+    func willSend(_ request: RequestType, target: TargetType) {
+        let hasAuthorization = request.request?.value(forHTTPHeaderField: "Authorization") != nil
+        TokenDebugLog.log("START \(target.method.rawValue) \(target.path) | bearer=\(hasAuthorization)")
     }
 
     func didReceive(_ result: Result<Moya.Response, MoyaError>, target: TargetType) {

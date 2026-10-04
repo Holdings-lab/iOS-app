@@ -4,6 +4,12 @@ import Foundation
 /// 어긋난 키 경로만 DEBUG 빌드 콘솔에 남긴다 — 응답 본문과 토큰은 기록하지 않는다
 /// (`TokenDebugLoggerPlugin`이 지키는 것과 같은 원칙).
 nonisolated enum NetworkDebugLog {
+    static func logDecodingSuccess(path: String, statusCode: Int) {
+        #if DEBUG
+        print("🧩 [Decode] \(path) → HTTP \(statusCode) 디코딩 성공")
+        #endif
+    }
+
     static func logDecodingFailure(path: String, statusCode: Int, error: any Error) {
         #if DEBUG
         print("🧩 [Decode] \(path) → HTTP \(statusCode) 디코딩 실패: \(description(for: error))")

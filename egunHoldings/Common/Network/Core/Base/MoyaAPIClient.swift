@@ -43,7 +43,9 @@ nonisolated final class MoyaAPIClient: APIClient, @unchecked Sendable {
 
         do {
             let decoder = NetworkJSONCoding.makeDecoder()
-            return try decoder.decode(T.self, from: response.data)
+            let decoded = try decoder.decode(T.self, from: response.data)
+            NetworkDebugLog.logDecodingSuccess(path: endpoint.path, statusCode: response.statusCode)
+            return decoded
         } catch {
             // decodingFailed는 어느 필드가 계약과 어긋났는지 잃어버린다. 응답 본문은 남기지 않고
             // (민감정보/지연 회피) DecodingError가 짚어 주는 키 경로만 DEBUG 빌드에 남긴다.
