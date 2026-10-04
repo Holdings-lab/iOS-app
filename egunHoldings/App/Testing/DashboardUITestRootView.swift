@@ -53,7 +53,7 @@ struct DashboardUITestRootView: View {
 
     private func countRefreshingControls(in view: UIView) -> Int {
         guard !view.isHidden, view.alpha > 0 else { return 0 }
-        let count = (view as? UIRefreshControl)?.isRefreshing == true ? 1 : 0
+        let count = (view as? UIScrollView)?.refreshControl?.isRefreshing == true ? 1 : 0
         return count + view.subviews.reduce(0) { $0 + countRefreshingControls(in: $1) }
     }
 }
@@ -76,7 +76,9 @@ private actor DashboardUITestNewsRepository: NewsroomDigestRepositoryProtocol {
 }
 
 private nonisolated struct DashboardUITestAPIClient: APIClient {
+    private let delays = DashboardUITestRequestDelays()
     func request<T: Decodable>(_ endpoint: Endpoint, as type: T.Type) async throws -> T {
+        try await delays.pause(for: endpoint.path)
         let result: String
         switch endpoint.path {
         case "/api/daily-briefing": result = #"{"isAccountLinked":true,"drawdownPct":-2}"#
@@ -88,6 +90,15 @@ private nonisolated struct DashboardUITestAPIClient: APIClient {
         return try NetworkJSONCoding.makeDecoder().decode(type, from: Data(
             #"{"isSuccess":true,"code":"SUCCESS-200","message":"OK","result":\#(result)}"#.utf8
         ))
+    }
+}
+
+private actor DashboardUITestRequestDelays {
+    private var briefingRequests = 0
+    func pause(for path: String) async throws {
+        guard path == "/api/daily-briefing" else { return }
+        briefingRequests += 1
+        if briefingRequests > 1 { try await Task.sleep(for: .seconds(7)) }
     }
 }
 #endif
