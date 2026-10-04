@@ -20,23 +20,6 @@ extension View {
     }
 }
 
-struct SoftGlassCard: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .background(Color.subtle, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
-                    .stroke(Color.hairline, lineWidth: 1)
-            }
-    }
-}
-
-extension View {
-    func softGlassCard() -> some View {
-        modifier(SoftGlassCard())
-    }
-}
-
 // KODEX light card — white bg, 1px hairline border, 16pt radius, no shadow.
 struct KDXCard<Content: View>: View {
     let padding: EdgeInsets

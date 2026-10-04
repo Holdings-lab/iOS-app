@@ -5,7 +5,6 @@ protocol APIClient: Sendable {
 }
 
 nonisolated enum NetworkError: Error, Sendable {
-    case notImplemented
     case invalidURL
     case invalidResponse
     case httpStatus(Int)
@@ -18,8 +17,6 @@ nonisolated enum NetworkError: Error, Sendable {
 extension NetworkError: LocalizedError {
     var errorDescription: String? {
         switch self {
-        case .notImplemented:
-            return AppVocabulary.ErrorMessage.serverFallback
         case .invalidURL:
             return AppVocabulary.ErrorMessage.unknown
         case .invalidResponse:
@@ -70,11 +67,5 @@ extension APIClient {
             code: response.code,
             message: response.message
         )
-    }
-}
-
-nonisolated struct StubAPIClient: APIClient {
-    nonisolated func request<T: Decodable>(_: Endpoint, as _: T.Type) async throws -> T {
-        throw NetworkError.notImplemented
     }
 }

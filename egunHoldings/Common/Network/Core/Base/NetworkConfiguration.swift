@@ -10,14 +10,6 @@ nonisolated enum NetworkConfiguration {
         return URL(string: "https://holdings-lab.me")!
     }
 
-    static var mlServiceBaseURL: URL {
-        if let configuredURL = configuredURL(forInfoKey: "ML_SERVICE_BASE_URL") {
-            return configuredURL
-        }
-
-        return backendBaseURL
-    }
-
     static var policyBackendBaseURL: URL? {
         backendBaseURL
     }

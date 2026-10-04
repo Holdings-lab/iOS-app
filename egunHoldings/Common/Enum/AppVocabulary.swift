@@ -107,7 +107,7 @@ nonisolated enum AppVocabulary {
                 return userFacing(statusCode: statusCode, fallback: fallback)
             case .httpStatus(let statusCode):
                 return userFacing(statusCode: statusCode, fallback: fallback)
-            case .invalidURL, .invalidResponse, .emptyResult, .decodingFailed, .notImplemented:
+            case .invalidURL, .invalidResponse, .emptyResult, .decodingFailed:
                 return serverFallback
             case .missingRefreshToken:
                 return loginExpired
