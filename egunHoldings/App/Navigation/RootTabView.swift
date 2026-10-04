@@ -126,7 +126,7 @@ struct RootTabView: View {
         }
         #if DEBUG
         .onReceive(NotificationCenter.default.publisher(for: .dashboardUITestTabRequested)) { notification in
-            guard ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh"),
+            guard UITestLaunchMode.isDashboardRefresh,
                   let tab = notification.object as? RootTab else { return }
             selectedTab = tab
         }

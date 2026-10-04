@@ -13,6 +13,6 @@ nonisolated struct RegisteredAuthAccount: Codable, Sendable, Identifiable {
     }
 
     var normalizedEmail: String {
-        email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        AuthEmailAddress.normalized(email)
     }
 }

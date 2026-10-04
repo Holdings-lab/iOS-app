@@ -154,7 +154,7 @@ final class AppRouter: ObservableObject {
     }
 
     func registeredAccount(for email: String) -> RegisteredAuthAccount? {
-        accountStore.loadAll().first { $0.normalizedEmail == normalizedEmail(from: email) }
+        accountStore.loadAll().first { $0.normalizedEmail == AuthEmailAddress.normalized(email) }
     }
 
     private func applySessionDerivedData(from session: AppUserSession) {
@@ -263,13 +263,9 @@ final class AppRouter: ObservableObject {
         clearSessionAndMoveToAuth()
     }
 
-    private func normalizedEmail(from email: String) -> String {
-        email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    }
-
     private func syncRegisteredAccount(with session: AppUserSession) {
         var accounts = accountStore.loadAll()
-        if let index = accounts.firstIndex(where: { $0.normalizedEmail == normalizedEmail(from: session.email) }) {
+        if let index = accounts.firstIndex(where: { $0.normalizedEmail == AuthEmailAddress.normalized(session.email) }) {
             accounts[index].userId = session.userId
             accounts[index].onboardingCompleted = session.onboardingCompleted
             accounts[index].onboardingResult = session.onboardingResult

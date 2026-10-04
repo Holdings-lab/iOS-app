@@ -242,16 +242,10 @@ struct TodayView: View {
             }
             .task { await viewModel.observeNews() }
             .onDisappear { viewModel.cancelLoading() }
-            #if DEBUG
-            .overlay(alignment: .topLeading) {
-                if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {
-                    Text("로딩: \(viewModel.loadState == .loading ? 1 : 0)")
-                        .accessibilityIdentifier("ui.todayLoading")
-                        .font(.system(size: 9))
-                        .allowsHitTesting(false)
-                }
-            }
-            #endif
+            .dashboardUITestLoadingIndicator(
+                isLoading: viewModel.loadState == .loading,
+                identifier: "ui.todayLoading"
+            )
             .sheet(item: $presentedNotificationDetail) { item in
                 NewsDetailSheet(item: item)
                     .presentationDetents([.large])

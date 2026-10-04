@@ -135,22 +135,7 @@ final class SignUpFlowViewModel: ObservableObject {
     }
 
     var canSendVerificationCode: Bool {
-        Self.isValidEmailAddress(emailAddress)
-    }
-
-    private static func isValidEmailAddress(_ value: String) -> Bool {
-        let email = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard email.rangeOfCharacter(from: .whitespacesAndNewlines) == nil else {
-            return false
-        }
-
-        let parts = email.components(separatedBy: "@")
-        guard parts.count == 2, !parts[0].isEmpty else {
-            return false
-        }
-
-        let domainParts = parts[1].split(separator: ".", omittingEmptySubsequences: false)
-        return domainParts.count >= 2 && domainParts.allSatisfy { !$0.isEmpty }
+        AuthEmailAddress.isValid(emailAddress)
     }
 
     func startSignup() {

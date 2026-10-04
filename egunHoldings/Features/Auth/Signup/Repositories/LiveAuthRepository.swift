@@ -1,48 +1,5 @@
 import Foundation
 
-nonisolated private struct EmailRequestDTO: Encodable {
-    let email: String
-}
-
-nonisolated private struct EmailVerifyRequestDTO: Encodable {
-    let email: String
-    let verificationCode: String
-}
-
-nonisolated private struct AuthRegisterRequestDTO: Encodable {
-    let email: String
-    let nickname: String
-    let password: String
-}
-
-nonisolated private struct FCMTokenRequestDTO: Encodable {
-    let userId: Int64
-    let fcmToken: String
-}
-
-nonisolated private struct NicknameRequestDTO: Encodable {
-    let nickname: String
-}
-
-nonisolated private struct ChangePasswordRequestDTO: Encodable {
-    let currentPassword: String
-    let newPassword: String
-}
-
-nonisolated private struct AuthAccountResponseDTO: Decodable {
-    let userId: Int64
-    let email: String
-    let nickname: String
-
-    func toDomain() -> AuthAccountProfile {
-        AuthAccountProfile(
-            userId: userId,
-            email: email,
-            nickname: nickname
-        )
-    }
-}
-
 nonisolated struct LiveAuthRepository: RegistrationRepositoryProtocol, AccountManagementRepositoryProtocol, EmailVerificationRepositoryProtocol {
     private let apiClient: APIClient
 

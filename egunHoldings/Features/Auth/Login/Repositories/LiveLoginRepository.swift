@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated final class LiveLoginRepository: LoginRepositoryProtocol, @unchecked Sendable {
+nonisolated final class LiveLoginRepository: LoginRepositoryProtocol {
     private let apiClient: APIClient
 
     init(apiClient: APIClient = APIClientFactory.makeDefault()) {
@@ -8,7 +8,7 @@ nonisolated final class LiveLoginRepository: LoginRepositoryProtocol, @unchecked
     }
 
     func login(email: String, password: String) async throws -> LoginSession {
-        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let normalizedEmail = AuthEmailAddress.normalized(email)
         let body = try NetworkJSONCoding.encodeJSON(LoginRequestDTO(email: normalizedEmail, password: password))
         let response = try await apiClient.requestResult(
             BackendEndpoint.login(body: body),
