@@ -32,40 +32,41 @@ struct DashboardLoadingTests {
         #expect(await source.count == 4)
     }
 
-    @Test("강제 새로고침은 이전 뉴스룸 요청을 취소하고 새 요청을 사용한다")
-    func refreshCancelsInFlightBriefing() async throws {
-        let source = BlockingNewsroomRepository()
+    @Test("새로고침도 진행 중인 공유 요청을 재사용한다")
+    func refreshSharesInFlightBriefing() async throws {
+        let gate = RequestGate()
+        let source = GatedNewsroomRepository(gate: gate)
         let cache = CachedNewsroomDigestRepository(repository: source)
         let original = Task { try await cache.fetchBriefing(briefingDate: nil) }
         await source.waitUntilFirstRequestStarts()
-
+        Task {
+            try? await Task.sleep(for: .milliseconds(20))
+            await gate.release()
+        }
         let refreshed = try await cache.refreshBriefing()
-
-        do {
-            _ = try await original.value
-            Issue.record("이전 요청은 취소되어야 한다")
-        } catch is CancellationError {}
-        #expect(refreshed.title == "두 번째 요청")
-        #expect(await source.firstRequestWasCancelled)
-        #expect(await source.count == 2)
+        #expect(try await original.value == refreshed)
+        #expect(await source.count == 1)
     }
 
     @Test("다른 탭의 캐시 무효화는 진행 중인 뉴스룸 요청을 취소하지 않는다")
     func invalidationLeavesInFlightBriefingRunning() async throws {
         // 잔고 동기화가 끝나면 Today 탭이 invalidateNews() → invalidateBriefing()을 호출한다.
         // 사용자가 직접 새로고침한 게 아니므로, 뉴스룸을 열어 둔 화면의 요청을 끊으면 안 된다.
-        let source = BlockingNewsroomRepository()
+        let gate = RequestGate()
+        let source = GatedNewsroomRepository(gate: gate)
         let cache = CachedNewsroomDigestRepository(repository: source)
         let opened = Task { try await cache.fetchBriefing(briefingDate: nil) }
         await source.waitUntilFirstRequestStarts()
 
         await cache.invalidateBriefing()
-        #expect(await source.firstRequestWasCancelled == false)
-
-        // 무효화됐으므로 그 결과는 캐시에 남지 않고 다음 조회는 새로 나간다.
+        Task {
+            try? await Task.sleep(for: .milliseconds(20))
+            await gate.release()
+        }
+        // 아직 실행 중인 조회를 중복 요청하지 않는다.
         _ = try await cache.fetchBriefing(briefingDate: nil)
-        #expect(await source.count == 2)
-        opened.cancel()
+        _ = try await opened.value
+        #expect(await source.count == 1)
     }
 
     @Test("실패 응답은 캐시하지 않고 다음 호출에서 재시도한다")
@@ -215,6 +216,179 @@ struct DashboardLoadingTests {
         await initial.value
         #expect(viewModel.holdings.first?.ticker == "NEW")
         #expect(viewModel.loadState == .loaded)
+    }
+
+    @Test("탭을 떠나면 홈 로딩을 해제하고 재진입 시 새로 불러온다")
+    func cancelsTodayWhenTabDisappears() async {
+        let started = RequestGate()
+        let cancelled = RequestGate()
+        let repository = SupersededTodayRepository(started: started, cancelled: cancelled)
+        let viewModel = TodayViewModel(userId: 1, userAssetProfile: AppMockData.userAssetProfile,
+                                      portfolioSnapshot: AppMockData.portfolioSnapshot, repository: repository)
+        let loading = Task { await viewModel.load() }
+        await started.wait()
+        viewModel.cancelLoading()
+        await cancelled.wait()
+        await loading.value
+        #expect(viewModel.loadState == .idle)
+        #expect(viewModel.loadingSections.isEmpty)
+        await viewModel.load()
+        #expect(viewModel.holdings.first?.ticker == "NEW")
+        #expect(viewModel.loadState == .loaded)
+    }
+
+    @Test("취소를 무시하는 공유 요청도 뉴스룸 대기를 길게 붙잡지 않는다")
+    func boundsNewsroomWaitAndClearsLoading() async throws {
+        let gate = RequestGate()
+        let source = GatedNewsroomRepository(gate: gate)
+        let cache = CachedNewsroomDigestRepository(repository: source)
+        let viewModel = NewsroomDigestViewModel(repository: cache, refreshTimeout: .milliseconds(20))
+        let clock = ContinuousClock()
+        let start = clock.now
+        #expect(await viewModel.refresh() == false)
+        #expect(start.duration(to: clock.now) < .seconds(1))
+        #expect(!viewModel.isLoading)
+        let observing = Task { await viewModel.observeBriefings() }
+        await gate.release()
+        await expectEventually { viewModel.briefing?.holdings.first?.ticker == "LIVE" }
+        #expect(viewModel.errorMessage == nil)
+        observing.cancel()
+        await observing.value
+    }
+
+    @Test("뉴스룸 탭 재진입은 공유 요청을 끊거나 중복 실행하지 않는다")
+    func reentersNewsroomDuringRefresh() async throws {
+        let gate = RequestGate()
+        let source = GatedNewsroomRepository(gate: gate)
+        let cache = CachedNewsroomDigestRepository(repository: source)
+        let viewModel = NewsroomDigestViewModel(repository: cache)
+        let first = Task { await viewModel.refresh() }
+        await source.waitUntilFirstRequestStarts()
+        viewModel.cancelLoading()
+        await first.value
+        #expect(!viewModel.isLoading)
+        Task {
+            try? await Task.sleep(for: .milliseconds(20))
+            await gate.release()
+        }
+        #expect(await viewModel.refresh())
+        #expect(!viewModel.isLoading)
+        #expect(viewModel.briefing?.holdings.first?.ticker == "LIVE")
+        #expect(await source.count == 1)
+        viewModel.cancelLoading()
+    }
+
+    @Test("홈의 뉴스 대기 종료 뒤 도착한 뉴스룸 응답을 자동 반영한다")
+    func appliesLateSharedNews() async throws {
+        let gate = RequestGate()
+        let source = GatedNewsroomRepository(gate: gate)
+        let cache = CachedNewsroomDigestRepository(repository: source)
+        let repository = LiveTodayRepository(apiClient: DashboardAPIClient(), newsroomRepository: cache,
+                                             newsTimeout: .milliseconds(20))
+        let viewModel = TodayViewModel(userId: 1, userAssetProfile: AppMockData.userAssetProfile,
+                                      portfolioSnapshot: AppMockData.portfolioSnapshot, repository: repository)
+        let observing = Task { await viewModel.observeNews() }
+        let clock = ContinuousClock()
+        let start = clock.now
+        await viewModel.load()
+        #expect(start.duration(to: clock.now) < .seconds(1))
+        #expect(viewModel.newsItems.isEmpty)
+        await gate.release()
+        await expectEventually { viewModel.newsItems.first?.ticker == "LIVE" }
+        #expect(await source.count == 1)
+        observing.cancel()
+        await observing.value
+    }
+
+    @Test("홈에 다시 들어와도 뉴스룸에서 완료한 최신 결과를 즉시 받는다")
+    func replaysNewsOnTodayReentry() async throws {
+        let gate = RequestGate()
+        let source = GatedNewsroomRepository(gate: gate)
+        let cache = CachedNewsroomDigestRepository(repository: source)
+        let repository = LiveTodayRepository(apiClient: DashboardAPIClient(), newsroomRepository: cache,
+                                             newsTimeout: .milliseconds(20))
+        let viewModel = TodayViewModel(userId: 1, userAssetProfile: AppMockData.userAssetProfile,
+                                      portfolioSnapshot: AppMockData.portfolioSnapshot, repository: repository)
+        await viewModel.load()
+        #expect(viewModel.newsItems.isEmpty)
+        await gate.release()
+        _ = try await cache.fetchBriefing(briefingDate: nil)
+        let observing = Task { await viewModel.observeNews() }
+        await expectEventually { viewModel.newsItems.first?.ticker == "LIVE" }
+        observing.cancel()
+        await observing.value
+        #expect(await source.count == 1)
+    }
+
+    @Test("대시보드 완료가 늦어도 이미 반영한 최신 뉴스를 빈 타임아웃 결과로 덮지 않는다")
+    func preservesNewsThatArrivesBeforeDashboard() async throws {
+        let newsGate = RequestGate()
+        let briefingGate = RequestGate()
+        let source = GatedNewsroomRepository(gate: newsGate)
+        let cache = CachedNewsroomDigestRepository(repository: source)
+        let repository = LiveTodayRepository(apiClient: DashboardAPIClient(slowBriefing: briefingGate),
+                                             newsroomRepository: cache, newsTimeout: .milliseconds(10))
+        let viewModel = TodayViewModel(userId: 1, userAssetProfile: AppMockData.userAssetProfile,
+                                      portfolioSnapshot: AppMockData.portfolioSnapshot, repository: repository)
+        let observing = Task { await viewModel.observeNews() }
+        let loading = Task { await viewModel.load() }
+        await source.waitUntilFirstRequestStarts()
+        try await Task.sleep(for: .milliseconds(30))
+        await newsGate.release()
+        await expectEventually { viewModel.newsItems.first?.ticker == "LIVE" }
+        await briefingGate.release()
+        await loading.value
+        #expect(viewModel.newsItems.first?.ticker == "LIVE")
+        observing.cancel()
+        await observing.value
+    }
+
+    @Test("느린 자산 API에도 전체 홈 대기 시간은 제한된다")
+    func boundsBrokerRequests() async throws {
+        let gate = RequestGate()
+        let clock = ContinuousClock()
+        let start = clock.now
+        let dashboard = try await LiveTodayRepository(apiClient: DashboardAPIClient(slowBriefing: gate),
+                                                     requestTimeout: .milliseconds(20)).fetchDashboard(
+            userId: 1, userAssetProfile: AppMockData.userAssetProfile,
+            portfolioSnapshot: AppMockData.portfolioSnapshot
+        )
+        #expect(start.duration(to: clock.now) < .seconds(1))
+        #expect(dashboard.fallbackMessage != nil)
+        await gate.release()
+    }
+
+    private func expectEventually(_ predicate: () -> Bool) async {
+        for _ in 0..<500 {
+            if predicate() { return }
+            try? await Task.sleep(for: .milliseconds(2))
+        }
+        #expect(predicate())
+    }
+}
+
+private actor GatedNewsroomRepository: NewsroomDigestRepositoryProtocol {
+    let gate: RequestGate
+    private(set) var count = 0
+    private var started: CheckedContinuation<Void, Never>?
+    init(gate: RequestGate) { self.gate = gate }
+    func fetchBriefing(briefingDate: String?) async throws -> NewsroomBriefing {
+        count += 1
+        started?.resume()
+        started = nil
+        await gate.wait()
+        return NewsroomBriefing(title: "실제 응답", asOfAt: nil, subtitle: "", holdings: [
+            NewsroomHoldingBriefing(ticker: "LIVE", name: "서버 종목", logoURL: nil, weightPercent: 100,
+                                    briefingType: .hero, dailyChangePercent: 1,
+                                    headline: "서버에서 도착한 뉴스", summary: nil, detailPath: nil)
+        ], footerMessage: nil, emptyState: nil, errorState: nil)
+    }
+    func fetchDetail(ticker: String, briefingDate: String?) async throws -> NewsroomTickerDetail {
+        throw URLError(.unsupportedURL)
+    }
+    func waitUntilFirstRequestStarts() async {
+        guard count == 0 else { return }
+        await withCheckedContinuation { started = $0 }
     }
 }
 
