@@ -65,7 +65,7 @@ struct NewsroomView: View {
         #if DEBUG
         .overlay(alignment: .topLeading) {
             if ProcessInfo.processInfo.arguments.contains("-ui-testing-dashboard-refresh") {
-                Text("로딩: \(viewModel.isLoading ? 1 : 0)")
+                Text("로딩: \(viewModel.isRefreshing ? 1 : 0)")
                     .accessibilityIdentifier("ui.newsroomLoading")
                     .font(.system(size: 9))
                     .allowsHitTesting(false)

@@ -5,6 +5,7 @@ import Combine
 final class NewsroomDigestViewModel: ObservableObject {
     @Published private(set) var briefing: NewsroomBriefing?
     @Published private(set) var isLoading = false
+    @Published private(set) var isRefreshing = false
     @Published private(set) var errorMessage: String?
     /// pull-to-refresh 결과 토스트. "이미 최신이에요" 등, 1.5초 뒤 자동으로 사라진다.
     @Published private(set) var refreshStatusMessage: String?
@@ -59,6 +60,7 @@ final class NewsroomDigestViewModel: ObservableObject {
         statusTask?.cancel()
         refreshStatusMessage = nil
         isLoading = false
+        isRefreshing = false
     }
 
     func observeBriefings() async {
@@ -75,6 +77,7 @@ final class NewsroomDigestViewModel: ObservableObject {
         generation += 1
         let currentGeneration = generation
         isLoading = true
+        isRefreshing = refresh
         errorMessage = nil
         let previousBriefing = briefing
         prefetchTask?.cancel()
@@ -87,6 +90,7 @@ final class NewsroomDigestViewModel: ObservableObject {
         defer {
             if generation == currentGeneration {
                 isLoading = false
+                isRefreshing = false
                 requestTask = nil
             }
         }

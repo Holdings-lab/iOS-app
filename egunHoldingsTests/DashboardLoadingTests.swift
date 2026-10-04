@@ -248,6 +248,7 @@ struct DashboardLoadingTests {
         #expect(await viewModel.refresh() == false)
         #expect(start.duration(to: clock.now) < .seconds(1))
         #expect(!viewModel.isLoading)
+        #expect(!viewModel.isRefreshing)
         let observing = Task { await viewModel.observeBriefings() }
         await gate.release()
         await expectEventually { viewModel.briefing?.holdings.first?.ticker == "LIVE" }
@@ -264,15 +265,18 @@ struct DashboardLoadingTests {
         let viewModel = NewsroomDigestViewModel(repository: cache)
         let first = Task { await viewModel.refresh() }
         await source.waitUntilFirstRequestStarts()
+        #expect(viewModel.isRefreshing)
         viewModel.cancelLoading()
         _ = await first.value
         #expect(!viewModel.isLoading)
+        #expect(!viewModel.isRefreshing)
         Task {
             try? await Task.sleep(for: .milliseconds(20))
             await gate.release()
         }
         #expect(await viewModel.refresh())
         #expect(!viewModel.isLoading)
+        #expect(!viewModel.isRefreshing)
         #expect(viewModel.briefing?.holdings.first?.ticker == "LIVE")
         #expect(await source.count == 1)
         viewModel.cancelLoading()
