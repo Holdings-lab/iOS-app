@@ -157,8 +157,7 @@ final class OnboardingFlowViewModel: ObservableObject {
 
     // MARK: - Step 8: 완료 처리
 
-    /// 목표 금액은 `/api/goal`에서 먼저 저장한다. 이 API가 프로필 API와 별도여야 은퇴 목표의
-    /// 20억 원 상한을 보존할 수 있다.
+    /// 목표 금액은 `/api/goal`에서 먼저 저장한다. 직접 입력한 금액도 같은 계약으로 전송한다.
     func submitGoal(userId: Int64?) async -> Bool {
         guard let userId else {
             recordMissingUserFailure(stepTitle: "투자 목표", endpoint: "PATCH /api/goal")

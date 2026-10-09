@@ -4,11 +4,11 @@ import Testing
 
 @MainActor
 struct TodayLocalGoalProgressTests {
-    @Test("온보딩 목표는 1억원 단위로 선택한다")
+    @Test("온보딩 슬라이더는 1억부터 5억원까지 1천만원 단위로 선택한다")
     func targetAmountsUseEokUnits() {
         for goal in FinancialGoal.allCases {
-            #expect(goal.targetAmountSliderStep == 100_000_000)
-            #expect(Int64(goal.targetAmountSliderRange.lowerBound) >= 100_000_000)
+            #expect(goal.targetAmountSliderStep == 10_000_000)
+            #expect(goal.targetAmountSliderRange == 100_000_000...500_000_000)
             #expect(goal.defaultTargetAmount % 100_000_000 == 0)
         }
     }
