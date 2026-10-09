@@ -5,6 +5,82 @@ import Testing
 
 @MainActor
 struct LoginRequestLifecycleTests {
+    @Test("새 설치는 남아 있는 Keychain 세션을 지우고 로그인 후 재실행에서 오늘 탭으로 복원한다")
+    func freshInstallRequiresLoginThenRestoresSession() throws {
+        let suite = "fresh-install-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        let keychain = InMemoryKeychain()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = KeychainAuthSessionStore(
+            keychain: keychain,
+            legacyStore: AuthSessionStore(defaults: defaults),
+            defaults: defaults
+        )
+        store.save(AppUserSession(userId: 99, token: "old", refreshToken: "old-refresh",
+                                  expiresAt: .distantFuture, userName: "old", email: "old@test.example",
+                                  onboardingCompleted: true))
+
+        let router = AppRouter(store: store, accountStore: AuthAccountStore(defaults: defaults))
+        #expect(router.route == .auth)
+        #expect(store.load() == nil)
+
+        router.handleLoginSuccess(loginSession: loginSession)
+        let restarted = AppRouter(store: store, accountStore: AuthAccountStore(defaults: defaults))
+        #expect(restarted.route == .main)
+        #expect(restarted.session?.refreshToken == "new-refresh")
+    }
+
+    @Test("기존 설치의 계정 기록이 있으면 Keychain 로그인 세션을 유지한다")
+    func existingInstallPreservesSession() throws {
+        let suite = "existing-install-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        let keychain = InMemoryKeychain()
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = KeychainAuthSessionStore(
+            keychain: keychain,
+            legacyStore: AuthSessionStore(defaults: defaults),
+            defaults: defaults
+        )
+        store.save(AppUserSession(userId: 42, token: "valid", refreshToken: "refresh",
+                                  expiresAt: .distantFuture, userName: "test", email: "test@example.invalid",
+                                  onboardingCompleted: true))
+        defaults.set(Data(), forKey: AuthAccountStore.storageKey)
+
+        let router = AppRouter(store: store, accountStore: AuthAccountStore(defaults: defaults))
+        #expect(router.route == .main)
+        #expect(router.session?.token == "valid")
+    }
+
+    @Test("만료된 액세스 토큰은 저장된 리프레시 토큰으로 갱신한 뒤 메인으로 간다")
+    func restoresExpiredAccessTokenWithRefresh() async throws {
+        let defaults = try #require(UserDefaults(suiteName: UUID().uuidString))
+        let store = AuthSessionStore(defaults: defaults)
+        store.save(AppUserSession(userId: 42, token: "expired", refreshToken: "refresh",
+                                  expiresAt: .distantPast, userName: "test", email: "test@example.invalid",
+                                  onboardingCompleted: true))
+        let refresher = CountingLoginRefresher(error: nil)
+        let router = AppRouter(store: store, accountStore: AuthAccountStore(defaults: defaults),
+                               tokenRefresher: refresher)
+        await waitUntil { router.route != .loading }
+        #expect(router.route == .main)
+        #expect(store.load()?.token == "new")
+        #expect(await refresher.count == 1)
+    }
+
+    @Test("리프레시 토큰이 거부되면 저장된 세션을 지우고 로그인으로 간다")
+    func expiredRefreshRequiresLogin() async throws {
+        let defaults = try #require(UserDefaults(suiteName: UUID().uuidString))
+        let store = AuthSessionStore(defaults: defaults)
+        store.save(AppUserSession(userId: 42, token: "expired", refreshToken: "expired-refresh",
+                                  expiresAt: .distantPast, userName: "test", email: "test@example.invalid",
+                                  onboardingCompleted: true))
+        let router = AppRouter(store: store, accountStore: AuthAccountStore(defaults: defaults),
+                               tokenRefresher: CountingLoginRefresher(error: .httpStatus(401)))
+        await waitUntil { router.route != .loading }
+        #expect(router.route == .auth)
+        #expect(store.load() == nil)
+    }
+
     @Test("메인 화면을 열 때 인증 토큰은 이미 저장되어 있다")
     func persistsBeforeOpeningTabs() throws {
         let defaults = try #require(UserDefaults(suiteName: UUID().uuidString))
@@ -143,6 +219,23 @@ struct LoginRequestLifecycleTests {
     private var loginSession: LoginSession {
         LoginSession(userId: 42, email: "new@test.example", nickname: "new", accessToken: "new-login",
                      refreshToken: "new-refresh", accessTokenExpiresIn: 1800, onboardingCompleted: true)
+    }
+}
+
+nonisolated private final class InMemoryKeychain: KeychainValueStoring, @unchecked Sendable {
+    private let lock = NSLock()
+    private var entries: [String: Data] = [:]
+
+    func read(account: String) -> Data? {
+        lock.withLock { entries[account] }
+    }
+
+    func save(_ data: Data, account: String) {
+        lock.withLock { entries[account] = data }
+    }
+
+    func delete(account: String) {
+        lock.withLock { _ = entries.removeValue(forKey: account) }
     }
 }
 

@@ -6,8 +6,9 @@ protocol AuthAccountStoring: Sendable {
 }
 
 nonisolated final class AuthAccountStore: AuthAccountStoring, @unchecked Sendable {
+    nonisolated static let storageKey = "policy_finance.auth.accounts.v1"
     private let defaults: UserDefaults
-    private let key = "policy_finance.auth.accounts.v1"
+    private let key = AuthAccountStore.storageKey
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
