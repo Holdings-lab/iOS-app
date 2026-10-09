@@ -261,12 +261,10 @@ final class TodayViewModel: ObservableObject {
         brokerBalanceSnapshot: BrokerBalanceSnapshot?,
         fallback: TodayGoalProgress?
     ) -> TodayGoalProgress? {
-        if let onboardingResult {
-            let currentAssetAmount = brokerBalanceSnapshot?.totalEvaluationAmount
-                ?? AppMockData.brokerBalanceSnapshot.totalEvaluationAmount
+        if let onboardingResult, let brokerBalanceSnapshot {
             return TodayLocalGoalProgress.make(
                 onboardingResult: onboardingResult,
-                currentAssetAmount: currentAssetAmount
+                currentAssetAmount: brokerBalanceSnapshot.totalEvaluationAmount
             )
         }
         return userId == nil ? fallback : nil

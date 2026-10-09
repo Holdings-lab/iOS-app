@@ -4,6 +4,7 @@ import SwiftUI
 
 struct TodayGoalProgressCard: View {
     let goalProgress: TodayGoalProgress?
+    let hasSavedGoal: Bool
     let onSetGoal: () -> Void
 
     var body: some View {
@@ -46,8 +47,10 @@ struct TodayGoalProgressCard: View {
                     .padding(.top, 2)
                 } else {
                     TodayQuietState(
-                        message: Text("아직 목표 자금을 설정하지 않았어요"),
-                        ctaTitle: "목표 설정하기",
+                        message: Text(hasSavedGoal
+                            ? "목표가 저장됐어요. 계좌 잔고를 불러오면 진행률을 보여드려요"
+                            : "아직 목표 자금을 설정하지 않았어요"),
+                        ctaTitle: hasSavedGoal ? "목표 수정하기" : "목표 설정하기",
                         onCTA: onSetGoal
                     )
                 }

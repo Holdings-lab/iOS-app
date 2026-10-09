@@ -39,16 +39,17 @@ struct TodayLocalGoalProgressTests {
             financialGoal: FinancialGoal.retirement.rawValue,
             targetAmount: 500_000_000
         )
+        let mockBalance = AppMockData.brokerBalanceSnapshot
         let viewModel = TodayViewModel(
             userId: 1,
             onboardingResult: goal,
             userAssetProfile: AppMockData.userAssetProfile,
             portfolioSnapshot: AppMockData.portfolioSnapshot,
+            brokerBalanceSnapshot: mockBalance,
             repository: MockTodayRepository()
         )
         #expect(viewModel.goalProgress?.progressPercent == 27)
 
-        let mockBalance = AppMockData.brokerBalanceSnapshot
         let updatedBalance = BrokerBalanceSnapshot(
             broker: mockBalance.broker,
             environment: mockBalance.environment,
@@ -69,5 +70,23 @@ struct TodayLocalGoalProgressTests {
             brokerBalanceSnapshot: updatedBalance
         )
         #expect(viewModel.goalProgress?.progressPercent == 50)
+    }
+
+    @Test("실제 잔고가 없으면 예시 잔고나 서버 진행률을 대신 표시하지 않는다")
+    func waitsForBalanceBeforeShowingProgress() async {
+        let goal = OnboardingResult(
+            financialGoal: FinancialGoal.retirement.rawValue,
+            targetAmount: 500_000_000
+        )
+        let viewModel = TodayViewModel(
+            userId: 1,
+            onboardingResult: goal,
+            userAssetProfile: AppMockData.userAssetProfile,
+            portfolioSnapshot: AppMockData.portfolioSnapshot,
+            repository: MockTodayRepository()
+        )
+        #expect(viewModel.goalProgress?.progressPercent == nil)
+        await viewModel.load()
+        #expect(viewModel.goalProgress?.progressPercent == nil)
     }
 }

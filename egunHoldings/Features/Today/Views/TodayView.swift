@@ -145,6 +145,7 @@ struct TodayView: View {
                         } else {
                             TodayGoalProgressCard(
                                 goalProgress: viewModel.goalProgress,
+                                hasSavedGoal: onboardingResult != nil,
                                 onSetGoal: {
                                     presentedSettings = .goal
                                 }
