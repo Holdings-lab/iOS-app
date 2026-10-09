@@ -4,6 +4,25 @@ import Testing
 
 @MainActor
 struct GoalSettingsFlowTests {
+    @Test("설정 목표 슬라이더는 모든 목적에서 1억부터 15억원까지 1천만원 간격이다")
+    func settingsGoalRangeMatchesOnboarding() {
+        for goal in FinancialGoal.allCases {
+            let preset = goal.settingsPreset
+            #expect(preset.min == 100_000_000)
+            #expect(preset.max == 1_500_000_000)
+            #expect(preset.step == 10_000_000)
+            #expect((preset.min...preset.max).contains(preset.amount))
+        }
+    }
+
+    @Test("서버 목표가 있어도 로컬 목표가 없으면 서버 목표를 사용하지 않는다")
+    func ignoresServerGoal() async {
+        let settings = SettingsViewModel(notificationCenter: .shared, repository: GoalSettingsRepository())
+        await settings.loadSettings()
+        #expect(settings.financialGoal == .retirement)
+        #expect(settings.targetAmount == FinancialGoal.retirement.defaultTargetAmount)
+    }
+
     @Test("설정에서 저장한 목표가 홈 계산과 재실행 세션에 반영된다")
     func persistsSettingsGoalAndRecalculatesToday() async throws {
         let suite = "goal-flow-\(UUID().uuidString)"
@@ -24,24 +43,24 @@ struct GoalSettingsFlowTests {
                                    brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot,
                                    repository: todayRepository)
         await today.load()
-        settings.saveGoal(goal: .homePurchase, amount: 400_000_000)
+        settings.saveGoal(goal: .seedMoney, amount: 1_500_000_000)
         today.updateSessionData(userAssetProfile: router.userAssetProfile,
                                 portfolioSnapshot: router.portfolioSnapshot,
                                 onboardingResult: router.session?.onboardingResult,
                                 brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot)
-        #expect(today.goalProgress?.goalLabel == FinancialGoal.homePurchase.title)
-        #expect(today.goalProgress?.progressPercent == 34)
+        #expect(today.goalProgress?.goalLabel == FinancialGoal.seedMoney.title)
+        #expect(today.goalProgress?.progressPercent == 9)
         #expect(todayRepository.count == 1)
-        #expect(store.load()?.onboardingResult?.targetAmount == 400_000_000)
-        #expect(accounts.loadAll().first { $0.normalizedEmail == "goal@test.example" }?.onboardingResult?.targetAmount == 400_000_000)
+        #expect(store.load()?.onboardingResult?.targetAmount == 1_500_000_000)
+        #expect(accounts.loadAll().first { $0.normalizedEmail == "goal@test.example" }?.onboardingResult?.targetAmount == 1_500_000_000)
         let restarted = AppRouter(store: store, accountStore: accounts)
         let reopened = SettingsViewModel(notificationCenter: .shared,
                                          repository: GoalSettingsRepository(),
                                          onboardingResult: restarted.session?.onboardingResult)
         await reopened.loadSettings()
-        #expect(reopened.financialGoal == .homePurchase)
-        #expect(reopened.targetAmount == 400_000_000)
-        #expect(restarted.session?.onboardingResult?.targetAmount == 400_000_000)
+        #expect(reopened.financialGoal == .seedMoney)
+        #expect(reopened.targetAmount == 1_500_000_000)
+        #expect(restarted.session?.onboardingResult?.targetAmount == 1_500_000_000)
     }
 }
 
@@ -57,7 +76,7 @@ private final class GoalCountingTodayRepository: TodayRepositoryProtocol {
 
 private struct GoalSettingsRepository: SettingsRepositoryProtocol {
     func fetchSettings() async throws -> SettingsHomeResponseDTO {
-        try NetworkJSONCoding.makeDecoder().decode(SettingsHomeResponseDTO.self, from: Data(#"{"user":{"nickname":"테스트","email":"goal@test.example","avatarText":"테"},"notifications":{"policyChangeAlert":false,"briefingTime":"09:00"},"investment":{"goal":{"code":"RETIREMENT","label":"은퇴"},"connectedAccounts":{"count":1,"expiredCount":0},"interests":{"count":0}}}"#.utf8))
+        try NetworkJSONCoding.makeDecoder().decode(SettingsHomeResponseDTO.self, from: Data(#"{"user":{"nickname":"테스트","email":"goal@test.example","avatarText":"테"},"notifications":{"policyChangeAlert":false,"briefingTime":"09:00"},"investment":{"goal":{"code":"HOME_PURCHASE","label":"내 집 마련"},"connectedAccounts":{"count":1,"expiredCount":0},"interests":{"count":0}}}"#.utf8))
     }
     func updateNotifications(policyChangeAlert: Bool?, briefingTime: String?) async throws -> NotificationSettingsResponseDTO {
         throw URLError(.unsupportedURL)

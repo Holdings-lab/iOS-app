@@ -42,7 +42,7 @@ extension MaxDrawdownTolerance {
     }
 }
 
-// MARK: - FinancialGoal 설정 탭 전용 금액 프리셋 (온보딩과 슬라이더 범위가 달라 분리)
+// MARK: - FinancialGoal 설정 탭 금액 프리셋
 
 struct SettingsGoalPreset {
     let amount: Int64
@@ -62,12 +62,12 @@ extension FinancialGoal {
     }
 
     var settingsPreset: SettingsGoalPreset {
-        switch self {
-        case .retirement: return SettingsGoalPreset(amount: 500_000_000, min: 100_000_000, max: 1_500_000_000, step: 50_000_000)
-        case .seedMoney: return SettingsGoalPreset(amount: 50_000_000, min: 10_000_000, max: 300_000_000, step: 5_000_000)
-        case .surplusFunds: return SettingsGoalPreset(amount: 30_000_000, min: 5_000_000, max: 200_000_000, step: 5_000_000)
-        case .homePurchase: return SettingsGoalPreset(amount: 300_000_000, min: 50_000_000, max: 1_000_000_000, step: 50_000_000)
-        }
+        SettingsGoalPreset(
+            amount: defaultTargetAmount,
+            min: Int64(targetAmountSliderRange.lowerBound),
+            max: Int64(targetAmountSliderRange.upperBound),
+            step: Int64(targetAmountSliderStep)
+        )
     }
 }
 

@@ -28,7 +28,6 @@ final class SettingsViewModel: ObservableObject {
     private let notificationCenter: AppNotificationCenter
     private let repository: any SettingsRepositoryProtocol
     private let onGoalSaved: (FinancialGoal, Int64) -> Void
-    private var hasLocalGoal: Bool
     @Published private(set) var isLoading = false
     @Published private(set) var isRequestingPushAuthorization = false
     @Published private(set) var isSendingTestNotification = false
@@ -46,7 +45,6 @@ final class SettingsViewModel: ObservableObject {
         self.notificationCenter = notificationCenter
         self.repository = repository
         self.onGoalSaved = onGoalSaved
-        self.hasLocalGoal = onboardingResult != nil
         if let onboardingResult {
             financialGoal = FinancialGoal(rawValue: onboardingResult.financialGoal) ?? .retirement
             targetAmount = onboardingResult.targetAmount
@@ -112,9 +110,6 @@ final class SettingsViewModel: ObservableObject {
                 expiredCount: settings.investment.connectedAccounts.expiredCount
             )
             interestCount = settings.investment.interests.count
-            if !hasLocalGoal, let goal = settings.investment.goal {
-                financialGoal = FinancialGoal(rawValue: goal.code) ?? financialGoal
-            }
         } catch {
             APIFallbackLog.log("GET /api/me/settings", error: error)
         }
@@ -145,7 +140,6 @@ final class SettingsViewModel: ObservableObject {
         guard amount > 0 else { return }
         financialGoal = goal
         targetAmount = amount
-        hasLocalGoal = true
         onGoalSaved(goal, amount)
         notify("목표를 저장했어요")
     }

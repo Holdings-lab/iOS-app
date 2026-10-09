@@ -17,7 +17,9 @@ struct SettingsGoalView: View {
         initialGoal = viewModel.financialGoal
         initialAmount = viewModel.targetAmount
         _goal = State(initialValue: viewModel.financialGoal)
-        _amount = State(initialValue: Double(viewModel.targetAmount))
+        let preset = viewModel.financialGoal.settingsPreset
+        let visibleAmount = min(max(viewModel.targetAmount, preset.min), preset.max)
+        _amount = State(initialValue: Double(visibleAmount))
     }
 
     private var preset: SettingsGoalPreset {
@@ -37,6 +39,13 @@ struct SettingsGoalView: View {
                     if viewModel.accounts.isEmpty {
                         CalloutView(tone: .info, icon: "info.circle.fill") {
                             Text("계좌를 연결하지 않아도 목표는 저장돼요. 연결하면 목표 대비 진행률을 보여드려요.")
+                        }
+                        .padding(.top, 14)
+                    }
+
+                    if initialAmount < preset.min || initialAmount > preset.max {
+                        CalloutView(tone: .info, icon: "info.circle.fill") {
+                            Text("기존 목표는 \(OnboardingCurrencyFormatter.wonText(initialAmount))이에요. 저장하면 1억~15억원 범위의 금액으로 변경돼요.")
                         }
                         .padding(.top, 14)
                     }
