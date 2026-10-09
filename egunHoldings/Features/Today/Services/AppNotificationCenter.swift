@@ -149,6 +149,13 @@ final class AppNotificationCenter: ObservableObject {
         notifications.insert(item, at: insertionIndex)
     }
 
+    func clearAccountNotifications() {
+        notifications.removeAll()
+        pendingPushRoute = nil
+        center.removeAllPendingNotificationRequests()
+        center.removeAllDeliveredNotifications()
+    }
+
     func handlePushNotificationOpen(userInfo: [AnyHashable: Any]) {
         if let notificationId = Self.stringValue(userInfo["notificationId"]) {
             markAsRead(notificationId: notificationId)

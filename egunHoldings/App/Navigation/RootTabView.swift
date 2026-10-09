@@ -14,6 +14,7 @@ struct RootTabView: View {
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     let onBrokerBalanceUpdated: (BrokerBalanceSnapshot) -> Void
     let onGoalSaved: (FinancialGoal, Int64) -> Void
+    let onDeleteAccount: () async throws -> Void
     let onLogout: () -> Void
     @State private var todayRepository: SharedTodayRepository
     private let settingsRepository: any SettingsRepositoryProtocol
@@ -35,6 +36,7 @@ struct RootTabView: View {
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
         onBrokerBalanceUpdated: @escaping (BrokerBalanceSnapshot) -> Void = { _ in },
         onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
+        onDeleteAccount: @escaping () async throws -> Void = { throw NetworkError.invalidResponse },
         onLogout: @escaping () -> Void = {},
         newsroomRepository: CachedNewsroomDigestRepository? = nil,
         todayRepository: TodayRepositoryProtocol? = nil,
@@ -55,6 +57,7 @@ struct RootTabView: View {
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.onBrokerBalanceUpdated = onBrokerBalanceUpdated
         self.onGoalSaved = onGoalSaved
+        self.onDeleteAccount = onDeleteAccount
         self.onLogout = onLogout
         self.settingsRepository = settingsRepository
         setupTabBarAppearance()
@@ -71,6 +74,7 @@ struct RootTabView: View {
                 repository: todayRepository,
                 externalSignalRoute: $todaySignalRoute,
                 onGoalSaved: onGoalSaved,
+                onDeleteAccount: onDeleteAccount,
                 onLogout: onLogout,
                 settingsRepository: settingsRepository,
                 refreshSessionID: todayRefreshSession,

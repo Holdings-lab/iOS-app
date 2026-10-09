@@ -37,6 +37,8 @@ struct SettingsConfirmModal: View {
     var confirmLabel = "확인"
     var cancelLabel: String? = "취소"
     var danger = false
+    var isProcessing = false
+    var errorMessage: String?
     let onConfirm: () -> Void
     let onCancel: () -> Void
 
@@ -50,6 +52,14 @@ struct SettingsConfirmModal: View {
                 Text(desc)
                     .font(.pretendard(13, weight: .regular))
                     .foregroundStyle(Color.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 8)
+            }
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .font(.pretendard(12, weight: .medium))
+                    .foregroundStyle(Color.trendDown)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 8)
             }
@@ -69,17 +79,25 @@ struct SettingsConfirmModal: View {
                             }
                     }
                     .buttonStyle(.plain)
+                    .disabled(isProcessing)
                 }
 
                 Button(action: onConfirm) {
-                    Text(confirmLabel)
-                        .font(.pretendard(13.5, weight: .bold))
-                        .foregroundStyle(Color.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(danger ? Color.trendDown : Color.brand, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Group {
+                        if isProcessing {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text(confirmLabel)
+                                .font(.pretendard(13.5, weight: .bold))
+                        }
+                    }
+                    .foregroundStyle(Color.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(danger ? Color.trendDown : Color.brand, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
                 .buttonStyle(.plain)
+                .disabled(isProcessing)
             }
             .padding(.top, 18)
         }

@@ -36,6 +36,7 @@ struct TodayView: View {
     private let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     private let onAssetTabRequested: () -> Void
     private let onGoalSaved: (FinancialGoal, Int64) -> Void
+    private let onDeleteAccount: () async throws -> Void
     private let onLogout: () -> Void
     private let settingsRepository: any SettingsRepositoryProtocol
     private let refreshSessionID: Int
@@ -54,6 +55,7 @@ struct TodayView: View {
         viewModel: TodayViewModel? = nil,
         externalSignalRoute: Binding<PolSignalRoute?> = .constant(nil),
         onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
+        onDeleteAccount: @escaping () async throws -> Void = { throw NetworkError.invalidResponse },
         onLogout: @escaping () -> Void = {},
         settingsRepository: any SettingsRepositoryProtocol = LiveSettingsRepository(),
         refreshSessionID: Int = 0,
@@ -70,6 +72,7 @@ struct TodayView: View {
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.onAssetTabRequested = onAssetTabRequested
         self.onGoalSaved = onGoalSaved
+        self.onDeleteAccount = onDeleteAccount
         self.onLogout = onLogout
         self.settingsRepository = settingsRepository
         self.refreshSessionID = refreshSessionID
@@ -260,6 +263,7 @@ struct TodayView: View {
                     initialRoute: destination.initialRoute,
                     onboardingResult: onboardingResult,
                     onGoalSaved: onGoalSaved,
+                    onDeleteAccount: onDeleteAccount,
                     onLogout: onLogout,
                     repository: settingsRepository
                 )

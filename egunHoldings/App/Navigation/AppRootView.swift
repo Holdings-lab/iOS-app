@@ -33,6 +33,7 @@ struct AppRootView: View {
                     brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot,
                     onBrokerBalanceUpdated: router.updateBrokerBalance,
                     onGoalSaved: router.updateGoal,
+                    onDeleteAccount: router.deleteAccount,
                     onLogout: router.logout
                 )
                 .id(router.session?.userId)

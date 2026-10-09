@@ -25,7 +25,7 @@ nonisolated final class AuthAccountStore: AuthAccountStoring, @unchecked Sendabl
             return AuthMockData.defaultRegisteredAccounts
         }
 
-        return mergedWithDefaultAccounts(storedAccounts)
+        return storedAccounts
     }
 
     nonisolated func saveAll(_ accounts: [RegisteredAuthAccount]) {
@@ -36,15 +36,4 @@ nonisolated final class AuthAccountStore: AuthAccountStoring, @unchecked Sendabl
         defaults.set(data, forKey: key)
     }
 
-    private nonisolated func mergedWithDefaultAccounts(_ storedAccounts: [RegisteredAuthAccount]) -> [RegisteredAuthAccount] {
-        var mergedAccounts = storedAccounts
-
-        for defaultAccount in AuthMockData.defaultRegisteredAccounts {
-            if !mergedAccounts.contains(where: { $0.normalizedEmail == defaultAccount.normalizedEmail }) {
-                mergedAccounts.append(defaultAccount)
-            }
-        }
-
-        return mergedAccounts
-    }
 }

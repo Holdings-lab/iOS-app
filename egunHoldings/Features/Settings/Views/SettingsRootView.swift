@@ -21,13 +21,17 @@ struct SettingsRootView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var path: [SettingsRoute] = []
     @State private var activeModal: SettingsModal?
+    @State private var isDeletingAccount = false
+    @State private var deletionError: String?
     private let onLogout: () -> Void
+    private let onDeleteAccount: () async throws -> Void
 
     init(
         notificationCenter: AppNotificationCenter,
         initialRoute: SettingsRoute? = nil,
         onboardingResult: OnboardingResult? = nil,
         onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
+        onDeleteAccount: @escaping () async throws -> Void = { throw NetworkError.invalidResponse },
         onLogout: @escaping () -> Void = {},
         repository: any SettingsRepositoryProtocol = LiveSettingsRepository()
     ) {
@@ -39,6 +43,7 @@ struct SettingsRootView: View {
             onGoalSaved: onGoalSaved
         ))
         self.onLogout = onLogout
+        self.onDeleteAccount = onDeleteAccount
     }
 
     var body: some View {
@@ -120,14 +125,30 @@ struct SettingsRootView: View {
             SettingsConfirmModal(
                 isPresented: activeModal == .delete,
                 title: "정말 탈퇴하시겠어요?",
-                desc: "데모 화면입니다. 확인해도 계정과 연결 정보는 삭제되지 않아요.",
+                desc: "계정과 연결 정보가 영구 삭제됩니다. 이 작업은 되돌릴 수 없어요.",
                 confirmLabel: "탈퇴하기",
                 danger: true,
+                isProcessing: isDeletingAccount,
+                errorMessage: deletionError,
                 onConfirm: {
-                    activeModal = nil
-                    viewModel.notify("데모 화면이에요. 계정은 삭제되지 않았어요")
+                    guard !isDeletingAccount else { return }
+                    isDeletingAccount = true
+                    deletionError = nil
+                    Task {
+                        do {
+                            try await onDeleteAccount()
+                            activeModal = nil
+                        } catch {
+                            deletionError = "회원 탈퇴에 실패했어요. 연결을 확인하고 다시 시도해 주세요."
+                        }
+                        isDeletingAccount = false
+                    }
                 },
-                onCancel: { activeModal = nil }
+                onCancel: {
+                    guard !isDeletingAccount else { return }
+                    activeModal = nil
+                    deletionError = nil
+                }
             )
         }
         .preferredColorScheme(.light)

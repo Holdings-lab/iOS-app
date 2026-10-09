@@ -5,6 +5,61 @@ import Testing
 
 @MainActor
 struct LoginRequestLifecycleTests {
+    @Test("회원 탈퇴는 서버 성공 후에만 로컬 로그인과 계정 기록을 지운다")
+    func deletesLocalSessionOnlyAfterServerSuccess() async throws {
+        let suite = "account-delete-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = AuthSessionStore(defaults: defaults)
+        let accounts = AuthAccountStore(defaults: defaults)
+        let repository = DeletionAccountRepository(result: .success(
+            AuthAccountProfile(userId: 42, email: "new@test.example", nickname: "new")
+        ))
+        let router = AppRouter(store: store, accountStore: accounts, accountManagementRepository: repository)
+        router.handleLoginSuccess(loginSession: loginSession)
+
+        try await router.deleteAccount()
+
+        #expect(router.route == .auth)
+        #expect(store.load() == nil)
+        #expect(accounts.loadAll().allSatisfy { $0.normalizedEmail != "new@test.example" })
+        #expect(await repository.deleteCount == 1)
+    }
+
+    @Test("서버 탈퇴 실패 시 로그인 세션과 로컬 계정 기록을 유지한다")
+    func preservesSessionWhenAccountDeletionFails() async throws {
+        let suite = "account-delete-failure-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = AuthSessionStore(defaults: defaults)
+        let accounts = AuthAccountStore(defaults: defaults)
+        let repository = DeletionAccountRepository(result: .failure(.httpStatus(500)))
+        let router = AppRouter(store: store, accountStore: accounts, accountManagementRepository: repository)
+        router.handleLoginSuccess(loginSession: loginSession)
+
+        do {
+            try await router.deleteAccount()
+            Issue.record("서버 오류가 전달되어야 한다")
+        } catch {}
+
+        #expect(router.route == .main)
+        #expect(store.load()?.userId == 42)
+        #expect(accounts.loadAll().contains { $0.normalizedEmail == "new@test.example" })
+    }
+
+    @Test("회원 탈퇴 요청은 Bearer 인증으로 DELETE /api/me를 호출한다")
+    func accountDeletionUsesAuthenticatedEndpoint() async throws {
+        let recorder = DeletionRequestRecorder()
+        let profile = try await LiveAuthRepository(apiClient: DeletionAPIClient(recorder: recorder)).deleteAccount()
+        let endpoint = try #require(await recorder.endpoint)
+
+        #expect(profile.userId == 42)
+        #expect(endpoint.path == "/api/me")
+        #expect(endpoint.method == .delete)
+        #expect(endpoint.authorizationRequirement == .bearerToken)
+        #expect(endpoint.body == nil)
+    }
+
     @Test("새 설치는 남아 있는 Keychain 세션을 지우고 로그인 후 재실행에서 오늘 탭으로 복원한다")
     func freshInstallRequiresLoginThenRestoresSession() throws {
         let suite = "fresh-install-\(UUID().uuidString)"
@@ -219,6 +274,47 @@ struct LoginRequestLifecycleTests {
     private var loginSession: LoginSession {
         LoginSession(userId: 42, email: "new@test.example", nickname: "new", accessToken: "new-login",
                      refreshToken: "new-refresh", accessTokenExpiresIn: 1800, onboardingCompleted: true)
+    }
+}
+
+private actor DeletionAccountRepository: AccountManagementRepositoryProtocol {
+    private let result: Result<AuthAccountProfile, NetworkError>
+    private(set) var deleteCount = 0
+
+    init(result: Result<AuthAccountProfile, NetworkError>) { self.result = result }
+
+    func deleteAccount() async throws -> AuthAccountProfile {
+        deleteCount += 1
+        return try result.get()
+    }
+
+    func fetchAccounts() async throws -> [AuthAccountProfile] { throw NetworkError.invalidResponse }
+    func registerFCMToken(userId: Int64, fcmToken: String) async throws -> AuthAccountProfile {
+        throw NetworkError.invalidResponse
+    }
+    func updateNickname(userId: Int64, nickname: String) async throws -> AuthAccountProfile {
+        throw NetworkError.invalidResponse
+    }
+    func changePassword(userId: Int64, currentPassword: String, newPassword: String) async throws -> AuthAccountProfile {
+        throw NetworkError.invalidResponse
+    }
+}
+
+private actor DeletionRequestRecorder {
+    private(set) var endpoint: Endpoint?
+
+    func record(_ endpoint: Endpoint) -> Data {
+        self.endpoint = endpoint
+        return Data(#"{"isSuccess":true,"code":"AUTH-DELETE-200","message":"OK","result":{"userId":42,"email":"new@test.example","nickname":"new"}}"#.utf8)
+    }
+}
+
+private struct DeletionAPIClient: APIClient {
+    let recorder: DeletionRequestRecorder
+
+    nonisolated func request<T: Decodable>(_ endpoint: Endpoint, as type: T.Type) async throws -> T {
+        let data = await recorder.record(endpoint)
+        return try NetworkJSONCoding.makeDecoder().decode(type, from: data)
     }
 }
 

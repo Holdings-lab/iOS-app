@@ -44,7 +44,7 @@ nonisolated struct LiveAuthRepository: RegistrationRepositoryProtocol, AccountMa
         return response.map { $0.toDomain() }
     }
 
-    func deleteAccount(userId: Int64) async throws -> AuthAccountProfile {
+    func deleteAccount() async throws -> AuthAccountProfile {
         let response = try await apiClient.requestResult(
             BackendEndpoint.deleteAccount(),
             as: AuthAccountResponseDTO.self

@@ -11,6 +11,7 @@ final class AppRouter: ObservableObject {
     private let store: AuthSessionStoring
     private let accountStore: AuthAccountStoring
     private let loginRepository: LoginRepositoryProtocol
+    private let accountManagementRepository: AccountManagementRepositoryProtocol
     private let tokenRefresher: AccessTokenRefreshing
     @Published private(set) var session: AppUserSession?
     private var bootstrapTask: Task<Void, Never>?
@@ -22,12 +23,14 @@ final class AppRouter: ObservableObject {
         store: AuthSessionStoring? = nil,
         accountStore: AuthAccountStoring? = nil,
         loginRepository: LoginRepositoryProtocol? = nil,
+        accountManagementRepository: AccountManagementRepositoryProtocol? = nil,
         tokenRefresher: AccessTokenRefreshing? = nil
     ) {
         let resolvedStore = store ?? KeychainAuthSessionStore()
         self.store = resolvedStore
         self.accountStore = accountStore ?? AuthAccountStore()
         self.loginRepository = loginRepository ?? LiveLoginRepository()
+        self.accountManagementRepository = accountManagementRepository ?? LiveAuthRepository()
         self.tokenRefresher = tokenRefresher ?? AlamofireAccessTokenRefresher(
             tokenStore: SessionAuthTokenStore(sessionStore: resolvedStore),
             refreshURL: NetworkConfiguration.authRefreshURL
@@ -152,6 +155,25 @@ final class AppRouter: ObservableObject {
         let refreshToken = store.load()?.refreshToken ?? session?.refreshToken
         clearSessionAndMoveToAuth()
         revokeRefreshTokenOnServer(refreshToken)
+    }
+
+    func deleteAccount() async throws {
+        guard let currentSession = session, let userId = currentSession.userId else {
+            throw NetworkError.invalidResponse
+        }
+        let generation = sessionGeneration
+        let deleted = try await accountManagementRepository.deleteAccount()
+        guard deleted.userId == userId else {
+            throw NetworkError.invalidResponse
+        }
+
+        var accounts = accountStore.loadAll()
+        accounts.removeAll { $0.normalizedEmail == AuthEmailAddress.normalized(currentSession.email) }
+        accountStore.saveAll(accounts)
+
+        guard generation == sessionGeneration, session?.userId == userId else { return }
+        AppNotificationCenter.shared.clearAccountNotifications()
+        clearSessionAndMoveToAuth()
     }
 
     /// 자산 탭이 직접 조회하거나 새로 연결한 서버 포트폴리오를 앱 전역 세션에도 반영한다.
