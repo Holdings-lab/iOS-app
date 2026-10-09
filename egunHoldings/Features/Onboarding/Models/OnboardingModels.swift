@@ -45,7 +45,7 @@ nonisolated enum FinancialGoal: String, CaseIterable, Identifiable, Codable, Sen
     }
 
     var targetAmountSliderRange: ClosedRange<Double> {
-        100_000_000...500_000_000
+        100_000_000...1_500_000_000
     }
 
     var targetAmountSliderStep: Double {
