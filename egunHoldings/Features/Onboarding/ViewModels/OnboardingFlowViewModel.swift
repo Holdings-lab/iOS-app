@@ -132,18 +132,7 @@ final class OnboardingFlowViewModel: ObservableObject {
     }
 
     func skipBrokerageConnection() async -> Bool {
-        do {
-            try await onboardingRepository.skipBrokerageConnection()
-        } catch {
-            recordSubmissionFailure(
-                stepTitle: "계좌 연결 건너뛰기",
-                endpoint: "POST /api/onboarding/account/skip",
-                error: error
-            )
-            brokerageLinkErrorMessage = onboardingSubmissionFailure?.message
-            return false
-        }
-
+        onboardingSubmissionFailure = nil
         connectedInstitutionID = nil
         isBrokerageConnected = false
         activeLinkStage = nil
@@ -157,28 +146,7 @@ final class OnboardingFlowViewModel: ObservableObject {
 
     // MARK: - Step 8: 완료 처리
 
-    /// 목표 금액은 `/api/goal`에서 먼저 저장한다. 직접 입력한 금액도 같은 계약으로 전송한다.
-    func submitGoal(userId: Int64?) async -> Bool {
-        guard let userId else {
-            recordMissingUserFailure(stepTitle: "투자 목표", endpoint: "PATCH /api/goal")
-            return false
-        }
-
-        do {
-            onboardingSubmissionFailure = nil
-            try await onboardingRepository.updateGoal(
-                userId: userId,
-                financialGoal: financialGoal,
-                targetAmount: targetAmount
-            )
-            return true
-        } catch {
-            recordSubmissionFailure(stepTitle: "투자 목표", endpoint: "PATCH /api/goal", error: error)
-            return false
-        }
-    }
-
-    /// 관심 섹터를 포함한 프로필은 목표 저장 뒤, 마지막으로 한 번만 저장한다.
+    /// 목표 금액은 온보딩 완료 시 로컬 세션에 저장하고, 다른 투자 성향만 서버에 저장한다.
     func submitProfile(userId: Int64?) async -> Bool {
         guard let userId else {
             recordMissingUserFailure(stepTitle: "맞춤 설정", endpoint: "PATCH /api/onboarding/profile")

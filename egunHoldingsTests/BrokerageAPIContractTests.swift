@@ -282,7 +282,4 @@ private struct NoopOnboardingRepository: OnboardingRepositoryProtocol {
         interests _: [WatchAssetSector]
     ) async throws {}
 
-    func updateGoal(userId _: Int64, financialGoal _: FinancialGoal, targetAmount _: Int64) async throws {}
-
-    func skipBrokerageConnection() async throws {}
 }

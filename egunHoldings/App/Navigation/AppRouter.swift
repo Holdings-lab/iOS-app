@@ -112,6 +112,9 @@ final class AppRouter: ObservableObject {
         bootstrapTask?.cancel()
         bootstrapTask = nil
         let existingAccount = registeredAccount(for: loginSession.email)
+        let matchingLocalAccount = existingAccount?.userId == loginSession.userId ? existingAccount : nil
+        let localOnboardingCompleted = matchingLocalAccount?.onboardingCompleted == true
+            && matchingLocalAccount?.onboardingResult != nil
         let newSession = AppUserSession(
             userId: loginSession.userId,
             token: loginSession.accessToken,
@@ -119,9 +122,9 @@ final class AppRouter: ObservableObject {
             expiresAt: Date().addingTimeInterval(TimeInterval(loginSession.accessTokenExpiresIn)),
             userName: loginSession.nickname,
             email: loginSession.email,
-            onboardingCompleted: loginSession.onboardingCompleted,
-            onboardingResult: existingAccount?.onboardingResult,
-            brokerBalanceSnapshot: existingAccount?.brokerBalanceSnapshot
+            onboardingCompleted: loginSession.onboardingCompleted || localOnboardingCompleted,
+            onboardingResult: matchingLocalAccount?.onboardingResult,
+            brokerBalanceSnapshot: matchingLocalAccount?.brokerBalanceSnapshot
         )
         TokenDebugLog.log("로그인 성공 → 액세스 토큰 만료까지 \(loginSession.accessTokenExpiresIn)초, refreshToken 발급=\(loginSession.refreshToken != nil)")
 

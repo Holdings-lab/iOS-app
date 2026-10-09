@@ -5,6 +5,39 @@ import Testing
 
 @MainActor
 struct LoginRequestLifecycleTests {
+    @Test("서버 온보딩이 미완료여도 같은 계정의 로컬 완료 기록과 목표를 복원한다")
+    func restoresLocallyCompletedOnboarding() throws {
+        let suite = "local-onboarding-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = AuthSessionStore(defaults: defaults)
+        let accounts = AuthAccountStore(defaults: defaults)
+        let router = AppRouter(store: store, accountStore: accounts)
+        let incompleteLogin = LoginSession(
+            userId: 42, email: "new@test.example", nickname: "new", accessToken: "new-login",
+            refreshToken: "new-refresh", accessTokenExpiresIn: 1800, onboardingCompleted: false
+        )
+
+        router.handleLoginSuccess(loginSession: incompleteLogin)
+        #expect(router.route == .onboarding)
+        router.completeOnboarding(with: OnboardingResult(targetAmount: 1_500_000_000))
+        router.handleLoginSuccess(loginSession: incompleteLogin)
+        #expect(router.route == .main)
+        #expect(router.session?.onboardingResult?.targetAmount == 1_500_000_000)
+
+        let restarted = AppRouter(store: store, accountStore: accounts)
+        #expect(restarted.route == .main)
+        #expect(restarted.session?.onboardingResult?.targetAmount == 1_500_000_000)
+
+        let differentUser = LoginSession(
+            userId: 43, email: "new@test.example", nickname: "other", accessToken: "other-login",
+            refreshToken: "other-refresh", accessTokenExpiresIn: 1800, onboardingCompleted: false
+        )
+        restarted.handleLoginSuccess(loginSession: differentUser)
+        #expect(restarted.route == .onboarding)
+        #expect(restarted.session?.onboardingResult == nil)
+    }
+
     @Test("회원 탈퇴는 서버 성공 후에만 로컬 로그인과 계정 기록을 지운다")
     func deletesLocalSessionOnlyAfterServerSuccess() async throws {
         let suite = "account-delete-\(UUID().uuidString)"

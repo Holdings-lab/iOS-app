@@ -17,7 +17,7 @@ struct OnboardingStep8CompletionView: View {
     @State private var didStart = false
 
     private var steps: [CompletionStep] {
-        [.goal, .profile]
+        [.profile]
     }
 
     var body: some View {
@@ -109,11 +109,9 @@ struct OnboardingStep8CompletionView: View {
         try? await Task.sleep(nanoseconds: 1_100_000_000)
     }
 
-    /// 각 저장은 서버 성공 응답을 받아야만 다음 단계와 완료 화면으로 진행된다.
+    /// 투자 성향 저장은 서버 성공 응답을 받아야만 완료 화면으로 진행된다.
     private func perform(_ step: CompletionStep) async -> Bool {
         switch step {
-        case .goal:
-            return await viewModel.submitGoal(userId: userId)
         case .profile:
             return await viewModel.submitProfile(userId: userId)
         }
@@ -194,21 +192,18 @@ struct OnboardingStep8CompletionView: View {
 }
 
 private enum CompletionStep: CaseIterable, Identifiable, Hashable {
-    case goal
     case profile
 
     var id: String { title }
 
     var title: String {
         switch self {
-        case .goal: return "투자 목표 저장"
         case .profile: return "맞춤 설정 저장"
         }
     }
 
     var icon: String {
         switch self {
-        case .goal: return "target"
         case .profile: return "slider.horizontal.3"
         }
     }

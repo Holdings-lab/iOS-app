@@ -6,8 +6,3 @@ nonisolated struct OnboardingProfilePatchRequestDTO: Encodable {
     let investmentStyle: String
     let interests: [String]
 }
-
-nonisolated struct GoalUpdateRequestDTO: Encodable {
-    let financialGoal: String
-    let targetAmount: Int64
-}

@@ -8,15 +8,6 @@ nonisolated enum FinancialGoal: String, CaseIterable, Identifiable, Codable, Sen
 
     var id: String { rawValue }
 
-    nonisolated var wireValue: String {
-        switch self {
-        case .retirement: return "RETIREMENT"
-        case .seedMoney: return "SEED_MONEY"
-        case .surplusFunds: return "SPARE_FUND"
-        case .homePurchase: return "HOUSE"
-        }
-    }
-
     var title: String {
         switch self {
         case .retirement: return "은퇴 자금 마련"

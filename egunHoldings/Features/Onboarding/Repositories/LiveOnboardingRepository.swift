@@ -27,21 +27,4 @@ nonisolated struct LiveOnboardingRepository: OnboardingRepositoryProtocol {
             as: EmptyAPIResult.self
         )
     }
-
-    func updateGoal(userId: Int64, financialGoal: FinancialGoal, targetAmount: Int64) async throws {
-        let body = try NetworkJSONCoding.encodeJSON(
-            GoalUpdateRequestDTO(financialGoal: financialGoal.wireValue, targetAmount: targetAmount)
-        )
-        _ = try await apiClient.requestResult(
-            BackendEndpoint.updateGoal(body: body),
-            as: EmptyAPIResult.self
-        )
-    }
-
-    func skipBrokerageConnection() async throws {
-        _ = try await apiClient.requestResult(
-            BackendEndpoint.skipOnboardingAccount(),
-            as: EmptyAPIResult.self
-        )
-    }
 }

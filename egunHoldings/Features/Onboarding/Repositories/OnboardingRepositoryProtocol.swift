@@ -8,8 +8,4 @@ nonisolated protocol OnboardingRepositoryProtocol: Sendable {
         investmentProfile: InvestmentProfile,
         interests: [WatchAssetSector]
     ) async throws
-
-    func updateGoal(userId: Int64, financialGoal: FinancialGoal, targetAmount: Int64) async throws
-
-    func skipBrokerageConnection() async throws
 }
