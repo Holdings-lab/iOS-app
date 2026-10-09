@@ -125,7 +125,7 @@ struct SettingsRootView: View {
             SettingsConfirmModal(
                 isPresented: activeModal == .delete,
                 title: "정말 탈퇴하시겠어요?",
-                desc: "계정과 연결 정보가 영구 삭제됩니다. 이 작업은 되돌릴 수 없어요.",
+                desc: "계정이 삭제되어 다시 로그인할 수 없어요. 이 작업은 되돌릴 수 없어요.",
                 confirmLabel: "탈퇴하기",
                 danger: true,
                 isProcessing: isDeletingAccount,
