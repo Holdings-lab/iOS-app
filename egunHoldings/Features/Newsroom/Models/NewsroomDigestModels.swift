@@ -108,8 +108,8 @@ nonisolated struct NewsroomTickerDetail: Equatable, Sendable {
     }
 }
 
-/// AI 판단 블록. 서버가 headline(결론 한 줄)과 reason(근거 문단)을 분리해서 주므로
-/// 화면도 둘을 다르게 다룬다 — headline은 항상 노출하고, 분량이 큰 reason은 접어 둔다.
+/// AI 판단 블록. 결론과 근거를 함께 표시한다.
+/// 서버가 reason을 생략하면 상세 응답의 summary.body를 근거로 사용한다.
 ///
 /// 예측 모델은 매일 새로 도는데(뉴스 요약과 같은 주기), 그중 하루라도 배치가 비어서
 /// 이번 응답에 값이 안 실려 올 수 있다. 그런 날엔 화면이 통째로 비지 않도록

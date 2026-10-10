@@ -4,6 +4,51 @@ import Testing
 
 @MainActor
 struct NewsroomAndSignalAPIContractTests {
+    @Test("문자열 AI 판단의 근거는 summary.body에서 읽고 본문 중복을 제거한다")
+    func usesSummaryBodyAsLegacyAIReason() async throws {
+        let reason = "애플의 아이폰 주문 감소는 하락 요인입니다. AI 인프라 투자 확대는 상승 요인으로 작용합니다."
+        let json = #"{"stock":{"ticker":"QQQ","name":"QQQ"},"headline":"기술주 뉴스","aiJudgement":"기술주 상승·하락 요인이 상충합니다.","summary":{"body":"\#(reason)","findings":["금리 상승"]}}"#
+        let repository = LiveNewsroomDigestRepository(
+            apiClient: NewsroomContractAPIClient(data: envelope(resultJSON: json))
+        )
+        let detail = try await repository.fetchDetail(ticker: "QQQ")
+
+        #expect(detail.aiJudgement?.headline == "기술주 상승·하락 요인이 상충합니다.")
+        #expect(detail.aiJudgement?.reason == reason)
+        #expect(detail.aiJudgement?.hasReason == true)
+        #expect(detail.summaryBody == nil)
+        #expect(detail.findings == ["금리 상승"])
+    }
+
+    @Test("객체의 reason을 우선하고 비어 있으면 summary.body를 사용한다",
+          arguments: [nil, "", "  \n", "별도의 AI 근거입니다."] as [String?])
+    func resolvesAIReason(reason: String?) throws {
+        var judgement: [String: Any] = ["headline": "예측 방향"]
+        if let reason { judgement["reason"] = reason }
+        let data = try JSONSerialization.data(withJSONObject: [
+            "stock": ["ticker": "QQQ", "name": "QQQ"], "headline": "기사 제목",
+            "aiJudgement": judgement, "summary": ["body": "서버가 보내 준 근거입니다."]
+        ])
+        let detail = try JSONDecoder().decode(NewsroomTickerDetailResponseDTO.self, from: data).toDomain()
+        let hasExplicitReason = !(reason?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+
+        #expect(detail.aiJudgement?.reason == (hasExplicitReason ? reason : "서버가 보내 준 근거입니다."))
+        #expect(detail.summaryBody == (hasExplicitReason ? "서버가 보내 준 근거입니다." : nil))
+    }
+
+    @Test("AI 판단이나 근거가 없으면 원래 본문과 결론을 보존한다")
+    func preservesDetailsWithoutAIReason() throws {
+        let withoutAI = Data(#"{"stock":{"ticker":"QQQ","name":"QQQ"},"headline":"기사","summary":{"body":"뉴스 본문"}}"#.utf8)
+        let detail = try JSONDecoder().decode(NewsroomTickerDetailResponseDTO.self, from: withoutAI).toDomain()
+        #expect(detail.aiJudgement == nil)
+        #expect(detail.summaryBody == "뉴스 본문")
+
+        let withoutSummary = Data(#"{"stock":{"ticker":"QQQ","name":"QQQ"},"headline":"기사","aiJudgement":"AI 결론"}"#.utf8)
+        let headlineOnly = try JSONDecoder().decode(NewsroomTickerDetailResponseDTO.self, from: withoutSummary).toDomain()
+        #expect(headlineOnly.aiJudgement?.headline == "AI 결론")
+        #expect(headlineOnly.aiJudgement?.hasReason == false)
+    }
+
     @Test("뉴스룸 로고와 기사 썸네일 URL을 도메인 모델에 보존한다")
     func mapsNewsroomImageURLs() throws {
         let briefing = try NetworkJSONCoding.makeDecoder().decode(

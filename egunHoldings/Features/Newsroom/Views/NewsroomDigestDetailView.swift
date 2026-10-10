@@ -365,7 +365,6 @@ private struct NewsroomAIJudgmentSection: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hasAppeared = false
-    @State private var isReasonExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -383,8 +382,15 @@ private struct NewsroomAIJudgmentSection: View {
                 .lineSpacing(5)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if judgement.hasReason {
-                reasonDisclosure
+            if judgement.hasReason, let reason = judgement.reason {
+                Divider()
+                    .overlay(Color.brand.opacity(0.15))
+
+                Text(reason)
+                    .font(.pretendard(13.5, weight: .medium))
+                    .foregroundStyle(Color.textSecondary)
+                    .lineSpacing(5)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Text(judgement.disclaimerText)
@@ -430,45 +436,7 @@ private struct NewsroomAIJudgmentSection: View {
         .foregroundStyle(Color.brand)
     }
 
-    /// 근거 문단은 분량이 커서(모델이 한 문단을 통째로 준다) 기본은 접어 둔다.
-    /// 시트로 띄우지 않는 이유는 이 화면 자체가 이미 푸시된 상세라서다 — 결론과 근거를
-    /// 같은 화면에서 나란히 읽을 수 있어야 근거가 근거로 기능한다.
-    private var reasonDisclosure: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Divider()
-                .overlay(Color.brand.opacity(0.15))
 
-            Button {
-                withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) {
-                    isReasonExpanded.toggle()
-                }
-            } label: {
-                HStack(spacing: 4) {
-                    Text(isReasonExpanded ? "판단 근거 접기" : "판단 근거 보기")
-                        .font(.pretendard(13, weight: .bold))
-
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .bold))
-                        .rotationEffect(.degrees(isReasonExpanded ? 180 : 0))
-
-                    Spacer(minLength: 0)
-                }
-                .foregroundStyle(Color.brand)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(isReasonExpanded ? "판단 근거를 접습니다" : "판단 근거를 펼칩니다")
-
-            if isReasonExpanded, let reason = judgement.reason {
-                Text(reason)
-                    .font(.pretendard(13.5, weight: .medium))
-                    .foregroundStyle(Color.textSecondary)
-                    .lineSpacing(5)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-    }
 }
 
 #Preview {

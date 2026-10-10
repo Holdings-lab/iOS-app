@@ -110,12 +110,17 @@ nonisolated struct NewsroomTickerDetailResponseDTO: Decodable, Sendable {
     let footer: NewsroomDetailFooterDTO?
 
     func toDomain() -> NewsroomTickerDetail {
-        NewsroomTickerDetail(
+        let judgement = aiJudgement?.toDomain(fallbackReason: summary?.body)
+        let summaryBody = summary?.body
+        let isReasonRepeated = judgement?.reason != nil
+            && summaryBody?.trimmingCharacters(in: .whitespacesAndNewlines) == judgement?.reason
+
+        return NewsroomTickerDetail(
             stock: stock.toDomain(),
             headline: headline,
             imageURL: NewsroomRemoteURL.parse(imageUrl),
-            aiJudgement: aiJudgement?.toDomain(),
-            summaryBody: summary?.body,
+            aiJudgement: judgement,
+            summaryBody: isReasonRepeated ? nil : summaryBody,
             findings: summary?.findings ?? [],
             sources: (sources ?? []).map { $0.toDomain() },
             asOfAt: footer?.asOfAt,
@@ -145,7 +150,7 @@ nonisolated struct NewsroomStockMetaDTO: Decodable, Sendable {
 /// AI 판단 블록.
 ///
 /// 서버가 문자열 한 줄만 주던 이전 스키마와 객체를 주는 현재 스키마가 한동안 공존할 수 있어
-/// 둘 다 받아들인다 — 문자열이 오면 headline만 채운 형태로 취급한다.
+/// 둘 다 받아들인다. 문자열의 근거는 상세 응답의 summary.body에서 보충한다.
 /// `used_news_url`은 이 블록만 snake_case라서(모델 출력이 그대로 실려 나온다) 키를 명시한다.
 nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
     let title: String?
@@ -191,11 +196,15 @@ nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
             .flatMap(NewsroomDigestDateFormat.parseISO8601)
     }
 
-    func toDomain() -> NewsroomAIJudgement {
-        NewsroomAIJudgement(
+    func toDomain(fallbackReason: String? = nil) -> NewsroomAIJudgement {
+        let resolvedReason = [reason, fallbackReason]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty }
+
+        return NewsroomAIJudgement(
             title: title,
             headline: headline,
-            reason: reason,
+            reason: resolvedReason,
             alignment: alignment.flatMap(NewsroomAIAlignment.init(rawValue:)),
             usedNewsURLs: (usedNewsURLs ?? []).compactMap(URL.init(string:)),
             disclaimer: disclaimer,
