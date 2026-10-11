@@ -141,6 +141,9 @@ nonisolated struct NewsroomAIJudgement: Equatable, Sendable, Codable {
 /// 뉴스 논조와 모델 신호의 방향성. 서버가 새 값을 추가해도 디코딩이 깨지지 않도록
 /// 매핑되지 않는 값은 nil로 두고, 그 경우 화면에서 칩을 아예 그리지 않는다.
 nonisolated enum NewsroomAIAlignment: Equatable, Sendable, Codable {
+    case supportive
+    case contradictory
+    case insufficient
     case positive
     case negative
     case mixed
@@ -148,6 +151,12 @@ nonisolated enum NewsroomAIAlignment: Equatable, Sendable, Codable {
 
     init?(rawValue: String) {
         switch rawValue.uppercased() {
+        case "SUPPORTIVE":
+            self = .supportive
+        case "CONTRADICTORY":
+            self = .contradictory
+        case "INSUFFICIENT":
+            self = .insufficient
         case "POSITIVE", "BULLISH":
             self = .positive
         case "NEGATIVE", "BEARISH":
@@ -163,12 +172,18 @@ nonisolated enum NewsroomAIAlignment: Equatable, Sendable, Codable {
 
     var label: String {
         switch self {
+        case .supportive:
+            return "예측 지지"
+        case .contradictory:
+            return "예측과 상반"
+        case .insufficient:
+            return "근거 부족"
         case .positive:
             return "긍정 신호"
         case .negative:
             return "부정 신호"
         case .mixed:
-            return "혼조"
+            return "근거 혼재"
         case .neutral:
             return "중립"
         }
@@ -178,6 +193,12 @@ nonisolated enum NewsroomAIAlignment: Equatable, Sendable, Codable {
     /// 매핑 규칙이 바뀌어도 `init?(rawValue:)` 한 곳만 고치면 된다.
     private var storageValue: String {
         switch self {
+        case .supportive:
+            return "SUPPORTIVE"
+        case .contradictory:
+            return "CONTRADICTORY"
+        case .insufficient:
+            return "INSUFFICIENT"
         case .positive:
             return "POSITIVE"
         case .negative:

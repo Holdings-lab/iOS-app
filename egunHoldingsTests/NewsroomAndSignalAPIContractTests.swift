@@ -4,6 +4,61 @@ import Testing
 
 @MainActor
 struct NewsroomAndSignalAPIContractTests {
+    @Test("Notion 명세의 뉴스 제목·AI 결론·근거·뉴스 본문을 분리해 보존한다",
+          arguments: ["Hero", "Compact"])
+    func mapsDocumentedNewsroomContent(briefingType: String) async throws {
+        let headline = "테크 대기업들의 AI 경쟁 심화"
+        let prediction = "QQQ는 향후 15일간 횡보할 가능성이 있습니다."
+        let reason = "AI 투자가 성장을 뒷받침합니다. 비용 상승은 수익성을 압박합니다."
+        let content = "팔란티르 주가는 2.4% 상승했습니다. 가계 채무 연체는 증가했습니다."
+        let listJSON = #"{"header":{"title":"뉴스룸","subtitle":"보유 종목 브리핑"},"holdings":[{"ticker":"QQQ","name":"Invesco QQQ Trust","weightPct":35,"briefingType":"\#(briefingType)","headline":"\#(headline)","summary":"\#(prediction)"}]}"#
+        let listRepository = LiveNewsroomDigestRepository(
+            apiClient: NewsroomContractAPIClient(data: envelope(resultJSON: listJSON))
+        )
+        let briefing = try await listRepository.fetchBriefing()
+        #expect(briefing.holdings.first?.headline == headline)
+        #expect(briefing.holdings.first?.summary == prediction)
+
+        let detailJSON = #"{"stock":{"ticker":"QQQ","name":"Invesco QQQ Trust"},"headline":"\#(headline)","aiJudgement":{"title":"AI는 이렇게 판단했어요","headline":"\#(prediction)","disclaimer":"본 내용은 투자 판단의 근거가 아닙니다."},"summary":{"body":"\#(reason)","findings":["\#(content)"]}}"#
+        let detailRepository = LiveNewsroomDigestRepository(
+            apiClient: NewsroomContractAPIClient(data: envelope(resultJSON: detailJSON))
+        )
+        let detail = try await detailRepository.fetchDetail(ticker: "QQQ")
+        #expect(detail.headline == headline)
+        #expect(detail.aiJudgement?.titleText == "AI는 이렇게 판단했어요")
+        #expect(detail.aiJudgement?.headline == prediction)
+        #expect(detail.aiJudgement?.reason == reason)
+        #expect(detail.aiJudgement?.disclaimerText == "본 내용은 투자 판단의 근거가 아닙니다.")
+        #expect(detail.aiJudgement?.generatedAt == nil)
+        #expect(detail.summaryBody == nil)
+        #expect(detail.findings == [content])
+    }
+
+    @Test("daily.content는 문자열과 문자열 배열 모두에서 뉴스 본문으로 보존한다",
+          arguments: [#""첫 뉴스. 둘째 뉴스.""#, #"["첫 뉴스. 둘째 뉴스."]"#])
+    func decodesDailyContent(findingsJSON: String) throws {
+        let json = #"{"stock":{"ticker":"QQQ","name":"QQQ"},"headline":"뉴스 제목","summary":{"findings":\#(findingsJSON)}}"#
+        let detail = try JSONDecoder().decode(NewsroomTickerDetailResponseDTO.self, from: Data(json.utf8)).toDomain()
+        #expect(detail.findings == ["첫 뉴스. 둘째 뉴스."])
+    }
+
+    @Test("AI alignment는 예측 지지 여부를 보존하고 캐시에서도 왕복한다",
+          arguments: ["SUPPORTIVE", "MIXED", "CONTRADICTORY", "INSUFFICIENT"])
+    func decodesDocumentedAlignment(rawValue: String) throws {
+        let expected: [String: NewsroomAIAlignment] = [
+            "SUPPORTIVE": .supportive, "MIXED": .mixed,
+            "CONTRADICTORY": .contradictory, "INSUFFICIENT": .insufficient
+        ]
+        let json = #"{"headline":"예측 방향","alignment":"\#(rawValue)"}"#
+        let judgement = try JSONDecoder().decode(NewsroomAIJudgementDTO.self, from: Data(json.utf8)).toDomain()
+        #expect(judgement.alignment == expected[rawValue])
+        let encoded = try JSONEncoder().encode(judgement)
+        #expect(try JSONDecoder().decode(NewsroomAIJudgement.self, from: encoded) == judgement)
+        #expect(NewsroomAIAlignment(rawValue: "UNKNOWN") == nil)
+        #expect(NewsroomAIAlignment(rawValue: "BULLISH") == .positive)
+        #expect(NewsroomAIAlignment(rawValue: "BEARISH") == .negative)
+    }
+
     @Test("문자열 AI 판단의 근거는 summary.body에서 읽고 본문 중복을 제거한다")
     func usesSummaryBodyAsLegacyAIReason() async throws {
         let reason = "애플의 아이폰 주문 감소는 하락 요인입니다. AI 인프라 투자 확대는 상승 요인으로 작용합니다."

@@ -108,6 +108,15 @@ struct NewsroomTickerDigestCompactRow: View {
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
 
+                    if let summary = holding.summary.map(NewsroomSummaryText.firstSentence(of:)), !summary.isEmpty {
+                        Text(summary)
+                            .font(.pretendard(12.5, weight: .medium))
+                            .foregroundStyle(Color.textSecondary)
+                            .lineSpacing(3)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
                     NewsroomHoldingMetrics(holding: holding)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

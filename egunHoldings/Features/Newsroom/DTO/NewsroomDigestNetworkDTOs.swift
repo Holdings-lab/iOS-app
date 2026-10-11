@@ -7,6 +7,9 @@ import Foundation
 //   GET /api/newsroom          → NewsroomBriefingResponseDTO
 //   GET /api/newsroom/{ticker} → NewsroomTickerDetailResponseDTO
 // 공통 엔벨로프 `APIResponse<T>`의 `result`에 담겨 온다.
+// 2026-10-10 명세: holdings.headline/detail.headline = daily.title,
+// holdings.summary/aiJudgement.headline = ai.headline,
+// summary.body = ai.reason, summary.findings = daily.content.
 
 nonisolated enum NewsroomBriefingTypeDTO: String, Decodable, Sendable {
     case hero = "Hero"
@@ -216,6 +219,21 @@ nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
 nonisolated struct NewsroomDetailSummaryDTO: Decodable, Sendable {
     let body: String?
     let findings: [String]?
+
+    private enum CodingKeys: String, CodingKey {
+        case body, findings
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        body = try container.decodeIfPresent(String.self, forKey: .body)
+        // 명세의 daily.content 문자열과 예시의 문자열 배열을 모두 보존한다.
+        if let content = try? container.decode(String.self, forKey: .findings) {
+            findings = [content]
+        } else {
+            findings = try container.decodeIfPresent([String].self, forKey: .findings)
+        }
+    }
 }
 
 nonisolated struct NewsroomSourceItemDTO: Decodable, Sendable {
