@@ -113,17 +113,16 @@ nonisolated struct NewsroomTickerDetailResponseDTO: Decodable, Sendable {
     let footer: NewsroomDetailFooterDTO?
 
     func toDomain() -> NewsroomTickerDetail {
-        let judgement = aiJudgement?.toDomain(fallbackReason: summary?.body)
-        let summaryBody = summary?.body
-        let isReasonRepeated = judgement?.reason != nil
-            && summaryBody?.trimmingCharacters(in: .whitespacesAndNewlines) == judgement?.reason
+        // AI 카드의 결론은 aiJudgement.headline, 근거는 summary.body다.
+        // 두 필드를 한 블록으로 합치고, 근거를 별도 본문에 다시 표시하지 않는다.
+        let judgement = aiJudgement?.toDomain(summaryBody: summary?.body)
 
         return NewsroomTickerDetail(
             stock: stock.toDomain(),
             headline: headline,
             imageURL: NewsroomRemoteURL.parse(imageUrl),
             aiJudgement: judgement,
-            summaryBody: isReasonRepeated ? nil : summaryBody,
+            summaryBody: judgement == nil ? summary?.body : nil,
             findings: summary?.findings ?? [],
             sources: (sources ?? []).map { $0.toDomain() },
             asOfAt: footer?.asOfAt,
@@ -153,7 +152,8 @@ nonisolated struct NewsroomStockMetaDTO: Decodable, Sendable {
 /// AI 판단 블록.
 ///
 /// 서버가 문자열 한 줄만 주던 이전 스키마와 객체를 주는 현재 스키마가 한동안 공존할 수 있어
-/// 둘 다 받아들인다. 문자열의 근거는 상세 응답의 summary.body에서 보충한다.
+/// 둘 다 받아들인다. 근거는 현재 계약의 summary.body를 우선 사용하며,
+/// 본문이 없을 때만 이전 계약의 reason으로 보충한다.
 /// `used_news_url`은 이 블록만 snake_case라서(모델 출력이 그대로 실려 나온다) 키를 명시한다.
 nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
     let title: String?
@@ -199,8 +199,8 @@ nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
             .flatMap(NewsroomDigestDateFormat.parseISO8601)
     }
 
-    func toDomain(fallbackReason: String? = nil) -> NewsroomAIJudgement {
-        let resolvedReason = [reason, fallbackReason]
+    func toDomain(summaryBody: String? = nil) -> NewsroomAIJudgement {
+        let resolvedReason = [summaryBody, reason]
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .first { !$0.isEmpty }
 

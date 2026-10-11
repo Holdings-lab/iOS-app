@@ -75,7 +75,7 @@ struct NewsroomAndSignalAPIContractTests {
         #expect(detail.findings == ["금리 상승"])
     }
 
-    @Test("객체의 reason을 우선하고 비어 있으면 summary.body를 사용한다",
+    @Test("AI 카드의 근거는 이전 reason보다 summary.body를 우선한다",
           arguments: [nil, "", "  \n", "별도의 AI 근거입니다."] as [String?])
     func resolvesAIReason(reason: String?) throws {
         var judgement: [String: Any] = ["headline": "예측 방향"]
@@ -85,10 +85,26 @@ struct NewsroomAndSignalAPIContractTests {
             "aiJudgement": judgement, "summary": ["body": "서버가 보내 준 근거입니다."]
         ])
         let detail = try JSONDecoder().decode(NewsroomTickerDetailResponseDTO.self, from: data).toDomain()
-        let hasExplicitReason = !(reason?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
+        #expect(detail.aiJudgement?.headline == "예측 방향")
+        #expect(detail.aiJudgement?.reason == "서버가 보내 준 근거입니다.")
+        #expect(detail.summaryBody == nil)
+    }
 
-        #expect(detail.aiJudgement?.reason == (hasExplicitReason ? reason : "서버가 보내 준 근거입니다."))
-        #expect(detail.summaryBody == (hasExplicitReason ? "서버가 보내 준 근거입니다." : nil))
+    @Test("summary.body가 없거나 비면 AI 카드에서 이전 reason을 사용한다",
+          arguments: [nil, "", "  \n"] as [String?])
+    func preservesLegacyReasonWhenSummaryBodyIsMissing(body: String?) throws {
+        var summary: [String: Any] = ["findings": ["뉴스 요약"]]
+        if let body { summary["body"] = body }
+        let data = try JSONSerialization.data(withJSONObject: [
+            "stock": ["ticker": "QQQ", "name": "QQQ"], "headline": "뉴스 제목",
+            "aiJudgement": ["headline": "AI 예측 문장", "reason": "이전 계약의 근거"],
+            "summary": summary
+        ])
+        let detail = try JSONDecoder().decode(NewsroomTickerDetailResponseDTO.self, from: data).toDomain()
+        #expect(detail.aiJudgement?.headline == "AI 예측 문장")
+        #expect(detail.aiJudgement?.reason == "이전 계약의 근거")
+        #expect(detail.summaryBody == nil)
+        #expect(detail.findings == ["뉴스 요약"])
     }
 
     @Test("AI 판단이나 근거가 없으면 원래 본문과 결론을 보존한다")
