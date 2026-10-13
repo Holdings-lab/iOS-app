@@ -5,7 +5,8 @@ import Foundation
 /// 예측 배치는 뉴스 크롤링과 같이 매일 도는데, 크롤링 결과가 비거나 배치가 실패하는 날은
 /// 그날 상세 응답에 브리핑이 안 실릴 수 있다. 서버가 그런 날 값을 아예 생략하든, 어제 값을
 /// 그대로 다시 보내든 — 클라이언트는 같은 규칙 하나로 처리한다:
-/// "더 새로운 게 오면 갈아끼우고, 아니면 갖고 있던 걸 유지".
+/// 생성 시각이 있으면 최신 값을 선택하고, 시각이 생략되면 현재 응답을 채택한다.
+/// 응답이 없을 때는 저장된 값을 유지한다.
 ///
 /// 세션 메모리가 아니라 디스크에 두는 이유: 브리핑이 안 실려 오는 날 앱을 재실행하면
 /// 메모리 캐시로는 보여줄 값이 없어져 섹션이 통째로 사라진다.
@@ -64,8 +65,10 @@ actor NewsroomAIJudgementStore: NewsroomAIJudgementStoring {
             save(incoming, for: ticker)
             return incoming
         case (.none, .some):
-            // 일시적인 구버전 응답이 생성 시각이 있는 캐시를 덮지 않게 한다.
-            return cached
+            // 현재 API는 generatedAt을 생략한다. 날짜가 없다는 이유로
+            // 이번 응답의 결론·근거를 과거 캐시로 교체하지 않는다.
+            save(incoming, for: ticker)
+            return incoming
         case (.none, .none):
             break
         }

@@ -7,11 +7,26 @@ struct OnboardingStep2TargetAmountView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
-    @State private var sliderValue: Double = 0
+    @State private var amountText = ""
     @State private var isRevealed = false
 
     private var goal: FinancialGoal {
         viewModel.financialGoal
+    }
+
+    private var enteredAmount: Int64? {
+        guard let amount = Int64(amountText), amount > 0 else { return nil }
+        return amount
+    }
+
+    private var sliderAmount: Binding<Double> {
+        Binding(
+            get: {
+                min(max(Double(viewModel.targetAmount), goal.targetAmountSliderRange.lowerBound),
+                    goal.targetAmountSliderRange.upperBound)
+            },
+            set: { setSliderAmount(Int64($0)) }
+        )
     }
 
     var body: some View {
@@ -23,7 +38,7 @@ struct OnboardingStep2TargetAmountView: View {
 
                 OnboardingV3QuestionHeader(
                     title: "목표 금액을 알려주세요",
-                    subtitle: "\(goal.title) 목적으로 자주 설정하는 금액이에요"
+                    subtitle: "1천만원 단위로 선택하거나 금액을 직접 입력해요"
                 )
 
                 VStack(spacing: 20) {
@@ -34,17 +49,11 @@ struct OnboardingStep2TargetAmountView: View {
                         .padding(.top, 12)
 
                     Slider(
-                        value: $sliderValue,
+                        value: sliderAmount,
                         in: goal.targetAmountSliderRange,
                         step: goal.targetAmountSliderStep
-                    ) { editing in
-                        guard !editing else { return }
-                        viewModel.updateTargetAmount(Int64(sliderValue))
-                    }
+                    )
                     .tint(OnboardingV3Theme.primary)
-                    .onChange(of: sliderValue) { _, newValue in
-                        viewModel.updateTargetAmount(Int64(newValue))
-                    }
 
                     HStack {
                         Text(OnboardingCurrencyFormatter.wonText(Int64(goal.targetAmountSliderRange.lowerBound)))
@@ -53,6 +62,33 @@ struct OnboardingStep2TargetAmountView: View {
                     }
                     .font(.pretendard(12, weight: .medium))
                     .foregroundStyle(OnboardingV3Theme.muted)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("직접 입력")
+                            .font(.pretendard(14, weight: .semibold))
+                            .foregroundStyle(OnboardingV3Theme.primary)
+
+                        HStack {
+                            TextField("목표 금액", text: $amountText)
+                                .keyboardType(.numberPad)
+                                .accessibilityLabel("목표 금액 직접 입력")
+                            Text("원")
+                                .foregroundStyle(OnboardingV3Theme.muted)
+                        }
+                        .font(.pretendard(16, weight: .medium))
+                        .padding(12)
+                        .background(OnboardingV3Theme.cardBackground, in: RoundedRectangle(cornerRadius: 10))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(OnboardingV3Theme.border, lineWidth: 1)
+                        }
+
+                        if enteredAmount == nil {
+                            Text("1원 이상의 금액을 숫자로 입력해 주세요.")
+                                .font(.pretendard(12, weight: .medium))
+                                .foregroundStyle(.red)
+                        }
+                    }
                 }
                 .padding(16)
                 .background(OnboardingV3Theme.cardBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -72,17 +108,41 @@ struct OnboardingStep2TargetAmountView: View {
         .onboardingProgressOverlay(step: 2, totalSteps: 8, isCollapsed: isProgressCollapsed)
         .safeAreaInset(edge: .bottom) {
             OnboardingV3BottomBar {
-                OnboardingV3PrimaryButton(title: "다음", action: onNext)
+                OnboardingV3PrimaryButton(title: "다음") {
+                    guard let enteredAmount else { return }
+                    viewModel.updateTargetAmount(enteredAmount)
+                    onNext()
+                }
+                .disabled(enteredAmount == nil)
             }
         }
         .onboardingV3Background()
         .onAppear {
-            sliderValue = Double(viewModel.targetAmount)
+            syncFromTargetAmount()
         }
         .onChange(of: goal) { _, _ in
-            sliderValue = Double(viewModel.targetAmount)
+            syncFromTargetAmount()
+        }
+        .onChange(of: amountText) { _, newValue in
+            let digits = newValue.filter { $0.isASCII && $0.isNumber }
+            if digits != newValue {
+                amountText = digits
+                return
+            }
+            if let enteredAmount {
+                viewModel.updateTargetAmount(enteredAmount)
+            }
         }
         .onboardingRevealSequence(isRevealed: $isRevealed, reduceMotion: reduceMotion)
+    }
+
+    private func syncFromTargetAmount() {
+        amountText = String(viewModel.targetAmount)
+    }
+
+    private func setSliderAmount(_ amount: Int64) {
+        viewModel.updateTargetAmount(amount)
+        amountText = String(amount)
     }
 }
 

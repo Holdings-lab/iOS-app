@@ -17,7 +17,7 @@ nonisolated enum AuthTokenDefaults {
     static let assumedAccessTokenLifetime: Int64 = 3600
 }
 
-protocol AuthTokenStore: Sendable {
+nonisolated protocol AuthTokenStore: Sendable {
     nonisolated func currentAccessToken() -> String?
     nonisolated func currentRefreshToken() -> String?
     nonisolated func currentExpiresAt() -> Date?
@@ -35,6 +35,6 @@ extension AuthTokenStore {
     }
 }
 
-protocol AccessTokenRefreshing: Sendable {
+nonisolated protocol AccessTokenRefreshing: Sendable {
     nonisolated func refreshAccessToken() async throws -> AuthTokenPayload
 }

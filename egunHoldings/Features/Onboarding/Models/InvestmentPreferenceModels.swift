@@ -27,6 +27,14 @@ struct InvestmentStyleAllocation: Identifiable, Hashable {
 }
 
 extension InvestmentProfile {
+    nonisolated var wireValue: String {
+        switch self {
+        case .conservative: return "CONSERVATIVE"
+        case .balanced: return "MODERATE"
+        case .aggressive: return "AGGRESSIVE"
+        }
+    }
+
     var title: String {
         displayName
     }
@@ -117,6 +125,15 @@ enum InvestmentHorizon: String, CaseIterable, Identifiable, Codable, Sendable {
     case overFiveYears = "OVER_FIVE_YEARS"
 
     var id: String { rawValue }
+
+    nonisolated var wireValue: String {
+        switch self {
+        case .underOneYear: return "UNDER_1Y"
+        case .oneToThreeYears: return "ONE_TO_THREE_YEARS"
+        case .threeToFiveYears: return "THREE_TO_FIVE_YEARS"
+        case .overFiveYears: return "OVER_FIVE_YEARS"
+        }
+    }
 
     var title: String {
         switch self {

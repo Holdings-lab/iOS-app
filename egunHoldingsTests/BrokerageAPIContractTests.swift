@@ -20,7 +20,7 @@ struct BrokerageAPIContractTests {
         let requests = await queue.recordedRequests()
         #expect(connection.accountId == 17)
         #expect(connection.brokerage == .kis)
-        #expect(connection.accountNumber == "1234567801")
+        #expect(connection.accountNumber == linkedAccountNumber)
         #expect(requests.map(\.path) == ["/api/accounts", "/api/accounts", "/api/accounts/17/sync"])
         #expect(requests.map(\.method.rawValue) == ["GET", "POST", "POST"])
         #expect(requests[1].body == nil)
@@ -36,7 +36,9 @@ struct BrokerageAPIContractTests {
 
         let requests = await queue.recordedRequests()
         #expect(requests.map(\.path) == ["/api/portfolio"])
-        #expect(balance.accountNumber == "1234567801")
+        // `/api/portfolio` 집계 응답은 계좌번호를 포함하지 않는다. 연결 API의 계좌번호를
+        // 여기서 재사용해 기대하면 실제 서버 DTO와 달라진다.
+        #expect(balance.accountNumber.isEmpty)
         #expect(balance.productCode == "01")
         #expect(balance.totalEvaluationAmount == 1_250_000)
         #expect(balance.cashAmount == 250_000)
@@ -58,7 +60,7 @@ struct BrokerageAPIContractTests {
         let snapshot = BrokerBalanceSnapshot(
             broker: "KIS",
             environment: "MOCK",
-            accountNumber: "1234567801",
+            accountNumber: linkedAccountNumber,
             productCode: "01",
             totalEvaluationAmount: 1_000,
             stockEvaluationAmount: 800,
@@ -113,7 +115,8 @@ struct BrokerageAPIContractTests {
         let viewModel = OnboardingFlowViewModel(
             onboardingRepository: NoopOnboardingRepository(),
             brokerageConnectionRepository: FailingBrokerageRepository(),
-            brokerBalanceRepository: FailingBalanceRepository()
+            brokerBalanceRepository: FailingBalanceRepository(),
+            authTokenStore: ValidAuthTokenStore()
         )
         viewModel.selectInstitution(viewModel.recommendedInstitution)
 
@@ -123,14 +126,60 @@ struct BrokerageAPIContractTests {
         #expect(viewModel.isBrokerageConnected == false)
         #expect(viewModel.linkedAccount == nil)
         #expect(viewModel.brokerageLinkErrorMessage != nil)
+        #expect(viewModel.requiresBrokerageReauthentication == false)
+    }
+
+    @Test("저장된 access token이 없으면 계좌 연결 전 재로그인을 요구한다")
+    @MainActor
+    func missingAccessTokenRequiresReauthentication() async {
+        let viewModel = OnboardingFlowViewModel(
+            onboardingRepository: NoopOnboardingRepository(),
+            brokerageConnectionRepository: FailingBrokerageRepository(),
+            brokerBalanceRepository: FailingBalanceRepository(),
+            authTokenStore: MissingAuthTokenStore()
+        )
+        viewModel.selectInstitution(viewModel.recommendedInstitution)
+
+        let didConnect = await viewModel.connectBrokerage(userId: 1, reduceMotion: true)
+
+        #expect(didConnect == false)
+        #expect(viewModel.requiresBrokerageReauthentication)
+        #expect(viewModel.brokerageLinkErrorMessage == AppVocabulary.ErrorMessage.loginExpired)
+    }
+
+    @Test("계좌 연결의 최종 401은 재로그인을 요구한다")
+    @MainActor
+    func unauthorizedConnectionRequiresReauthentication() async {
+        let viewModel = OnboardingFlowViewModel(
+            onboardingRepository: NoopOnboardingRepository(),
+            brokerageConnectionRepository: UnauthorizedBrokerageRepository(),
+            brokerBalanceRepository: FailingBalanceRepository(),
+            authTokenStore: ValidAuthTokenStore()
+        )
+        viewModel.selectInstitution(viewModel.recommendedInstitution)
+
+        let didConnect = await viewModel.connectBrokerage(userId: 1, reduceMotion: true)
+
+        #expect(didConnect == false)
+        #expect(viewModel.requiresBrokerageReauthentication)
+        #expect(viewModel.brokerageLinkErrorMessage == AppVocabulary.ErrorMessage.loginExpired)
+    }
+
+    /// 서버는 KIS `CANO`와 계좌상품코드를 이어 저장·반환한다. 운영 환경의 실제 CANO를 테스트
+    /// 소스에 고정하지 않도록, 이 계약을 명시적으로 조합해 검증한다.
+    private var linkedAccountNumber: String {
+        mockAccountCANO + mockAccountProductCode
     }
 
     private var linkedAccountJSON: String {
-        #"[{"accountId":17,"brokerName":"KIS","accountNumber":"1234567801","status":"CONNECTED","accountSnapshot":{"accountProductCode":"01"}}]"#
+        "[{\"accountId\":17,\"brokerName\":\"KIS\",\"accountNumber\":\"\(linkedAccountNumber)\",\"status\":\"CONNECTED\",\"accountSnapshot\":{\"accountProductCode\":\"\(mockAccountProductCode)\"}}]"
     }
 
+    private let mockAccountCANO = "12345678"
+    private let mockAccountProductCode = "01"
+
     private var portfolioJSON: String {
-        #"{"estimatedDepositAsset":1250000,"cashBalance":250000,"totalPurchaseAmount":800000,"totalValuationAmount":1000000,"totalValuationGainLoss":200000,"totalProfitRate":25,"positions":[{"itemCode":"005930","itemName":"삼성전자","productType":"STOCK","quantity":10,"purchaseUnitPrice":80000,"presentPrice":100000,"purchaseAmount":800000,"valuationAmount":1000000,"valuationGainLoss":200000,"profitRate":25,"currencyCode":"USD"}],"byBroker":{"KIS_1234567801":{"accountId":17,"accountNumber":"1234567801","brokerName":"KIS","estimatedDepositAsset":1250000,"cashBalance":250000,"positions":[],"lastSyncedAt":"2026-08-27T10:00:00"}},"lastSyncedAt":"2026-08-27T10:00:00"}"#
+        #"{"estimatedDepositAsset":1250000,"cashBalance":250000,"totalPurchaseAmount":800000,"totalValuationAmount":1000000,"totalValuationGainLoss":200000,"totalProfitRate":25,"positions":[{"itemCode":"005930","itemName":"삼성전자","productType":"STOCK","quantity":10,"profitRate":25,"currencyCode":"USD","fxRate":1350,"native":{"purchaseUnitPrice":80000,"presentPrice":100000,"purchaseAmount":800000,"valuationAmount":1000000,"gainLoss":200000},"krw":{"purchaseAmount":1080000000,"valuationAmount":1350000000,"gainLoss":270000000}}],"lastSyncedAt":"2026-08-27T10:00:00"}"#
     }
 
     private func holding(symbol: String, name: String, productType: String?, value: Int) -> BrokerHoldingSnapshot {
@@ -194,6 +243,30 @@ private struct FailingBrokerageRepository: BrokerageConnectionRepositoryProtocol
     func sync(accountId _: Int64) async throws {}
 }
 
+private struct UnauthorizedBrokerageRepository: BrokerageConnectionRepositoryProtocol {
+    func connectKISDemoAccount(institutionID _: String) async throws -> BrokerageConnection {
+        throw NetworkError.httpStatus(401)
+    }
+
+    func sync(accountId _: Int64) async throws {}
+}
+
+private struct ValidAuthTokenStore: AuthTokenStore {
+    func currentAccessToken() -> String? { "test-access-token" }
+    func currentRefreshToken() -> String? { "test-refresh-token" }
+    func currentExpiresAt() -> Date? { Date().addingTimeInterval(3_600) }
+    func updateTokens(_: AuthTokenPayload) {}
+    func clearTokens() {}
+}
+
+private struct MissingAuthTokenStore: AuthTokenStore {
+    func currentAccessToken() -> String? { nil }
+    func currentRefreshToken() -> String? { nil }
+    func currentExpiresAt() -> Date? { nil }
+    func updateTokens(_: AuthTokenPayload) {}
+    func clearTokens() {}
+}
+
 private struct FailingBalanceRepository: BrokerBalanceRepositoryProtocol {
     func fetchPortfolioBalance() async throws -> BrokerBalanceSnapshot {
         throw QueueError.missingResponse
@@ -201,14 +274,12 @@ private struct FailingBalanceRepository: BrokerBalanceRepositoryProtocol {
 }
 
 private struct NoopOnboardingRepository: OnboardingRepositoryProtocol {
-    func updateSettings(
+    func updateProfile(
         userId _: Int64,
         investmentHorizon _: InvestmentHorizon,
         maxDrawdownTolerance _: MaxDrawdownTolerance,
-        investmentProfile _: InvestmentProfile
+        investmentProfile _: InvestmentProfile,
+        interests _: [WatchAssetSector]
     ) async throws {}
 
-    func updateWatchAssets(userId _: Int64, sectors _: [WatchAssetSector]) async throws {}
-
-    func updateGoal(userId _: Int64, financialGoal _: FinancialGoal, targetAmount _: Int64) async throws {}
 }

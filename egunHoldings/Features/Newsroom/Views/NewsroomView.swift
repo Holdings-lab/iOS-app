@@ -11,14 +11,20 @@ struct NewsroomView: View {
 
     @StateObject private var viewModel: NewsroomDigestViewModel
     @State private var presentedHolding: NewsroomHoldingBriefing?
+    private let refreshSessionID: Int
+    private let onPullRefreshStarted: () -> Void
 
     init(
         userId: Int64? = nil,
         userAssetProfile: UserAssetProfile,
+        refreshSessionID: Int = 0,
+        onPullRefreshStarted: @escaping () -> Void = {},
         onAssetTabRequested: @escaping () -> Void = {},
         viewModel: NewsroomDigestViewModel? = nil
     ) {
         self.userAssetProfile = userAssetProfile
+        self.refreshSessionID = refreshSessionID
+        self.onPullRefreshStarted = onPullRefreshStarted
         self.onAssetTabRequested = onAssetTabRequested
         _viewModel = StateObject(wrappedValue: viewModel ?? NewsroomDigestViewModel(userId: userId))
     }
@@ -32,23 +38,21 @@ struct NewsroomView: View {
             ) {
                 header
 
-                if let briefing = viewModel.briefing, briefing.holdings.isEmpty {
-                    NewsroomNoHoldingsCard(onRegister: onAssetTabRequested)
-                } else if let briefing = viewModel.briefing, briefing.hasNoRelevantNews {
-                    NewsroomNoRelatedNewsCard()
-                } else if viewModel.isLoading && viewModel.briefing == nil {
+                if viewModel.isLoading && viewModel.briefing == nil {
                     NewsroomDigestSkeleton()
                 } else if let errorMessage = viewModel.errorMessage, viewModel.briefing == nil {
                     NewsroomErrorCard(message: errorMessage) {
                         viewModel.load()
                     }
                 } else if let briefing = viewModel.briefing {
-                    briefingContent(briefing)
+                    briefingState(briefing)
                 }
             }
             .refreshable {
+                onPullRefreshStarted()
                 await viewModel.refresh()
             }
+            .id(refreshSessionID)
 
             if let refreshStatusMessage = viewModel.refreshStatusMessage {
                 refreshToast(refreshStatusMessage)
@@ -64,6 +68,12 @@ struct NewsroomView: View {
         .onAppear {
             viewModel.loadIfNeeded()
         }
+        .task { await viewModel.observeBriefings() }
+        .onDisappear { viewModel.cancelLoading() }
+        .dashboardUITestLoadingIndicator(
+            isLoading: viewModel.isRefreshing,
+            identifier: "ui.newsroomLoading"
+        )
         #if DEBUG
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -96,8 +106,41 @@ struct NewsroomView: View {
     }
 
     @ViewBuilder
+    private func briefingState(_ briefing: NewsroomBriefing) -> some View {
+        if let errorState = briefing.errorState {
+            NewsroomErrorCard(
+                message: errorState.summary,
+                title: errorState.title,
+                actionTitle: errorState.buttonLabel
+            ) {
+                viewModel.load()
+            }
+        } else if let emptyState = briefing.emptyState {
+            NewsroomNoHoldingsCard(
+                title: emptyState.title,
+                message: emptyState.description,
+                actionTitle: emptyState.buttonLabel,
+                onRegister: onAssetTabRequested
+            )
+        } else if briefing.holdings.isEmpty {
+            // 구 서버가 emptyState 없이 빈 목록만 주는 경우의 호환 폴백.
+            NewsroomNoHoldingsCard(onRegister: onAssetTabRequested)
+        } else if briefing.hasNoRelevantNews {
+            NewsroomNoRelatedNewsCard()
+            tickerSection(briefing)
+        } else {
+            briefingContent(briefing)
+        }
+    }
+
+    @ViewBuilder
     private func briefingContent(_ briefing: NewsroomBriefing) -> some View {
         tickerSection(briefing)
+
+        Text("오늘 등락은 최근 정규장 시세의 전일 종가 대비예요.")
+            .font(.pretendard(10.5, weight: .medium))
+            .foregroundStyle(Color.textTertiary)
+            .fixedSize(horizontal: false, vertical: true)
 
         NewsroomEndMarker(heartbeatText: nil)
     }
@@ -108,10 +151,14 @@ struct NewsroomView: View {
                 .font(.pretendard(16, weight: .bold))
                 .foregroundStyle(Color.textPrimary)
 
-            ForEach(briefing.holdings) { holding in
-                NewsroomTickerDigestRow.make(for: holding) {
+            ForEach(briefing.sortedHoldings) { holding in
+                NewsroomTickerDigestRow.make(
+                    for: holding,
+                    isHighlighted: holding.id == briefing.sortedHoldings.first?.id
+                ) {
                     presentedHolding = holding
                 }
+                .accessibilityIdentifier("newsroom.holding.\(holding.ticker)")
             }
         }
     }

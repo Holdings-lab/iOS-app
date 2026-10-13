@@ -12,6 +12,12 @@ enum TodayNavDestination: Hashable {
     case policyNews(PolicyNewsItem)
 }
 
+private enum TodaySettingsDestination: String, Identifiable {
+    case root, goal
+    var id: String { rawValue }
+    var initialRoute: SettingsRoute? { self == .goal ? .goal : nil }
+}
+
 // MARK: - TodayView
 
 struct TodayView: View {
@@ -20,44 +26,68 @@ struct TodayView: View {
     @StateObject private var notificationCenter = AppNotificationCenter.shared
     @State private var navigationPath: [TodayNavDestination] = []
     @State private var isPushSlotDismissed = false
-    @State private var isSettingsPresented = false
+    @State private var presentedSettings: TodaySettingsDestination?
     @State private var presentedNotificationDetail: AppNotificationItem?
     @Binding private var externalSignalRoute: PolSignalRoute?
     private let userId: Int64?
+    private let onboardingResult: OnboardingResult?
     private let userAssetProfile: UserAssetProfile
     private let portfolioSnapshot: PortfolioSnapshot
     private let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     private let onAssetTabRequested: () -> Void
+    private let onGoalSaved: (FinancialGoal, Int64) -> Void
+    private let onDeleteAccount: () async throws -> Void
+    private let onLogout: () -> Void
+    private let settingsRepository: any SettingsRepositoryProtocol
+    private let refreshSessionID: Int
+    private let onPullRefreshStarted: () -> Void
     private let onNewsroomTabRequested: () -> Void
     private let onSignalRouteRequested: (PolSignalRoute) -> Void
     private let onAnalysisNotificationRequested: (PolSignalAnalysisPayload) -> Void
 
     init(
         userId: Int64? = nil,
+        onboardingResult: OnboardingResult? = nil,
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
+        repository: TodayRepositoryProtocol? = nil,
         viewModel: TodayViewModel? = nil,
         externalSignalRoute: Binding<PolSignalRoute?> = .constant(nil),
+        onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
+        onDeleteAccount: @escaping () async throws -> Void = { throw NetworkError.invalidResponse },
+        onLogout: @escaping () -> Void = {},
+        settingsRepository: any SettingsRepositoryProtocol = LiveSettingsRepository(),
+        refreshSessionID: Int = 0,
+        onPullRefreshStarted: @escaping () -> Void = {},
         onAssetTabRequested: @escaping () -> Void = {},
         onNewsroomTabRequested: @escaping () -> Void = {},
         onSignalRouteRequested: @escaping (PolSignalRoute) -> Void = { _ in },
         onAnalysisNotificationRequested: @escaping (PolSignalAnalysisPayload) -> Void = { _ in }
     ) {
         self.userId = userId
+        self.onboardingResult = onboardingResult
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.onAssetTabRequested = onAssetTabRequested
+        self.onGoalSaved = onGoalSaved
+        self.onDeleteAccount = onDeleteAccount
+        self.onLogout = onLogout
+        self.settingsRepository = settingsRepository
+        self.refreshSessionID = refreshSessionID
+        self.onPullRefreshStarted = onPullRefreshStarted
         self.onNewsroomTabRequested = onNewsroomTabRequested
         self.onSignalRouteRequested = onSignalRouteRequested
         self.onAnalysisNotificationRequested = onAnalysisNotificationRequested
         _viewModel = StateObject(
             wrappedValue: viewModel ?? TodayViewModel(
                 userId: userId,
+                onboardingResult: onboardingResult,
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
-                brokerBalanceSnapshot: brokerBalanceSnapshot
+                brokerBalanceSnapshot: brokerBalanceSnapshot,
+                repository: repository
             )
         )
         _policyNewsViewModel = StateObject(wrappedValue: PolicyNewsViewModel(userId: userId))
@@ -76,7 +106,9 @@ struct TodayView: View {
                             onNotifications: {
                                 openNotifications()
                             },
-                            onSettings: { isSettingsPresented = true }
+                            onSettings: {
+                                presentedSettings = .root
+                            }
                         )
 
                         if let item = notificationCenter.todayPreviewNotification, !isPushSlotDismissed {
@@ -91,28 +123,38 @@ struct TodayView: View {
                             )
                         }
 
-                        if viewModel.loadState == .loading {
+                        if viewModel.loadingSections.contains(.briefing) {
                             TodayBriefingSkeleton()
-                            TodayHoldingsSkeleton()
-                            TodayGoalProgressSkeleton()
-                            TodayNewsSkeleton()
                         } else {
                             TodayBriefingCard(
                                 briefing: viewModel.briefing,
                                 isAccountLinked: viewModel.isAccountLinked
                             )
-
+                        }
+                        if viewModel.loadingSections.contains(.holdings) {
+                            TodayHoldingsSkeleton()
+                        } else {
                             TodayHoldingsTop3Card(
                                 holdings: viewModel.topHoldings,
                                 isAccountLinked: viewModel.isAccountLinked,
                                 onConnectAccount: onAssetTabRequested
                             )
-
+                        }
+                        if viewModel.loadingSections.contains(.goal) {
+                            TodayGoalProgressSkeleton()
+                        } else {
                             TodayGoalProgressCard(
                                 goalProgress: viewModel.goalProgress,
-                                onSetGoal: onAssetTabRequested
+                                hasSavedGoal: onboardingResult != nil,
+                                onSetGoal: {
+                                    presentedSettings = .goal
+                                }
                             )
-
+                            .accessibilityIdentifier("today.goalProgress")
+                        }
+                        if viewModel.loadingSections.contains(.news) {
+                            TodayNewsSkeleton()
+                        } else {
                             TodayNewsSection(
                                 newsItems: viewModel.newsItems,
                                 isAccountLinked: viewModel.isAccountLinked,
@@ -126,6 +168,7 @@ struct TodayView: View {
                     .padding(.bottom, 112)
                 }
                 .refreshable {
+                    onPullRefreshStarted()
                     await viewModel.refresh()
                 }
             }
@@ -138,12 +181,6 @@ struct TodayView: View {
                             openAnalysisNotification(payload)
                         }
                     )
-                case .today(.settings):
-                    // 설정 화면은 자체 NavigationStack을 가진 화면이라 여기서 push하지 않는다 —
-                    // NavigationStack 안에 NavigationStack을 push로 중첩하면 SwiftUI가
-                    // AnyNavigationPath.Error.comparisonTypeMismatch로 크래시한다.
-                    // 실제로는 isSettingsPresented(fullScreenCover)로만 열리므로 이 분기는 도달하지 않는다.
-                    EmptyView()
                 case .signal(.list):
                     EmptyView()
                 case .signal(.detail(let id)):
@@ -187,6 +224,12 @@ struct TodayView: View {
             .onChange(of: brokerBalanceSnapshot) { _, _ in
                 syncSessionData()
             }
+            .onChange(of: onboardingResult?.targetAmount) { _, _ in
+                syncSessionData()
+            }
+            .onChange(of: onboardingResult?.financialGoal) { _, _ in
+                syncSessionData()
+            }
             .onChange(of: policyNewsViewModel.presentedItem) { _, item in
                 syncPolicyNewsDestination(with: item)
             }
@@ -204,21 +247,38 @@ struct TodayView: View {
                 await viewModel.load()
                 await notificationCenter.refreshAuthorizationStatus()
             }
+            .task { await viewModel.observeNews() }
+            .onDisappear { viewModel.cancelLoading() }
+            .dashboardUITestLoadingIndicator(
+                isLoading: viewModel.loadState == .loading,
+                identifier: "ui.todayLoading"
+            )
             .sheet(item: $presentedNotificationDetail) { item in
                 NewsDetailSheet(item: item)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
-            .fullScreenCover(isPresented: $isSettingsPresented) {
-                SettingsRootView(notificationCenter: notificationCenter)
+            .fullScreenCover(item: $presentedSettings) { destination in
+                SettingsRootView(
+                    notificationCenter: notificationCenter,
+                    initialRoute: destination.initialRoute,
+                    onboardingResult: onboardingResult,
+                    onGoalSaved: onGoalSaved,
+                    onDeleteAccount: onDeleteAccount,
+                    onLogout: onLogout,
+                    repository: settingsRepository
+                )
             }
         }
+        // 뷰모델과 경로는 TodayView에 남기고, 이전 refresh control만 재생성한다.
+        .id(refreshSessionID)
     }
 
     private func syncSessionData() {
         viewModel.updateSessionData(
             userAssetProfile: userAssetProfile,
             portfolioSnapshot: portfolioSnapshot,
+            onboardingResult: onboardingResult,
             brokerBalanceSnapshot: brokerBalanceSnapshot
         )
     }

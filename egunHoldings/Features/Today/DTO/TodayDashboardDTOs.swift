@@ -1,6 +1,6 @@
 import Foundation
 
-// Today 탭은 4개 섹션을 각각 별도 GET으로 조회한다. 모든 필드는 옵셔널이며,
+// Today 탭의 브리핑과 보유 종목은 별도 GET으로 조회한다. 모든 필드는 옵셔널이며,
 // 누락 시 toDomain(fallback:)에서 mock fallback으로 대체된다.
 
 // MARK: - GET /api/users/{id}/daily-briefing (Section 1)
@@ -91,47 +91,12 @@ nonisolated struct TodayHoldingDTO: Decodable {
     }
 }
 
-// MARK: - GET /api/users/{id}/goal (Section 3)
-
-nonisolated struct TodayGoalResponseDTO: Decodable {
-    // 실서버(UserAssetDto.GoalProgressResponse) 응답엔 isAccountLinked가 없다 — daily-briefing/
-    // holdings와 동일한 이유로, 목표가 실제로 설정돼 있는지(goalLabel 등 필드 존재)로만 판단한다.
-    let isAccountLinked: Bool?
-    let goalLabel: String?
-    let progressPct: Double?
-    let scheduleStatus: String?
-    let scheduleNote: String?
-
-    func toDomain(fallback: TodayGoalProgress?) -> TodayGoalProgress? {
-        guard let goalLabel, let progressPct, let scheduleStatus else {
-            return nil
-        }
-
-        return TodayGoalProgress(
-            goalLabel: goalLabel,
-            progressPercent: Int(progressPct.rounded()),
-            status: TodayDTOMapper.goalStatus(from: scheduleStatus, fallback: fallback?.status ?? .justStarted),
-            scheduleDeltaText: scheduleNote ?? ""
-        )
-    }
-}
-
 nonisolated private enum TodayDTOMapper {
     static func severity(from value: String?, fallback: TodayBriefingSeverity) -> TodayBriefingSeverity {
         switch value {
         case "NORMAL": return .calm
         case "WATCH": return .watch
         case "ALERT": return .alert
-        default: return fallback
-        }
-    }
-
-    static func goalStatus(from value: String, fallback: TodayGoalStatus) -> TodayGoalStatus {
-        switch value {
-        case "JUST_STARTED": return .justStarted
-        case "AHEAD": return .ahead
-        case "ON_TRACK": return .onTrack
-        case "BEHIND": return .behind
         default: return fallback
         }
     }

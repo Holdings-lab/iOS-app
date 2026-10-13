@@ -27,6 +27,7 @@ final class SettingsViewModel: ObservableObject {
     @Published private(set) var briefingTime = "09:00"
     private let notificationCenter: AppNotificationCenter
     private let repository: any SettingsRepositoryProtocol
+    private let onGoalSaved: (FinancialGoal, Int64) -> Void
     @Published private(set) var isLoading = false
     @Published private(set) var isRequestingPushAuthorization = false
     @Published private(set) var isSendingTestNotification = false
@@ -37,10 +38,17 @@ final class SettingsViewModel: ObservableObject {
 
     init(
         notificationCenter: AppNotificationCenter,
-        repository: any SettingsRepositoryProtocol = LiveSettingsRepository()
+        repository: any SettingsRepositoryProtocol = LiveSettingsRepository(),
+        onboardingResult: OnboardingResult? = nil,
+        onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in }
     ) {
         self.notificationCenter = notificationCenter
         self.repository = repository
+        self.onGoalSaved = onGoalSaved
+        if let onboardingResult {
+            financialGoal = FinancialGoal(rawValue: onboardingResult.financialGoal) ?? .retirement
+            targetAmount = onboardingResult.targetAmount
+        }
     }
 
     // MARK: - 파생 텍스트 (루트 화면 row 서브텍스트)
@@ -102,9 +110,6 @@ final class SettingsViewModel: ObservableObject {
                 expiredCount: settings.investment.connectedAccounts.expiredCount
             )
             interestCount = settings.investment.interests.count
-            if let goal = settings.investment.goal {
-                financialGoal = FinancialGoal(rawValue: goal.code) ?? financialGoal
-            }
         } catch {
             APIFallbackLog.log("GET /api/me/settings", error: error)
         }
@@ -132,8 +137,10 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func saveGoal(goal: FinancialGoal, amount: Int64) {
+        guard amount > 0 else { return }
         financialGoal = goal
         targetAmount = amount
+        onGoalSaved(goal, amount)
         notify("목표를 저장했어요")
     }
 

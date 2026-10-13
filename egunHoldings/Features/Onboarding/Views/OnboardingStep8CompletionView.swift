@@ -16,12 +16,8 @@ struct OnboardingStep8CompletionView: View {
     @State private var isStartButtonInteractive = false
     @State private var didStart = false
 
-    private var isAccountConnected: Bool {
-        viewModel.connectedInstitutionID != nil
-    }
-
     private var steps: [CompletionStep] {
-        isAccountConnected ? [.settings, .watchAssets, .goal] : [.settings, .watchAssets]
+        [.profile]
     }
 
     var body: some View {
@@ -50,7 +46,9 @@ struct OnboardingStep8CompletionView: View {
                     completedSteps: completedSteps,
                     reduceMotion: reduceMotion,
                     userName: viewModel.userName,
-                    progressPercent: progressPercent
+                    progressPercent: progressPercent,
+                    failure: viewModel.onboardingSubmissionFailure,
+                    onRetry: { Task { await retryCompletionSequence() } }
                 )
                 .transition(.opacity)
             }
@@ -68,9 +66,13 @@ struct OnboardingStep8CompletionView: View {
 
         async let percentAnimation: Void = driveProgressPercent()
 
-        for step in steps {
+        for step in steps where !completedSteps.contains(step) {
             await setActive(step)
-            await perform(step)
+            let succeeded = await perform(step)
+            guard succeeded else {
+                didStart = false
+                return
+            }
             await markCompleted(step)
         }
 
@@ -79,6 +81,12 @@ struct OnboardingStep8CompletionView: View {
 
         try? await Task.sleep(nanoseconds: 300_000_000)
         await revealCompletion()
+    }
+
+    private func retryCompletionSequence() async {
+        guard !didStart else { return }
+        activeStep = nil
+        await runCompletionSequence()
     }
 
     /// 실제 요청 완료 여부와 무관하게 0→99%까지 감속 곡선으로 채워지는 연출용 카운터.
@@ -101,25 +109,12 @@ struct OnboardingStep8CompletionView: View {
         try? await Task.sleep(nanoseconds: 1_100_000_000)
     }
 
-    /// 서버가 요청을 정상 수신했다는 응답이 오면 그 즉시 체크 표시로 넘어간다. 아직 서버가 응답하지
-    /// 않거나(현재 백엔드 미구현) 실패하면, 로딩 아이콘을 일정 시간 더 보여준 뒤 목업으로 완료 처리한다.
-    private func perform(_ step: CompletionStep) async {
-        let succeeded: Bool
-
+    /// 투자 성향 저장은 서버 성공 응답을 받아야만 완료 화면으로 진행된다.
+    private func perform(_ step: CompletionStep) async -> Bool {
         switch step {
-        case .settings:
-            succeeded = await viewModel.submitSettings(userId: userId)
-        case .watchAssets:
-            succeeded = await viewModel.submitWatchAssets(userId: userId)
-        case .goal:
-            if !viewModel.isBrokerageConnected {
-                await viewModel.connectBrokerage(userId: userId, reduceMotion: reduceMotion)
-            }
-            succeeded = await viewModel.submitGoal(userId: userId)
+        case .profile:
+            return await viewModel.submitProfile(userId: userId)
         }
-
-        guard !succeeded else { return }
-        try? await Task.sleep(nanoseconds: reduceMotion ? 150_000_000 : 700_000_000)
     }
 
     @MainActor
@@ -197,25 +192,19 @@ struct OnboardingStep8CompletionView: View {
 }
 
 private enum CompletionStep: CaseIterable, Identifiable, Hashable {
-    case settings
-    case watchAssets
-    case goal
+    case profile
 
     var id: String { title }
 
     var title: String {
         switch self {
-        case .settings: return "맞춤 설정 저장"
-        case .watchAssets: return "관심 분야 저장"
-        case .goal: return "투자 목표 저장"
+        case .profile: return "맞춤 설정 저장"
         }
     }
 
     var icon: String {
         switch self {
-        case .settings: return "slider.horizontal.3"
-        case .watchAssets: return "star"
-        case .goal: return "target"
+        case .profile: return "slider.horizontal.3"
         }
     }
 }
@@ -227,6 +216,8 @@ private struct ProgressPhase: View {
     let reduceMotion: Bool
     let userName: String
     let progressPercent: Int
+    let failure: OnboardingSubmissionFailure?
+    let onRetry: () -> Void
 
     var body: some View {
         VStack(spacing: 32) {
@@ -256,6 +247,30 @@ private struct ProgressPhase: View {
             .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
             .frame(maxWidth: OnboardingV3Layout.maxWidth)
             .frame(maxWidth: .infinity)
+
+            if let failure {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("\(failure.stepTitle)을 저장하지 못했어요")
+                        .font(.pretendard(15, weight: .semibold))
+                        .foregroundStyle(Color.textPrimary)
+                    Text("\(failure.endpoint) · \(failure.errorCode)")
+                        .font(.pretendard(12, weight: .medium))
+                        .foregroundStyle(Color.textSecondary)
+                    Text(failure.message)
+                        .font(.pretendard(13, weight: .regular))
+                        .foregroundStyle(Color.textSecondary)
+                    Button("다시 시도", action: onRetry)
+                        .font(.pretendard(14, weight: .semibold))
+                        .foregroundStyle(Color.brand)
+                        .padding(.top, 4)
+                }
+                .padding(16)
+                .frame(maxWidth: OnboardingV3Layout.maxWidth, alignment: .leading)
+                .frame(maxWidth: .infinity)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .padding(.horizontal, OnboardingV3Layout.horizontalPadding)
+            }
 
             Spacer()
         }

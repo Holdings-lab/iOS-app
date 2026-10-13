@@ -100,23 +100,8 @@ nonisolated enum BackendEndpoint {
         )
     }
 
-    /// ⚠️ 예전 타깃(`PATCH /api/me/settings`)이 이번 리팩터로 사라졌다. 서버에 남은 동급 라우트는
-    /// `PATCH /api/investment-profile`뿐인데 필드가 `investmentHorizon`·`maxDrawdownTolerance` 2개뿐이라
-    /// `investmentProfile`(투자 성향)을 보낼 곳이 없다 — 온보딩 5/8 값이 저장 안 될 수 있음. 확인 필요.
-    static func updateInvestmentProfile(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/investment-profile", method: .patch, body: body, authorizationRequirement: .bearerToken)
-    }
-
-    static func updateWatchAssets(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/me/watch-assets", method: .post, body: body, authorizationRequirement: .bearerToken)
-    }
-
-    static func goal() -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/goal-progress", authorizationRequirement: .bearerToken)
-    }
-
-    static func updateGoal(body: Data) -> Endpoint {
-        Endpoint(baseURL: baseURL, path: "/api/goal", method: .patch, body: body, authorizationRequirement: .bearerToken)
+    static func updateOnboardingProfile(body: Data) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/onboarding/profile", method: .patch, body: body, authorizationRequirement: .bearerToken)
     }
 
     static func watchAssetOptions() -> Endpoint {
@@ -160,6 +145,12 @@ nonisolated enum BackendEndpoint {
             queryItems: briefingDate.map { [URLQueryItem(name: "briefingDate", value: $0)] } ?? [],
             authorizationRequirement: .bearerToken
         )
+    }
+
+    /// 뉴스룸 서버가 사용하는 같은 비필터 피드. 사용자 식별 정보는 전송하지 않는다.
+    static func newsroomSourceFeed(date: String) -> Endpoint {
+        Endpoint(baseURL: baseURL, path: "/api/feeds/policy",
+                 queryItems: policyFeedQuery(limit: 50, category: nil, dateFrom: date, dateTo: date))
     }
 
     /// `/api/feeds/policy*`는 JWT 보호 대상이 아니고 userId를 여전히 쿼리로 명시해야 한다(서버 미변경).

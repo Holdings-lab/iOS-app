@@ -27,11 +27,16 @@ struct AppRootView: View {
             case .main:
                 RootTabView(
                     userId: router.session?.userId,
+                    onboardingResult: router.session?.onboardingResult,
                     userAssetProfile: router.userAssetProfile,
                     portfolioSnapshot: router.portfolioSnapshot,
                     brokerBalanceSnapshot: router.session?.brokerBalanceSnapshot,
-                    onBrokerBalanceUpdated: router.updateBrokerBalance
+                    onBrokerBalanceUpdated: router.updateBrokerBalance,
+                    onGoalSaved: router.updateGoal,
+                    onDeleteAccount: router.deleteAccount,
+                    onLogout: router.logout
                 )
+                .id(router.session?.userId)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: router.route)

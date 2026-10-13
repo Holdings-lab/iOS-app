@@ -2,9 +2,7 @@ import Foundation
 
 // MARK: - 뉴스룸 목록
 
-/// `GET /newsroom` 1회 응답을 그대로 옮긴 도메인 모델.
-/// 서버가 이미 briefingType(Hero/Compact/Quiet)과 정렬 순서를 결정해서 주므로,
-/// 예전처럼 클라이언트가 hasNews/비중으로 재정렬하거나 히어로를 골라내지 않는다.
+/// 카드 종류는 서버 계약을 유지하고, 표시 순서는 뉴스 유무와 보유 비중으로 결정한다.
 nonisolated struct NewsroomBriefing: Equatable, Sendable {
     let title: String
     let asOfAt: Date?
@@ -13,6 +11,21 @@ nonisolated struct NewsroomBriefing: Equatable, Sendable {
     let footerMessage: String?
     let emptyState: NewsroomEmptyState?
     let errorState: NewsroomErrorState?
+
+    var sortedHoldings: [NewsroomHoldingBriefing] {
+        holdings.sorted {
+            if ($0.briefingType == .quiet) != ($1.briefingType == .quiet) {
+                return $0.briefingType != .quiet
+            }
+            if $0.weightPercent != $1.weightPercent { return $0.weightPercent > $1.weightPercent }
+            return $0.ticker < $1.ticker
+        }
+    }
+
+    func replacingHoldings(_ holdings: [NewsroomHoldingBriefing]) -> Self {
+        Self(title: title, asOfAt: asOfAt, subtitle: subtitle, holdings: holdings,
+             footerMessage: footerMessage, emptyState: emptyState, errorState: errorState)
+    }
 
     var asOfAtText: String? {
         asOfAt.map { NewsroomDigestDateFormat.asOfAtText(for: $0) }
@@ -38,7 +51,6 @@ nonisolated struct NewsroomHoldingBriefing: Identifiable, Equatable, Hashable, S
     let weightPercent: Double
     let briefingType: NewsroomBriefingType
     let dailyChangePercent: Double?
-    let totalAssetImpactPercent: Double?
     let headline: String?
     let summary: String?
     let detailPath: String?
@@ -96,8 +108,8 @@ nonisolated struct NewsroomTickerDetail: Equatable, Sendable {
     }
 }
 
-/// AI 판단 블록. 서버가 headline(결론 한 줄)과 reason(근거 문단)을 분리해서 주므로
-/// 화면도 둘을 다르게 다룬다 — headline은 항상 노출하고, 분량이 큰 reason은 접어 둔다.
+/// AI 판단 블록. aiJudgement.headline과 summary.body를 결론과 근거로 함께 표시한다.
+/// summary.body가 없으면 이전 계약의 aiJudgement.reason을 근거로 사용한다.
 ///
 /// 예측 모델은 매일 새로 도는데(뉴스 요약과 같은 주기), 그중 하루라도 배치가 비어서
 /// 이번 응답에 값이 안 실려 올 수 있다. 그런 날엔 화면이 통째로 비지 않도록
@@ -129,6 +141,9 @@ nonisolated struct NewsroomAIJudgement: Equatable, Sendable, Codable {
 /// 뉴스 논조와 모델 신호의 방향성. 서버가 새 값을 추가해도 디코딩이 깨지지 않도록
 /// 매핑되지 않는 값은 nil로 두고, 그 경우 화면에서 칩을 아예 그리지 않는다.
 nonisolated enum NewsroomAIAlignment: Equatable, Sendable, Codable {
+    case supportive
+    case contradictory
+    case insufficient
     case positive
     case negative
     case mixed
@@ -136,6 +151,12 @@ nonisolated enum NewsroomAIAlignment: Equatable, Sendable, Codable {
 
     init?(rawValue: String) {
         switch rawValue.uppercased() {
+        case "SUPPORTIVE":
+            self = .supportive
+        case "CONTRADICTORY":
+            self = .contradictory
+        case "INSUFFICIENT":
+            self = .insufficient
         case "POSITIVE", "BULLISH":
             self = .positive
         case "NEGATIVE", "BEARISH":
@@ -151,12 +172,18 @@ nonisolated enum NewsroomAIAlignment: Equatable, Sendable, Codable {
 
     var label: String {
         switch self {
+        case .supportive:
+            return "예측 지지"
+        case .contradictory:
+            return "예측과 상반"
+        case .insufficient:
+            return "근거 부족"
         case .positive:
             return "긍정 신호"
         case .negative:
             return "부정 신호"
         case .mixed:
-            return "혼조"
+            return "근거 혼재"
         case .neutral:
             return "중립"
         }
@@ -166,6 +193,12 @@ nonisolated enum NewsroomAIAlignment: Equatable, Sendable, Codable {
     /// 매핑 규칙이 바뀌어도 `init?(rawValue:)` 한 곳만 고치면 된다.
     private var storageValue: String {
         switch self {
+        case .supportive:
+            return "SUPPORTIVE"
+        case .contradictory:
+            return "CONTRADICTORY"
+        case .insufficient:
+            return "INSUFFICIENT"
         case .positive:
             return "POSITIVE"
         case .negative:
@@ -201,7 +234,6 @@ nonisolated struct NewsroomStockMeta: Equatable, Sendable {
     let logoURL: URL?
     let dailyChangePercent: Double?
     let weightPercent: Double?
-    let totalAssetImpactPercent: Double?
 }
 
 nonisolated struct NewsroomSourceItem: Identifiable, Equatable, Sendable {
@@ -266,4 +298,18 @@ nonisolated enum NewsroomDigestDateFormat {
     static func parseISO8601(_ value: String) -> Date? {
         NetworkJSONCoding.parseISO8601(value)
     }
+}
+
+nonisolated extension NewsroomTickerDetail {
+    var imageCandidates: [URL] {
+        // 다른 출처의 사진을 현재 헤드라인 사진으로 쓰지 않는다.
+        // 첫 출처에 사진이 없으면 해당 원문의 메타데이터를 조회한다.
+        if let primary = sources.first, primary.url != nil {
+            return [primary.thumbnailURL].compactMap { $0 }
+        }
+        return [imageURL ?? sources.first?.thumbnailURL].compactMap { $0 }
+            .filter { NewsroomRemoteURL.parse($0.absoluteString) != nil }
+    }
+
+    var primaryArticleURL: URL? { sources.compactMap(\.url).first }
 }

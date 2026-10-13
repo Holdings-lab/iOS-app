@@ -80,20 +80,3 @@ enum PSSpacing {
     static let itemGap: CGFloat    = 16
     static let pillGap: CGFloat    = 8
 }
-
-enum PSFont {
-    static let displayTracking: CGFloat = -0.01
-
-    static func display(_ size: CGFloat = 34)  -> Font { .pretendard(size, weight: .bold) }
-    static func title(_ size: CGFloat = 18)    -> Font { .pretendard(size, weight: .semibold) }
-    static func body(_ size: CGFloat = 15)     -> Font { .pretendard(size, weight: .regular) }
-    static func semibold(_ size: CGFloat = 14) -> Font { .pretendard(size, weight: .semibold) }
-    static func caption(_ size: CGFloat = 13)  -> Font { .pretendard(size, weight: .medium) }
-    static func tickerLabel(_ size: CGFloat = 16) -> Font { .pretendard(size, weight: .semibold) }
-}
-
-enum PSShadow {
-    static let cardColor = PSColor.cardShadow
-    static let cardYOffset: CGFloat = 1
-    static let cardBlur: CGFloat = 4
-}

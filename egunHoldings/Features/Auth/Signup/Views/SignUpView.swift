@@ -8,11 +8,12 @@ struct SignUpView: View {
 
     init(
         onBackToLogin: @escaping () -> Void,
-        onCompleted: @escaping (String) -> Void
+        onCompleted: @escaping (String) -> Void,
+        viewModel: SignUpFlowViewModel? = nil
     ) {
         self.onBackToLogin = onBackToLogin
         self.onCompleted = onCompleted
-        _viewModel = StateObject(wrappedValue: SignUpFlowViewModel())
+        _viewModel = StateObject(wrappedValue: viewModel ?? SignUpFlowViewModel())
     }
 
     var body: some View {
@@ -42,9 +43,9 @@ struct SignUpView: View {
                             get: { viewModel.selectedDomain },
                             set: { viewModel.updateSelectedDomain($0) }
                         ),
-                        customDomain: Binding(
-                            get: { viewModel.customDomain },
-                            set: { viewModel.updateCustomDomain($0) }
+                        customEmailAddress: Binding(
+                            get: { viewModel.customEmailAddress },
+                            set: { viewModel.updateCustomEmailAddress($0) }
                         ),
                         otpCode: Binding(
                             get: { viewModel.otpCode },
@@ -52,6 +53,7 @@ struct SignUpView: View {
                         ),
                         availableDomains: viewModel.availableDomains,
                         emailAddress: viewModel.emailAddress,
+                        canSendVerificationCode: viewModel.canSendVerificationCode,
                         hasSentCode: viewModel.hasSentCode,
                         isVerified: viewModel.isEmailVerified,
                         secondsRemaining: viewModel.secondsRemaining,

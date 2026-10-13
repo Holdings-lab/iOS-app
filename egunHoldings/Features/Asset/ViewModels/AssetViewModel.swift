@@ -16,6 +16,8 @@ final class AssetViewModel: ObservableObject {
     @Published private(set) var isConnecting = false
 
     private var brokerBalanceSnapshot: BrokerBalanceSnapshot?
+    private var requestGeneration = 0
+    private var balanceTask: Task<BrokerBalanceSnapshot?, Never>?
     private let brokerBalanceRepository: BrokerBalanceRepositoryProtocol
     private let brokerageConnectionRepository: BrokerageConnectionRepositoryProtocol
 
@@ -38,29 +40,56 @@ final class AssetViewModel: ObservableObject {
     }
 
     func loadIfNeeded() async -> BrokerBalanceSnapshot? {
-        guard loadState == .idle else { return nil }
+        guard loadState == .idle || loadState == .loading else { return nil }
         return await reload()
     }
 
     @discardableResult
     func reload() async -> BrokerBalanceSnapshot? {
         guard !isConnecting else { return nil }
-        loadState = .loading
-
-        do {
-            let snapshot = try await brokerBalanceRepository.fetchPortfolioBalance()
-            apply(snapshot)
-            return snapshot
-        } catch {
-            portfolioDisplay = nil
-            loadState = .failed(AppVocabulary.ErrorMessage.userFacing(for: error, fallback: "자산을 불러오지 못했어요."))
-            return nil
+        if let balanceTask {
+            let generation = requestGeneration
+            let snapshot = try? await AsyncTaskWait.value(of: balanceTask)
+            return generation == requestGeneration ? snapshot ?? nil : nil
         }
+        loadState = .loading
+        requestGeneration += 1
+        let generation = requestGeneration
+        let repository = brokerBalanceRepository
+        let task = Task { [weak self] () -> BrokerBalanceSnapshot? in
+            do {
+                let snapshot = try await repository.fetchPortfolioBalance()
+                try Task.checkCancellation()
+                guard let self, generation == self.requestGeneration else { return nil }
+                self.balanceTask = nil
+                self.apply(snapshot)
+                return snapshot
+            } catch {
+                guard let self, generation == self.requestGeneration else { return nil }
+                self.balanceTask = nil
+                if Task.isCancelled || error is CancellationError {
+                    self.loadState = self.brokerBalanceSnapshot.map {
+                        Self.isEmptyPortfolio($0) ? .empty : .loaded
+                    } ?? .idle
+                } else {
+                    self.loadState = .failed(AppVocabulary.ErrorMessage.userFacing(
+                        for: error, fallback: "자산을 불러오지 못했어요."
+                    ))
+                }
+                return nil
+            }
+        }
+        balanceTask = task
+        // 화면의 대기만 취소한다. 같은 조회를 다음 탭 방문에서 재사용한다.
+        let snapshot = try? await AsyncTaskWait.value(of: task)
+        return generation == requestGeneration ? snapshot ?? nil : nil
     }
 
     @discardableResult
     func connectKISDemoAccount() async -> BrokerBalanceSnapshot? {
         guard !isConnecting else { return nil }
+        invalidateBalanceRequest()
+        let generation = requestGeneration
         isConnecting = true
         defer { isConnecting = false }
 
@@ -70,9 +99,12 @@ final class AssetViewModel: ObservableObject {
             )
             try await brokerageConnectionRepository.sync(accountId: connection.accountId)
             let snapshot = try await brokerBalanceRepository.fetchPortfolioBalance()
+            try Task.checkCancellation()
+            guard generation == requestGeneration else { return nil }
             apply(snapshot)
             return snapshot
         } catch {
+            guard generation == requestGeneration, !Task.isCancelled, !(error is CancellationError) else { return nil }
             loadState = .failed(AppVocabulary.ErrorMessage.userFacing(for: error, fallback: "한국투자증권 모의투자 계좌를 연결하지 못했어요."))
             return nil
         }
@@ -82,9 +114,20 @@ final class AssetViewModel: ObservableObject {
     /// AssetView를 재생성하지 않고 표시용 데이터만 갱신해 스크롤 위치를 유지한다.
     func updateBrokerBalance(_ snapshot: BrokerBalanceSnapshot?) {
         guard snapshot != brokerBalanceSnapshot else { return }
+        invalidateBalanceRequest()
         brokerBalanceSnapshot = snapshot
-        guard let snapshot else { return }
+        guard let snapshot else {
+            portfolioDisplay = nil
+            loadState = .idle
+            return
+        }
         apply(snapshot)
+    }
+
+    private func invalidateBalanceRequest() {
+        requestGeneration += 1
+        balanceTask?.cancel()
+        balanceTask = nil
     }
 
     private func apply(_ snapshot: BrokerBalanceSnapshot) {

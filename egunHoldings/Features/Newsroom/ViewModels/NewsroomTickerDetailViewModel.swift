@@ -10,6 +10,13 @@ final class NewsroomTickerDetailViewModel: ObservableObject {
     @Published private(set) var detail: NewsroomTickerDetail?
     @Published private(set) var isLoading = false
     @Published private(set) var errorMessage: String?
+    @Published private(set) var earlySources: [NewsroomSourceItem] = []
+
+    var imageCandidates: [URL] {
+        detail?.imageCandidates ?? [earlySources.first?.thumbnailURL].compactMap { $0 }
+    }
+
+    var articleURL: URL? { detail?.primaryArticleURL ?? earlySources.first?.url }
 
     private let repository: NewsroomDigestRepositoryProtocol
     private let judgementStore: NewsroomAIJudgementStoring
@@ -36,8 +43,14 @@ final class NewsroomTickerDetailViewModel: ObservableObject {
 
         Task { [weak self] in
             guard let self else { return }
+            earlySources = (try? await repository.fetchSources(ticker: holding.ticker)) ?? []
+        }
+
+        Task { [weak self] in
+            guard let self else { return }
             do {
                 let fetched = try await repository.fetchDetail(ticker: holding.ticker, briefingDate: nil)
+                detail = fetched
                 // 브리핑만 캐시와 대조해 갈아끼운다 — 뉴스 요약/출처는 매일 새로 오는 값이라 그대로 쓴다.
                 let judgement = await judgementStore.resolve(
                     incoming: fetched.aiJudgement,

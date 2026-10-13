@@ -137,8 +137,8 @@ struct NewsroomAIJudgementStoreTests {
         #expect(cached == briefing)
     }
 
-    @Test("생성 시각이 없는 응답은 생성 시각이 있는 캐시를 덮지 않는다")
-    func undatedIncomingDoesNotReplaceDatedCache() async {
+    @Test("현재 명세의 무시각 응답도 과거 캐시 대신 채택하고 저장한다")
+    func undatedIncomingReplacesDatedCache() async {
         let store = makeStore()
         let dated = judgement(headline: "current", generatedAt: Date(timeIntervalSince1970: 1000))
         _ = await store.resolve(incoming: dated, for: "NVDA")
@@ -146,7 +146,8 @@ struct NewsroomAIJudgementStoreTests {
         let undated = judgement(headline: "unknown", generatedAt: nil)
         let resolved = await store.resolve(incoming: undated, for: "NVDA")
 
-        #expect(resolved == dated)
+        #expect(resolved == undated)
+        #expect(await store.cached(for: "NVDA") == undated)
     }
 
     @Test("손상된 캐시는 한 번 확인한 뒤 디스크에서 제거한다")

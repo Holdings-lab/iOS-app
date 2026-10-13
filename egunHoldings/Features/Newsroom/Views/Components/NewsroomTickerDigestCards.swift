@@ -1,22 +1,27 @@
 import SwiftUI
 
 enum NewsroomTickerDigestRow: View {
-    case hero(NewsroomHoldingBriefing, onOpenDetail: () -> Void)
+    case hero(NewsroomHoldingBriefing, isHighlighted: Bool, onOpenDetail: () -> Void)
     case compact(NewsroomHoldingBriefing, onOpenDetail: () -> Void)
     case quiet(NewsroomHoldingBriefing)
 
-    static func make(for holding: NewsroomHoldingBriefing, onOpenDetail: @escaping () -> Void) -> NewsroomTickerDigestRow {
+    static func make(
+        for holding: NewsroomHoldingBriefing,
+        isHighlighted: Bool,
+        onOpenDetail: @escaping () -> Void
+    ) -> NewsroomTickerDigestRow {
         switch holding.briefingType {
-        case .hero: return .hero(holding, onOpenDetail: onOpenDetail)
+        case .hero: return .hero(holding, isHighlighted: isHighlighted, onOpenDetail: onOpenDetail)
         case .compact: return .compact(holding, onOpenDetail: onOpenDetail)
+        // Quiet 행은 상세 뉴스가 없는 정적 안내이므로, 열기 동작을 보관하지 않는다.
         case .quiet: return .quiet(holding)
         }
     }
 
     var body: some View {
         switch self {
-        case .hero(let holding, let onOpenDetail):
-            NewsroomTickerDigestHeroCard(holding: holding, onOpenDetail: onOpenDetail)
+        case .hero(let holding, let isHighlighted, let onOpenDetail):
+            NewsroomTickerDigestHeroCard(holding: holding, isHighlighted: isHighlighted, onOpenDetail: onOpenDetail)
         case .compact(let holding, let onOpenDetail):
             NewsroomTickerDigestCompactRow(holding: holding, onOpenDetail: onOpenDetail)
         case .quiet(let holding):
@@ -27,6 +32,7 @@ enum NewsroomTickerDigestRow: View {
 
 struct NewsroomTickerDigestHeroCard: View {
     let holding: NewsroomHoldingBriefing
+    let isHighlighted: Bool
     let onOpenDetail: () -> Void
 
     var body: some View {
@@ -53,12 +59,12 @@ struct NewsroomTickerDigestHeroCard: View {
                 }
 
                 Text(holding.headline ?? holding.name)
-                    .font(.pretendard(18, weight: .bold))
+                    .font(.pretendard(16, weight: .bold))
                     .foregroundStyle(Color.textPrimary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
 
-                if let summary = holding.summary {
+                if let summary = holding.summary.map(NewsroomSummaryText.firstSentence(of:)), !summary.isEmpty {
                     Text(summary)
                         .font(.pretendard(13.5, weight: .medium))
                         .foregroundStyle(Color.textSecondary)
@@ -67,7 +73,7 @@ struct NewsroomTickerDigestHeroCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                impactLine
+                NewsroomHoldingMetrics(holding: holding)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
@@ -76,26 +82,10 @@ struct NewsroomTickerDigestHeroCard: View {
         .background(Color.elevated, in: RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: KDXRadius.card, style: .continuous)
-                .stroke(Color.brand, lineWidth: 2)
+                .stroke(isHighlighted ? Color.brand : Color.hairline, lineWidth: isHighlighted ? 2 : 1)
         }
     }
 
-    @ViewBuilder
-    private var impactLine: some View {
-        if let dailyChange = holding.dailyChangePercent {
-            HStack(spacing: 5) {
-                Text("오늘 \(NewsroomPercentFormat.signed(dailyChange))")
-                    .font(.pretendard(12.5, weight: .bold))
-                    .foregroundStyle(NewsroomPercentFormat.color(for: dailyChange))
-
-                if let impact = holding.totalAssetImpactPercent {
-                    Text("· 총자산 기준 \(NewsroomPercentFormat.signedImpact(impact))")
-                        .font(.pretendard(12, weight: .semibold))
-                        .foregroundStyle(Color.textTertiary)
-                }
-            }
-        }
-    }
 }
 
 struct NewsroomTickerDigestCompactRow: View {
@@ -117,6 +107,17 @@ struct NewsroomTickerDigestCompactRow: View {
                         .foregroundStyle(Color.textPrimary)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
+
+                    if let summary = holding.summary.map(NewsroomSummaryText.firstSentence(of:)), !summary.isEmpty {
+                        Text(summary)
+                            .font(.pretendard(12.5, weight: .medium))
+                            .foregroundStyle(Color.textSecondary)
+                            .lineSpacing(3)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    NewsroomHoldingMetrics(holding: holding)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -139,23 +140,23 @@ struct NewsroomTickerDigestCompactRow: View {
 
 struct NewsroomTickerQuietRow: View {
     let holding: NewsroomHoldingBriefing
+    static let titleText = "특이사항 없음"
+    static let subtitleText = "계속 지켜보고 있어요"
 
     var body: some View {
         HStack(spacing: 11) {
             NewsroomTickerLogo(ticker: holding.ticker, logoURL: holding.logoURL, size: 32)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(holding.ticker) · \(holding.headline ?? "특이사항 없음")")
-                    .font(.pretendard(13.5, weight: .semibold))
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(holding.ticker) · 내 자산의 \(NewsroomPercentFormat.weight(holding.weightPercent))%")
+                    .font(.pretendard(13, weight: .semibold))
                     .foregroundStyle(Color.textPrimary)
 
-                Text(holding.summary ?? "계속 지켜보고 있어요")
+                Text("\(Self.titleText) · \(Self.subtitleText)")
                     .font(.pretendard(12.5, weight: .medium))
                     .foregroundStyle(Color.textSecondary)
             }
-            .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 4)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
@@ -166,7 +167,7 @@ struct NewsroomTickerQuietRow: View {
                 .stroke(Color.hairline, lineWidth: 1)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(holding.ticker), \(holding.headline ?? "특이사항 없음"), \(holding.summary ?? "계속 지켜보고 있어요")")
+        .accessibilityLabel("\(holding.ticker), 내 자산의 \(NewsroomPercentFormat.weight(holding.weightPercent))%, \(Self.titleText), \(Self.subtitleText)")
     }
 }
 
@@ -207,24 +208,26 @@ struct NewsroomTickerLogo: View {
     }
 }
 
-enum NewsroomPercentFormat {
-    static func signed(_ value: Double) -> String {
-        let sign = value > 0 ? "+" : ""
-        return "\(sign)\(String(format: "%.1f", value))%"
+/// 두 값은 각각 주가의 전일 대비 변화와 현금을 포함한 전체 자산에서의 평가액 비중이다.
+private struct NewsroomHoldingMetrics: View {
+    let holding: NewsroomHoldingBriefing
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 5) { dailyChange; allocation }
+            VStack(alignment: .leading, spacing: 3) { dailyChange; allocation }
+        }
     }
 
-    static func signedImpact(_ value: Double) -> String {
-        let sign = value > 0 ? "+" : ""
-        return "\(sign)\(String(format: "%.2f", value))%"
+    private var dailyChange: some View {
+        Text(holding.dailyChangePercent.map { "오늘 \(NewsroomPercentFormat.signed($0))" } ?? "오늘 —")
+            .font(.pretendard(12, weight: .bold))
+            .foregroundStyle(holding.dailyChangePercent.map(NewsroomPercentFormat.color) ?? Color.textTertiary)
     }
 
-    static func weight(_ value: Double) -> String {
-        String(Int(value.rounded()))
-    }
-
-    static func color(for value: Double) -> Color {
-        if value > 0 { return Color.emerald }
-        if value < 0 { return Color.policyCoral }
-        return Color.textPrimary
+    private var allocation: some View {
+        Text("총자산 기준 \(NewsroomPercentFormat.weight(holding.weightPercent))%")
+            .font(.pretendard(11.5, weight: .medium))
+            .foregroundStyle(Color.textTertiary)
     }
 }

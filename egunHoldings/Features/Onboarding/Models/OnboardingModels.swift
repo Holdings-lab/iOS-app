@@ -29,26 +29,18 @@ nonisolated enum FinancialGoal: String, CaseIterable, Identifiable, Codable, Sen
     var defaultTargetAmount: Int64 {
         switch self {
         case .retirement: return 500_000_000
-        case .seedMoney: return 50_000_000
-        case .surplusFunds: return 30_000_000
+        case .seedMoney: return 100_000_000
+        case .surplusFunds: return 100_000_000
         case .homePurchase: return 300_000_000
         }
     }
 
     var targetAmountSliderRange: ClosedRange<Double> {
-        switch self {
-        case .retirement: return 100_000_000...2_000_000_000
-        case .seedMoney: return 10_000_000...300_000_000
-        case .surplusFunds: return 5_000_000...200_000_000
-        case .homePurchase: return 50_000_000...1_000_000_000
-        }
+        100_000_000...1_500_000_000
     }
 
     var targetAmountSliderStep: Double {
-        switch self {
-        case .retirement, .homePurchase: return 10_000_000
-        case .seedMoney, .surplusFunds: return 5_000_000
-        }
+        10_000_000
     }
 }
 
@@ -63,6 +55,19 @@ enum WatchAssetSector: String, CaseIterable, Identifiable, Codable, Sendable {
     case realEstate = "REAL_ESTATE"
 
     var id: String { rawValue }
+
+    nonisolated var wireValue: String {
+        switch self {
+        case .semiconductor: return "SEMICONDUCTOR"
+        case .aiPlatform: return "AI_PLATFORM"
+        case .secondaryBattery: return "SECONDARY_BATTERY"
+        case .greenEnergy: return "GREEN_ENERGY"
+        case .finance: return "FINANCE"
+        case .healthcare: return "HEALTHCARE_BIO"
+        case .consumer: return "CONSUMER_RETAIL"
+        case .realEstate: return "REAL_ESTATE_REIT"
+        }
+    }
 
     var title: String {
         switch self {
@@ -196,6 +201,15 @@ extension MaxDrawdownTolerance {
         case .withinTen: return 10
         case .withinTwenty: return 20
         case .overThirty: return 30
+        }
+    }
+
+    nonisolated var wireValue: String {
+        switch self {
+        case .withinFive: return "WITHIN_5"
+        case .withinTen: return "WITHIN_10"
+        case .withinTwenty: return "WITHIN_20"
+        case .overThirty: return "OVER_30"
         }
     }
 }

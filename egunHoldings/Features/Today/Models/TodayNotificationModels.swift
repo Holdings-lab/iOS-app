@@ -3,7 +3,6 @@ import SwiftUI
 
 enum TodayRoute: Hashable {
     case notifications
-    case settings
 }
 
 enum AppNotificationKind: String, CaseIterable, Hashable, Identifiable {

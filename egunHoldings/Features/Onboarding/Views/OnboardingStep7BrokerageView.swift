@@ -6,11 +6,13 @@ struct OnboardingStep7BrokerageView: View {
     let onBack: () -> Void
     let onNext: () -> Void
     let onSkip: () -> Void
+    let onReauthenticate: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isProgressCollapsed = false
     @State private var isSkipConfirmationPresented = false
     @State private var isLinking = false
+    @State private var isSkipping = false
     @State private var isLinkCompleted = false
     @State private var isLinkErrorPresented = false
     @State private var isRevealed = false
@@ -102,13 +104,28 @@ struct OnboardingStep7BrokerageView: View {
             titleVisibility: .visible
         ) {
             Button("지금은 건너뛸게요") {
-                viewModel.skipBrokerageConnection()
-                onSkip()
+                Task {
+                    isSkipping = true
+                    let didSkip = await viewModel.skipBrokerageConnection()
+                    isSkipping = false
+                    if didSkip {
+                        onSkip()
+                    } else {
+                        isLinkErrorPresented = true
+                    }
+                }
             }
+            .disabled(isSkipping)
 
             Button("계좌 연결하기", role: .cancel) {}
         }
-        .alert("계좌를 연결하지 못했어요", isPresented: $isLinkErrorPresented) {
+        .alert(
+            viewModel.requiresBrokerageReauthentication ? "다시 로그인이 필요해요" : "계좌를 연결하지 못했어요",
+            isPresented: $isLinkErrorPresented
+        ) {
+            if viewModel.requiresBrokerageReauthentication {
+                Button("다시 로그인", action: onReauthenticate)
+            }
             Button("확인", role: .cancel) {}
         } message: {
             Text(viewModel.brokerageLinkErrorMessage ?? "잠시 후 다시 시도해 주세요.")
@@ -511,6 +528,13 @@ private extension AccountInstitution {
 }
 
 #Preview {
-    OnboardingStep7BrokerageView(viewModel: OnboardingFlowViewModel(), userId: nil, onBack: {}, onNext: {}, onSkip: {})
+    OnboardingStep7BrokerageView(
+        viewModel: OnboardingFlowViewModel(),
+        userId: nil,
+        onBack: {},
+        onNext: {},
+        onSkip: {},
+        onReauthenticate: {}
+    )
         .preferredColorScheme(.light)
 }

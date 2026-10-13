@@ -6,7 +6,26 @@ struct egunHoldingsApp: App {
 
     var body: some Scene {
         WindowGroup {
-            StartView()
+            AppLaunchRootView()
         }
+    }
+}
+
+private struct AppLaunchRootView: View {
+    var body: some View {
+        #if DEBUG
+        if UITestLaunchMode.isEnabled {
+            UITestLaunchRootView()
+        } else {
+            standardRoot
+        }
+        #else
+        standardRoot
+        #endif
+    }
+
+    private var standardRoot: some View {
+        StartView()
+            .task { await SimulatorWebDemoSnapshotExporter.exportIfRequested() }
     }
 }

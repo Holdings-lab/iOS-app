@@ -2,28 +2,33 @@ import SwiftUI
 
 struct NewsroomErrorCard: View {
     let message: String
+    var title: String = "불러오지 못했어요"
+    var actionTitle: String = "다시 불러오기"
     let onRetry: () -> Void
 
     var body: some View {
         NewsroomStatusCard(
             iconName: "wifi.exclamationmark",
-            title: "불러오지 못했어요",
+            title: title,
             message: message,
-            actionTitle: "다시 불러오기",
+            actionTitle: actionTitle,
             action: onRetry
         )
     }
 }
 
 struct NewsroomNoHoldingsCard: View {
+    var title: String = "아직 등록된 자산이 없어요"
+    var message: String = "보유 자산을 등록하면 내 포트폴리오 기준으로 소식을 정리해드려요."
+    var actionTitle: String = "자산 등록하기"
     let onRegister: () -> Void
 
     var body: some View {
         NewsroomStatusCard(
             iconName: "tray",
-            title: "아직 등록된 자산이 없어요",
-            message: "보유 자산을 등록하면 내 포트폴리오 기준으로 소식을 정리해드려요.",
-            actionTitle: "자산 등록하기",
+            title: title,
+            message: message,
+            actionTitle: actionTitle,
             action: onRegister
         )
     }

@@ -1,7 +1,13 @@
 import Foundation
 import Security
 
-nonisolated struct KeychainStore: Sendable {
+protocol KeychainValueStoring: Sendable {
+    nonisolated func read(account: String) -> Data?
+    nonisolated func save(_ data: Data, account: String)
+    nonisolated func delete(account: String)
+}
+
+nonisolated struct KeychainStore: KeychainValueStoring, Sendable {
     private let service: String
 
     init(service: String = Bundle.main.bundleIdentifier ?? "egunHoldings") {

@@ -52,11 +52,12 @@ struct TodayHolding: Identifiable {
 // MARK: - Goal Progress (Section 3)
 
 enum TodayGoalStatus {
-    case justStarted, ahead, onTrack, behind
+    case justStarted, inProgress, ahead, onTrack, behind
 
     var label: String {
         switch self {
         case .justStarted: return "아직 판단 이르러요"
+        case .inProgress: return "목표 진행 중"
         case .ahead:        return "계획보다 앞서는 중"
         case .onTrack:       return "계획대로 진행 중"
         case .behind:        return "계획보다 늦어지는 중"
@@ -67,6 +68,7 @@ enum TodayGoalStatus {
     var color: Color {
         switch self {
         case .justStarted: return Color.textTertiary
+        case .inProgress: return Color.brand
         case .ahead:        return Color.brand
         case .onTrack:       return Color.trendUp
         case .behind:        return Color.warning
@@ -75,8 +77,7 @@ enum TodayGoalStatus {
 }
 
 struct TodayGoalProgress {
-    /// 서버가 완성된 라벨 문자열을 그대로 내려준다(e.g. "은퇴 자금 목표") — 클라이언트가 FinancialGoal
-    /// enum으로 재매핑하지 않는다.
+    /// 온보딩에 저장된 목표 이름 또는 프리뷰용 라벨.
     let goalLabel: String
     let progressPercent: Int
     let status: TodayGoalStatus
@@ -126,4 +127,26 @@ struct TodayDashboard {
     let holdings: [TodayHolding]
     let goalProgress: TodayGoalProgress?
     let newsItems: [TodayNewsItem]
+    /// 일부 실시간 요청이 실패했을 때, 화면이 목/이전 값임을 숨기지 않도록 안내한다.
+    let fallbackMessage: String?
+
+    nonisolated init(
+        userAssetProfile: UserAssetProfile,
+        portfolioSnapshot: PortfolioSnapshot,
+        isAccountLinked: Bool,
+        briefing: TodayBriefing,
+        holdings: [TodayHolding],
+        goalProgress: TodayGoalProgress?,
+        newsItems: [TodayNewsItem],
+        fallbackMessage: String? = nil
+    ) {
+        self.userAssetProfile = userAssetProfile
+        self.portfolioSnapshot = portfolioSnapshot
+        self.isAccountLinked = isAccountLinked
+        self.briefing = briefing
+        self.holdings = holdings
+        self.goalProgress = goalProgress
+        self.newsItems = newsItems
+        self.fallbackMessage = fallbackMessage
+    }
 }

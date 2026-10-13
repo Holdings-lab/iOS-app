@@ -6,8 +6,9 @@ protocol AuthAccountStoring: Sendable {
 }
 
 nonisolated final class AuthAccountStore: AuthAccountStoring, @unchecked Sendable {
+    nonisolated static let storageKey = "policy_finance.auth.accounts.v1"
     private let defaults: UserDefaults
-    private let key = "policy_finance.auth.accounts.v1"
+    private let key = AuthAccountStore.storageKey
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
@@ -24,7 +25,7 @@ nonisolated final class AuthAccountStore: AuthAccountStoring, @unchecked Sendabl
             return AuthMockData.defaultRegisteredAccounts
         }
 
-        return mergedWithDefaultAccounts(storedAccounts)
+        return storedAccounts
     }
 
     nonisolated func saveAll(_ accounts: [RegisteredAuthAccount]) {
@@ -35,20 +36,4 @@ nonisolated final class AuthAccountStore: AuthAccountStoring, @unchecked Sendabl
         defaults.set(data, forKey: key)
     }
 
-    private nonisolated func mergedWithDefaultAccounts(_ storedAccounts: [RegisteredAuthAccount]) -> [RegisteredAuthAccount] {
-        var mergedAccounts = storedAccounts
-
-        for defaultAccount in AuthMockData.defaultRegisteredAccounts {
-            if let existingIndex = mergedAccounts.firstIndex(where: { account in
-                account.normalizedEmail == defaultAccount.normalizedEmail
-            }) {
-                // Demo accounts should remain deterministic even if an older local copy exists.
-                mergedAccounts[existingIndex] = defaultAccount
-            } else {
-                mergedAccounts.append(defaultAccount)
-            }
-        }
-
-        return mergedAccounts
-    }
 }

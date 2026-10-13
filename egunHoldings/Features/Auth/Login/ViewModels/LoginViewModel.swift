@@ -27,9 +27,9 @@ final class LoginViewModel: ObservableObject {
 
         resetError()
 
-        let normalizedEmail = normalizedEmail(from: email)
+        let normalizedEmail = AuthEmailAddress.normalized(email)
 
-        guard isValidEmail(normalizedEmail) else {
+        guard AuthEmailAddress.isValid(normalizedEmail) else {
             errorMessage = "올바른 이메일 주소를 입력해주세요."
             return nil
         }
@@ -64,14 +64,6 @@ final class LoginViewModel: ObservableObject {
         email = ""
         password = ""
         resetError()
-    }
-
-    private func isValidEmail(_ email: String) -> Bool {
-        email.contains("@") && email.contains(".")
-    }
-
-    private func normalizedEmail(from email: String) -> String {
-        email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 
     private func authMessage(for error: Error, fallback: String) -> String {

@@ -4,9 +4,12 @@ import Foundation
 //
 // 서버 계약: `com.project.server.dto.NewsroomDto` (api-server, 2026-07 뉴스룸 API 신설).
 // 목록/상세가 별도 엔드포인트다 — 예전의 "한 번에 다 담긴 다이제스트 + 폴링" 계약은 폐기됐다.
-//   GET /api/users/{userId}/newsroom          → NewsroomBriefingResponseDTO
-//   GET /api/users/{userId}/newsroom/{ticker} → NewsroomTickerDetailResponseDTO
+//   GET /api/newsroom          → NewsroomBriefingResponseDTO
+//   GET /api/newsroom/{ticker} → NewsroomTickerDetailResponseDTO
 // 공통 엔벨로프 `APIResponse<T>`의 `result`에 담겨 온다.
+// 2026-10-10 명세: holdings.headline/detail.headline = daily.title,
+// holdings.summary/aiJudgement.headline = ai.headline,
+// summary.body = ai.reason, summary.findings = daily.content.
 
 nonisolated enum NewsroomBriefingTypeDTO: String, Decodable, Sendable {
     case hero = "Hero"
@@ -53,20 +56,19 @@ nonisolated struct NewsroomHoldingBriefingDTO: Decodable, Sendable {
     let weightPct: Double
     let briefingType: NewsroomBriefingTypeDTO
     let dailyChangePct: Double?
-    let totalAssetImpactPct: Double?
     let headline: String?
     let summary: String?
     let detailPath: String?
 
+    /// 오늘 등락은 서버가 주는 값만 쓴다 — 앱에서 외부 시세 API를 직접 호출하지 않는다.
     func toDomain() -> NewsroomHoldingBriefing {
         NewsroomHoldingBriefing(
             ticker: ticker,
             name: name,
-            logoURL: logoUrl.flatMap(URL.init(string:)),
+            logoURL: NewsroomRemoteURL.parse(logoUrl),
             weightPercent: weightPct,
             briefingType: NewsroomBriefingType(dto: briefingType),
             dailyChangePercent: dailyChangePct,
-            totalAssetImpactPercent: totalAssetImpactPct,
             headline: headline,
             summary: summary,
             detailPath: detailPath
@@ -111,12 +113,16 @@ nonisolated struct NewsroomTickerDetailResponseDTO: Decodable, Sendable {
     let footer: NewsroomDetailFooterDTO?
 
     func toDomain() -> NewsroomTickerDetail {
-        NewsroomTickerDetail(
+        // AI 카드의 결론은 aiJudgement.headline, 근거는 summary.body다.
+        // 두 필드를 한 블록으로 합치고, 근거를 별도 본문에 다시 표시하지 않는다.
+        let judgement = aiJudgement?.toDomain(summaryBody: summary?.body)
+
+        return NewsroomTickerDetail(
             stock: stock.toDomain(),
             headline: headline,
-            imageURL: imageUrl.flatMap(URL.init(string:)),
-            aiJudgement: aiJudgement?.toDomain(),
-            summaryBody: summary?.body,
+            imageURL: NewsroomRemoteURL.parse(imageUrl),
+            aiJudgement: judgement,
+            summaryBody: judgement == nil ? summary?.body : nil,
             findings: summary?.findings ?? [],
             sources: (sources ?? []).map { $0.toDomain() },
             asOfAt: footer?.asOfAt,
@@ -131,16 +137,14 @@ nonisolated struct NewsroomStockMetaDTO: Decodable, Sendable {
     let logoUrl: String?
     let dailyChangePct: Double?
     let weightPct: Double?
-    let totalAssetImpactPct: Double?
 
     func toDomain() -> NewsroomStockMeta {
         NewsroomStockMeta(
             ticker: ticker,
             name: name,
-            logoURL: logoUrl.flatMap(URL.init(string:)),
+            logoURL: NewsroomRemoteURL.parse(logoUrl),
             dailyChangePercent: dailyChangePct,
-            weightPercent: weightPct,
-            totalAssetImpactPercent: totalAssetImpactPct
+            weightPercent: weightPct
         )
     }
 }
@@ -148,7 +152,8 @@ nonisolated struct NewsroomStockMetaDTO: Decodable, Sendable {
 /// AI 판단 블록.
 ///
 /// 서버가 문자열 한 줄만 주던 이전 스키마와 객체를 주는 현재 스키마가 한동안 공존할 수 있어
-/// 둘 다 받아들인다 — 문자열이 오면 headline만 채운 형태로 취급한다.
+/// 둘 다 받아들인다. 근거는 현재 계약의 summary.body를 우선 사용하며,
+/// 본문이 없을 때만 이전 계약의 reason으로 보충한다.
 /// `used_news_url`은 이 블록만 snake_case라서(모델 출력이 그대로 실려 나온다) 키를 명시한다.
 nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
     let title: String?
@@ -194,11 +199,15 @@ nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
             .flatMap(NewsroomDigestDateFormat.parseISO8601)
     }
 
-    func toDomain() -> NewsroomAIJudgement {
-        NewsroomAIJudgement(
+    func toDomain(summaryBody: String? = nil) -> NewsroomAIJudgement {
+        let resolvedReason = [summaryBody, reason]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .first { !$0.isEmpty }
+
+        return NewsroomAIJudgement(
             title: title,
             headline: headline,
-            reason: reason,
+            reason: resolvedReason,
             alignment: alignment.flatMap(NewsroomAIAlignment.init(rawValue:)),
             usedNewsURLs: (usedNewsURLs ?? []).compactMap(URL.init(string:)),
             disclaimer: disclaimer,
@@ -210,6 +219,21 @@ nonisolated struct NewsroomAIJudgementDTO: Decodable, Sendable {
 nonisolated struct NewsroomDetailSummaryDTO: Decodable, Sendable {
     let body: String?
     let findings: [String]?
+
+    private enum CodingKeys: String, CodingKey {
+        case body, findings
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        body = try container.decodeIfPresent(String.self, forKey: .body)
+        // 명세의 daily.content 문자열과 예시의 문자열 배열을 모두 보존한다.
+        if let content = try? container.decode(String.self, forKey: .findings) {
+            findings = [content]
+        } else {
+            findings = try container.decodeIfPresent([String].self, forKey: .findings)
+        }
+    }
 }
 
 nonisolated struct NewsroomSourceItemDTO: Decodable, Sendable {
@@ -228,8 +252,8 @@ nonisolated struct NewsroomSourceItemDTO: Decodable, Sendable {
             title: title,
             publisher: publisher,
             publishedAtRaw: publishedAt,
-            thumbnailURL: thumbnailUrl.flatMap(URL.init(string:)),
-            url: url.flatMap(URL.init(string:))
+            thumbnailURL: NewsroomRemoteURL.parse(thumbnailUrl),
+            url: NewsroomRemoteURL.parse(url)
         )
     }
 }
@@ -237,6 +261,50 @@ nonisolated struct NewsroomSourceItemDTO: Decodable, Sendable {
 nonisolated struct NewsroomDetailFooterDTO: Decodable, Sendable {
     let asOfAt: Date?
     let aiNotice: String?
+}
+
+/// 번역/분석을 기다리지 않고 원문을 먼저 제공하는 공개 피드의 최소 계약.
+/// 관련성은 NewsroomService.cardMatchesTicker와 같은 필드를 사용한다.
+nonisolated struct NewsroomSourceFeedDTO: Decodable, Sendable {
+    let cards: [Card]
+
+    struct Card: Decodable, Sendable {
+        let newsId: String?
+        let id: String?
+        let title: String
+        let bodySummary: String?
+        let source: String?
+        let date: String?
+        let link: String?
+        let thumbnailUrl: String?
+        let sector: String?
+        let assetSignals: [AssetSignal]?
+        let impact: Impact?
+
+        struct AssetSignal: Decodable, Sendable { let ticker: String? }
+        struct Impact: Decodable, Sendable { let targetAssets: [String]? }
+
+        func matches(_ ticker: String) -> Bool {
+            let ticker = ticker.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            guard !ticker.isEmpty else { return false }
+            let tags = [sector].compactMap { $0 } + (assetSignals ?? []).compactMap(\.ticker)
+                + (impact?.targetAssets ?? [])
+            return tags.contains { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() == ticker }
+                || (title + " " + (bodySummary ?? "")).uppercased().contains(ticker)
+        }
+
+        var sourceItem: NewsroomSourceItem {
+            NewsroomSourceItem(newsId: newsId ?? id, title: title, publisher: source ?? "원문",
+                               publishedAtRaw: date, thumbnailURL: NewsroomRemoteURL.parse(thumbnailUrl),
+                               url: NewsroomRemoteURL.parse(link))
+        }
+    }
+
+    func sources(for ticker: String, on date: String) -> [NewsroomSourceItem] {
+        cards.filter { card in
+            card.date?.prefix(10) == date[...] && card.matches(ticker)
+        }.prefix(5).map(\.sourceItem)
+    }
 }
 
 private nonisolated extension NewsroomBriefingType {

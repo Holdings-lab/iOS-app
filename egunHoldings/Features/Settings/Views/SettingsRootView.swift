@@ -21,9 +21,29 @@ struct SettingsRootView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var path: [SettingsRoute] = []
     @State private var activeModal: SettingsModal?
+    @State private var isDeletingAccount = false
+    @State private var deletionError: String?
+    private let onLogout: () -> Void
+    private let onDeleteAccount: () async throws -> Void
 
-    init(notificationCenter: AppNotificationCenter) {
-        _viewModel = StateObject(wrappedValue: SettingsViewModel(notificationCenter: notificationCenter))
+    init(
+        notificationCenter: AppNotificationCenter,
+        initialRoute: SettingsRoute? = nil,
+        onboardingResult: OnboardingResult? = nil,
+        onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
+        onDeleteAccount: @escaping () async throws -> Void = { throw NetworkError.invalidResponse },
+        onLogout: @escaping () -> Void = {},
+        repository: any SettingsRepositoryProtocol = LiveSettingsRepository()
+    ) {
+        _path = State(initialValue: initialRoute.map { [$0] } ?? [])
+        _viewModel = StateObject(wrappedValue: SettingsViewModel(
+            notificationCenter: notificationCenter,
+            repository: repository,
+            onboardingResult: onboardingResult,
+            onGoalSaved: onGoalSaved
+        ))
+        self.onLogout = onLogout
+        self.onDeleteAccount = onDeleteAccount
     }
 
     var body: some View {
@@ -92,11 +112,11 @@ struct SettingsRootView: View {
             SettingsConfirmModal(
                 isPresented: activeModal == .logout,
                 title: "로그아웃할까요?",
-                desc: "다시 로그인하면 이어서 사용할 수 있어요.",
+                desc: "이 기기에서 로그아웃하고 로그인 화면으로 돌아갑니다.",
                 confirmLabel: "로그아웃",
                 onConfirm: {
                     activeModal = nil
-                    viewModel.notify("로그아웃했어요")
+                    onLogout()
                 },
                 onCancel: { activeModal = nil }
             )
@@ -105,14 +125,30 @@ struct SettingsRootView: View {
             SettingsConfirmModal(
                 isPresented: activeModal == .delete,
                 title: "정말 탈퇴하시겠어요?",
-                desc: "계정과 모든 설정, 연결된 계좌 정보가 삭제되고 되돌릴 수 없어요.",
+                desc: "계정이 삭제되어 다시 로그인할 수 없어요. 이 작업은 되돌릴 수 없어요.",
                 confirmLabel: "탈퇴하기",
                 danger: true,
+                isProcessing: isDeletingAccount,
+                errorMessage: deletionError,
                 onConfirm: {
-                    activeModal = nil
-                    viewModel.notify("탈퇴 요청을 접수했어요")
+                    guard !isDeletingAccount else { return }
+                    isDeletingAccount = true
+                    deletionError = nil
+                    Task {
+                        do {
+                            try await onDeleteAccount()
+                            activeModal = nil
+                        } catch {
+                            deletionError = "회원 탈퇴에 실패했어요. 연결을 확인하고 다시 시도해 주세요."
+                        }
+                        isDeletingAccount = false
+                    }
                 },
-                onCancel: { activeModal = nil }
+                onCancel: {
+                    guard !isDeletingAccount else { return }
+                    activeModal = nil
+                    deletionError = nil
+                }
             )
         }
         .preferredColorScheme(.light)

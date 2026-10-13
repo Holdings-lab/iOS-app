@@ -8,27 +8,58 @@ enum RootTab: Hashable {
 
 struct RootTabView: View {
     let userId: Int64?
+    let onboardingResult: OnboardingResult?
     let userAssetProfile: UserAssetProfile
     let portfolioSnapshot: PortfolioSnapshot
     let brokerBalanceSnapshot: BrokerBalanceSnapshot?
     let onBrokerBalanceUpdated: (BrokerBalanceSnapshot) -> Void
-    @State private var selectedTab: RootTab = .today
+    let onGoalSaved: (FinancialGoal, Int64) -> Void
+    let onDeleteAccount: () async throws -> Void
+    let onLogout: () -> Void
+    @State private var todayRepository: SharedTodayRepository
+    private let settingsRepository: any SettingsRepositoryProtocol
+    @State private var selectedTab: RootTab
+    @State private var refreshResetTabs: Set<RootTab> = []
+    @State private var todayRefreshSession = 0
+    @State private var newsroomRefreshSession = 0
+    @State private var newsroomRepository: CachedNewsroomDigestRepository
     @State private var todaySignalRoute: PolSignalRoute?
     @State private var presentedSignalRoute: PolSignalRoute?
     @ObservedObject private var notificationCenter = AppNotificationCenter.shared
 
     init(
+        initialTab: RootTab = .today,
         userId: Int64? = nil,
+        onboardingResult: OnboardingResult? = nil,
         userAssetProfile: UserAssetProfile = AppMockData.userAssetProfile,
         portfolioSnapshot: PortfolioSnapshot = AppMockData.portfolioSnapshot,
         brokerBalanceSnapshot: BrokerBalanceSnapshot? = nil,
-        onBrokerBalanceUpdated: @escaping (BrokerBalanceSnapshot) -> Void = { _ in }
+        onBrokerBalanceUpdated: @escaping (BrokerBalanceSnapshot) -> Void = { _ in },
+        onGoalSaved: @escaping (FinancialGoal, Int64) -> Void = { _, _ in },
+        onDeleteAccount: @escaping () async throws -> Void = { throw NetworkError.invalidResponse },
+        onLogout: @escaping () -> Void = {},
+        newsroomRepository: CachedNewsroomDigestRepository? = nil,
+        todayRepository: TodayRepositoryProtocol? = nil,
+        settingsRepository: any SettingsRepositoryProtocol = LiveSettingsRepository()
     ) {
+        _selectedTab = State(initialValue: initialTab)
+        let sharedNewsroom = newsroomRepository ?? CachedNewsroomDigestRepository(
+            repository: NewsroomDigestRepositoryFactory.makeDefault(userId: userId)
+        )
+        _newsroomRepository = State(initialValue: sharedNewsroom)
+        _todayRepository = State(initialValue: SharedTodayRepository(
+            repository: todayRepository ?? LiveTodayRepository(newsroomRepository: sharedNewsroom)
+        ))
         self.userId = userId
+        self.onboardingResult = onboardingResult
         self.userAssetProfile = userAssetProfile
         self.portfolioSnapshot = portfolioSnapshot
         self.brokerBalanceSnapshot = brokerBalanceSnapshot
         self.onBrokerBalanceUpdated = onBrokerBalanceUpdated
+        self.onGoalSaved = onGoalSaved
+        self.onDeleteAccount = onDeleteAccount
+        self.onLogout = onLogout
+        self.settingsRepository = settingsRepository
         setupTabBarAppearance()
     }
 
@@ -36,10 +67,18 @@ struct RootTabView: View {
         TabView(selection: $selectedTab) {
             TodayView(
                 userId: userId,
+                onboardingResult: onboardingResult,
                 userAssetProfile: userAssetProfile,
                 portfolioSnapshot: portfolioSnapshot,
                 brokerBalanceSnapshot: brokerBalanceSnapshot,
+                repository: todayRepository,
                 externalSignalRoute: $todaySignalRoute,
+                onGoalSaved: onGoalSaved,
+                onDeleteAccount: onDeleteAccount,
+                onLogout: onLogout,
+                settingsRepository: settingsRepository,
+                refreshSessionID: todayRefreshSession,
+                onPullRefreshStarted: { refreshResetTabs.insert(.today) },
                 onAssetTabRequested: {
                     selectedTab = .asset
                 },
@@ -62,9 +101,12 @@ struct RootTabView: View {
                 NewsroomView(
                     userId: userId,
                     userAssetProfile: userAssetProfile,
+                    refreshSessionID: newsroomRefreshSession,
+                    onPullRefreshStarted: { refreshResetTabs.insert(.newsroom) },
                     onAssetTabRequested: {
                         selectedTab = .asset
-                    }
+                    },
+                    viewModel: NewsroomDigestViewModel(repository: newsroomRepository)
                 )
             }
             .tag(RootTab.newsroom)
@@ -85,6 +127,21 @@ struct RootTabView: View {
         }
         .tint(AssetTabPalette.brand)
         .preferredColorScheme(.light)
+        .onChange(of: selectedTab) { previous, _ in
+            guard refreshResetTabs.remove(previous) != nil else { return }
+            switch previous {
+            case .today: todayRefreshSession += 1
+            case .newsroom: newsroomRefreshSession += 1
+            case .asset: break
+            }
+        }
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: .dashboardUITestTabRequested)) { notification in
+            guard UITestLaunchMode.isDashboardRefresh,
+                  let tab = notification.object as? RootTab else { return }
+            selectedTab = tab
+        }
+        #endif
         .onAppear {
             consumePendingPushRoute()
         }
